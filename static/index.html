@@ -1,0 +1,156 @@
+<html><head>
+  <title>CS30 Exercise and Test environment</title>
+  <link href="https://fonts.googleapis.com/css?family=Nunito:300,400,700" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js" defer></script>
+  <script src="mathquill/mathquill.js" defer></script>
+  <!-- FONT -->
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="mathquill/mathquill.css"/>
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/skeleton.css">
+</head><body>
+<noscript>
+  You need to enable JavaScript to use this page.
+  This page is meant to help you practice with interactive exercises.
+  Those exercises need to be retrieved through json, so there really is no soft fallback (short of writing your own client to the api).
+</noscript>
+<div class="container row big" id="header"></div>
+<form onsubmit="return false;">
+  <div class="container">
+  <span id="serverCGI"></span>
+  <div id="cards"></div>
+  </div>
+</form>
+<script>
+var MQ;
+var ses;
+var serverCGI = "/~sjc/cs30/cs30.cgi";
+var currentlyCallingAPI = false;
+var disconnects = 0;
+var serverResponseMsg;
+window.onload = function (){
+  function abort(msg,hard=true){
+    var might = hard? 'will' : 'might';
+    var dv = document.createElement('div');
+    var doc = document.children[0].children[1];
+    dv.class="container row";
+    dv.innerHTML = msg+' Please inform Sebastiaan about this (send him a screenshot). Several things '+might+' not work right now. After Sebastiaan asks you to try again, refresh this page with cmd-shift-R or ctrl-shift-R.<br />';
+    if(hard){
+      doc.appendChild(dv);
+      exit(1);
+    }else{
+      doc.insertBefore(dv,doc.childNodes[0]);
+    }
+  }
+  if (typeof $ == 'undefined'){
+    abort('Could not find jquery.');
+  }
+  // abort('Trying to cause problems ....',false)
+  if(typeof MathQuill === 'undefined'){
+    abort('Could not load MathQuill.',true);
+  }else{
+    MQ = MathQuill.getInterface(2);
+  }
+  var mathFieldSpan = document.getElementById('math-field');
+  $(".math-field").each(function(i,mf){
+      var v= MQ.MathField(mf,{
+                spaceBehavesLikeTab: false, // configurable
+                handlers: {
+                  edit: function() {}
+                }
+                });
+      mf.v=v;
+    }
+  );
+  $("input.submit").each(function(i,ip){
+    var jip = $(ip)
+    jip.on("click",function(e){
+      var data = new Array();
+      // gather values in an array:
+      jip.closest("form").find(".math-field").each(function(i,mf){
+        data.push({n:mf.id,v:mf.v.latex()});
+      })
+      console.log(data);
+      console.log(e);
+      return false;
+    })
+  });
+  serverResponseMsg = $('#serverCGI');
+  function paragraph(txt){
+    var p = document.createElement('p');
+    p.appendChild(document.createTextNode(txt));
+    return p;
+  }
+  function pre(txt){
+    var p = document.createElement('pre');
+    p.appendChild(document.createTextNode(txt));
+    return p;
+  }
+  function communicate(){
+    var request;
+    processError = function (obj,statusStr){
+      var errMsg = document.createElement('div');
+      errMsg.class="row error"
+      var h3 = document.createElement('h3');
+      h3.appendChild(document.createTextNode('Error in communication between JavaScript running on your machine and code on the server'));
+      errMsg.appendChild(h3);
+      var reloadLink = document.createElement('a');
+      reloadLink.appendChild(document.createTextNode("Click here to try again"));
+      reloadLink.class = "link";
+      reloadLink.onclick
+        = function(){
+            $.ajax(request);
+            serverResponseMsg.each(function(i,e){
+              e.removeChild(errMsg);
+            });
+          };
+      request.data.r++;
+      if(obj.readyState==0 && obj.status==0){
+        disconnects++;
+        errMsg.appendChild(paragraph('This may be a connection error, check your internet connection'));
+        errMsg.appendChild(reloadLink);
+        errMsg.appendChild(paragraph('Alternatively, take a screenshot and email Sebastiaan'));
+      }else{
+        console.log(obj);
+        var err = document.createElement('p');
+        err.innerHTML = "The error was: <em>"+statusStr+"</em>";
+        errMsg.appendChild(err);
+        errMsg.appendChild(paragraph('Please take a screenshot and email Sebastiaan'));
+        errMsg.appendChild(paragraph('Some debug output for Sebastiaan:'));
+        errMsg.appendChild(pre(obj.responseText));
+        errMsg.appendChild(paragraph('After letting Sebastiaan know about what is probably a bug, you may want to try again (but it probably won\'t help):'));
+        errMsg.appendChild(reloadLink);
+      }
+      errMsg.appendChild(document.createElement('hr'));
+      serverResponseMsg.html(errMsg);
+    }
+    request = {
+      dataType: "json", // json
+      url: serverCGI,
+      data:{ d:"init",
+             c:document.cookie,
+             s:window.location.search,
+             r:0 // retry number
+           },
+      success: processPageUpdate,
+      jsonp: false,
+      error: processError
+    };
+    $.ajax(request);
+  }
+  function processPageUpdate(data,statusStr,jqXHR){
+    ses = data.rSes
+    var exrs = data.rExercises;
+    for(var i=0;i<exrs.length;i++){
+      var exr = exrs[i];
+
+    }
+    console.log("Json data:");
+    console.log(data);
+    serverResponseMsg.html(data);
+  }
+  communicate();
+}
+</script></body></html>
