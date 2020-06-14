@@ -13,8 +13,9 @@ maintainer:          sjcjoosten+github@gmail.com
 -- copyright:
 -- category:
 build-type:          Simple
-extra-source-files:  CHANGELOG.md
-data-files:          data/salt
+extra-source-files:  CHANGELOG.md, data/salt, data/dir
+-- data-files have the secrets in them
+data-files:          data/osinsumaspejdeetrogumwaeghif
 
 executable cs30.cgi
   main-is:             Main.hs
@@ -27,8 +28,20 @@ executable cs30.cgi
                        directory,
                        aeson,
                        base64-bytestring,
-                       text
+                       text,
+                       time,
+                       random,
+                       template-haskell,
+                       transformers,
+                       th-lift-instances,
+                       parser-combinators,
+                       megaparsec
   hs-source-dirs:      src
   default-language:    Haskell2010
-  other-modules:       Paths_cs30
+  other-modules:       Paths_cs30,
+                       CS30.Util,
+                       CS30.Sessions,
+                       CS30.Data,
+                       CS30.Exercises,
+                       CS30.Pages
   ghc-options:         -Wall

@@ -30,13 +30,18 @@
 
 /* Grid
  */
-.container, .card {
+.container, .card{
   position: relative;
   width: 100%;
   max-width: 960px;
   margin: 0 auto;
   padding: 0 20px;
-  box-sizing: border-box; }
+  box-sizing: border-box;
+}
+.card { padding: 20px; margin-bottom: 20px; }
+@media (min-width: 550px) {.card { margin-bottom: 40px; }}
+.container {padding: 0}
+.container .container, top .container {padding: 20px}
 .column,
 .columns {
   width: 100%;
@@ -53,21 +58,25 @@
 }
 .card{
   border-radius: 4px;
-  border: 1px solid #40AAEE;
+  border: 1px solid #00693e;
+  background-color: #f2f2f2;
 }
 
 /* For devices larger than 550px */
 @media (min-width: 550px) {
-  .container {
+  .top .container {
     width: 80%;
     padding: 0; }
   .column,
   .columns {
-    margin-left: 4%; }
-  .column:first-child,
-  .columns:first-child {
-    margin-left: 0; }
-
+    margin-left: 4%;
+    margin-right: 4% }
+    .column:first-child,
+    .columns:first-child 
+    .column:last-child,
+    .columns:last-child {
+    margin-left: 0;margin-right: 0; }
+  
   .one.column,
   .one.columns                    { width: 4.66666666667%; }
   .two.columns                    { width: 13.3333333333%; }
@@ -128,52 +137,72 @@
 html is set to 62.5% so that all the REM measurements throughout Skeleton
 are based on 10px sizing. So basically 1.5rem = 15px :) */
 html {
-  font-size: 62.5%; }
+  font-size: 62.5%; 
+}
 body {
   font-size: 1.5em; /* currently ems cause chrome bug misinterpreting rems on body element */
   line-height: 1.6;
   font-weight: 400;
   font-family: "Raleway", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  color: #222; }
-
-/* Typography
- */
+  color: #005d39;
+  background-color: #FFF;
+  padding:0rem;
+  margin:0rem;
+}
+.card {
+  color: #000;
+}
+body{
+  padding-top: 1rem;
+}
+body.top{
+  padding:1rem;
+}
+/* Typography */
 h1, h2, h3, h4, h5, h6 {
   margin-top: 0;
   margin-bottom: 2rem;
   font-weight: 300; }
-h1 { font-size: 4.0rem; line-height: 1.2;  letter-spacing: -.1rem;}
-h2 { font-size: 3.6rem; line-height: 1.25; letter-spacing: -.1rem; }
-h3 { font-size: 3.0rem; line-height: 1.3;  letter-spacing: -.1rem; }
-h4 { font-size: 2.4rem; line-height: 1.35; letter-spacing: -.08rem; }
-h5 { font-size: 1.8rem; line-height: 1.5;  letter-spacing: -.05rem; }
-h6 { font-size: 1.5rem; line-height: 1.6;  letter-spacing: 0; }
-
-/* Larger than phablet */
-@media (min-width: 550px) {
-  h1 { font-size: 5.0rem; }
-  h2 { font-size: 4.2rem; }
-  h3 { font-size: 3.6rem; }
-  h4 { font-size: 3.0rem; }
-  h5 { font-size: 2.4rem; }
-  h6 { font-size: 1.5rem; }
-}
+h2, h4 { font-weight: 700; }
+h1 { margin-top: 3rem; font-size: 4.0rem; line-height: 1.2;  letter-spacing: -.1rem;}
+h2,h3 { font-size: 3.6rem; line-height: 1.25; letter-spacing: -.1rem; }
+h4,h5 { font-size: 1.8rem; line-height: 1.5;  letter-spacing: -.05rem; margin-bottom: 1.8rem; }
+h6 { font-size: 1.5rem; line-height: 1.6;  letter-spacing: 0; margin-bottom: 1.5rem; }
 
 p {
   margin-top: 0; }
-
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #fff;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  padding: 12px 16px;
+  z-index: 1;
+}
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+.dropdown-content a{
+  display: block;
+  clear:both;
+}
 
 /* Links */
 a {
-  color: #1EAEDB;
+  color: #006fae;
   cursor: pointer;
-  text-decoration: underline #777;
+  text-decoration: underline;
 }
 a:hover {
-  color: #0890AA; }
+  color: #816089; }
 
 /* Buttons */
-.button,
+.button,.dropdown,
 button,
 input[type="submit"],
 input[type="reset"],
@@ -181,17 +210,17 @@ input[type="button"] {
   display: inline-block;
   height: 38px;
   padding: 0 30px;
-  color: #555;
+  color: #005d39;
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 38px;
   letter-spacing: .1rem;
-  text-transform: uppercase;
   white-space: nowrap;
   background-color: transparent;
   border-radius: 4px;
-  border: 1px solid #bbb;
+  border: 1px solid #005d39;
+  background-color: #fff;
   cursor: pointer;
   box-sizing: border-box; }
 .button:hover,
@@ -204,9 +233,10 @@ button:focus,
 input[type="submit"]:focus,
 input[type="reset"]:focus,
 input[type="button"]:focus {
-  color: #333;
-  border-color: #888;
-  outline: 0; }
+  background-color: #f7f7f7;
+  border-color: #b9d783;
+  outline: 0 ;
+  box-shadow: 0px 0px 2px 2px #FFF; }
 .button.button-primary,
 button.button-primary,
 input[type="submit"].button-primary,
@@ -244,7 +274,7 @@ select {
   height: 38px;
   padding: 6px 10px; /* The 6px vertically centers text on FF, ignored by Webkit */
   background-color: #fff;
-  border: 1px solid #D1D1D1;
+  border: 1px solid #00693e;
   border-radius: 4px;
   box-shadow: none;
   box-sizing: border-box; }
@@ -273,7 +303,7 @@ input[type="url"]:focus,
 input[type="password"]:focus,
 textarea:focus,
 select:focus {
-  border: 1px solid #33C3F0;
+  border: 1px solid #c4dd88;
   outline: 0; }
 label,
 legend {
@@ -346,12 +376,12 @@ td:last-child {
  */
 button,
 .button {
-  margin-bottom: 1rem; }
+  margin-top: 1rem; }
 input,
 textarea,
 select,
 fieldset {
-  margin-bottom: 1.5rem; }
+  margin-top: 1.5rem; }
 pre,
 blockquote,
 dl,
@@ -380,10 +410,10 @@ form {
 /* Misc
  */
 hr {
-  margin-top: 3rem;
-  margin-bottom: 3.5rem;
+  margin-top: 1.4rem;
+  margin-bottom: 1.4rem;
   border-width: 0;
-  border-top: 2px solid #40AAEE; 
+  border-top: 2px solid #424141; 
 }
 
 

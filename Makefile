@@ -76,7 +76,8 @@ $(testcgi) : dir $(tesths)
 	@ghc --make $(tesths) -hidir=$(hidir) -odir=$(hidir) -o $(testcgi)
 	@chmod 755 $(testcgi)
 
-$(maincgi) : dir $(mainhs)
+$(maincgi) : dir $(mainhs) $(datadir)
+	printf "$(datadir)" > data/dir
 	@~/.local/bin/stack install --local-bin-path=$(installdir)
 	@chmod 755 $(maincgi)
 
