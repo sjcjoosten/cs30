@@ -44,6 +44,7 @@ data Field = FText String -- text to be displayed
            | FValue{fvName::String,fvVal::Int} -- numeric value to be returned verbatim
            | FValueS{fvName::String,fvValS::String} -- like FValue, but a string
            | FMath String -- text to display as math
+           | FNote String -- text to be displayed in a small font on a separate line
   deriving (Show)
 
 -- These are page references

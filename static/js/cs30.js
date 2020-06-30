@@ -14,6 +14,38 @@ function abort(msg,hard=true){
   }
 }
 
+function span(txt){
+  var p = document.createElement('span');
+  p.appendChild(document.createTextNode(txt));
+  return p;
+}
+function paragraph(txt){
+  var p = document.createElement('p');
+  p.appendChild(document.createTextNode(txt));
+  return p;
+}
+function pre(txt){
+  var p = document.createElement('pre');
+  p.appendChild(document.createTextNode(txt));
+  return p;
+}
+function card(title,content,level=3){
+  var div = document.createElement('div');
+  if (level < 5){ /* move to half cards */
+    div.className = "card columns six";
+  }
+  div.className = "card";
+  var h = document.createElement('h'+level);
+  h.appendChild(document.createTextNode(title));
+  div.appendChild(h);
+  if(level < 3){
+    var hr = document.createElement('hr');
+    div.appendChild(hr);
+  }
+  $(div).append(content);
+  return div;
+}
+
 // Helper to display a field (first argument: q)
 // Does two things (depending on q):
 // 1. Create a value-object with its relevent retrieve function, and pass it to pushHandler to be added to an array.
@@ -21,18 +53,28 @@ function abort(msg,hard=true){
 // 2. Generate the appropriate DOM node and call appendHandler with it (provided there's something to see).
 //    You typically want to pass .appendChild of some DOM element for 'appendHandler'.
 // Results to calls of both handlers are ignored and default to ignoring functions.
-function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_)
+function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_, submitAction = ()=>_)
 {
   switch(q.tag){
     case null: console.log(q); abort('Malformed field: q.tag = null'); appendHandler(document.createTextNode("[[- Null encountered in q.tag -]]"));
     break; case "FText": 
-          appendHandler(document.createTextNode(q.contents));
+          appendHandler(span(q.contents));
+    break; case "FNote": 
+          p=paragraph(q.contents);
+          p.className="note";
+          appendHandler(p);
     break; case "FFieldMath":
           var elmt = document.createElement('div');
           elmt.className="u-full-width";
           // non-editable: MQ.StaticMath
           var mf = MQ.MathField(elmt,{handlers:{enter:function(){submitAction();}}} );
           pushHandler({name:q.contents, q:q, getVal:function(){return mf.latex();}});
+          appendHandler(elmt);
+    break; case "FMath":
+          var elmt = document.createElement('span');
+          elmt.appendChild(document.createTextNode(q.contents));
+          // elmt.className="u-full-width";
+          MQ.StaticMath(elmt);
           appendHandler(elmt);
     break; case "FValueS":
           pushHandler({name:q.fvName, q:q, getVal:function(){return q.fvValS;}});
@@ -48,11 +90,9 @@ function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_)
 var MQ;
 var ses;
 var serverCGI = "/~sjc/cs30/cs30.cgi";
-var currentlyCallingAPI = false;
 var disconnects = 0;
 var serverResponseMsg;
 window.onload = function (){
-  if(window.top==window.self){ document.body.classList.add("top"); }
   
   if (typeof $ == 'undefined'){
     abort('Could not find jquery.');
@@ -63,52 +103,14 @@ window.onload = function (){
   }else{
     MQ = MathQuill.getInterface(2);
   }
-  var mathFieldSpan = document.getElementById('math-field');
-  $(".math-field").each(function(i,mf){
-      var v= MQ.MathField(mf,{
-                spaceBehavesLikeTab: false, // configurable
-                handlers: {
-                  edit: function() {}
-                }
-                });
-      mf.v=v;
-    }
-  );
-  $("input.submit").each(function(i,ip){
-    var jip = $(ip);
-    jip.on("click",function(e){
-      var data = [];
-      // gather values in an array:
-      jip.closest("form").find(".math-field").each(function(i,mf){
-        data.push({n:mf.id,v:mf.v.latex()});
-      });
-      console.log(data);
-      console.log(e);
-      return false;
-    });
-  });
+
   serverResponseMsg = $('#serverCGI');
-  function paragraph(txt){
-    var p = document.createElement('p');
-    p.appendChild(document.createTextNode(txt));
-    return p;
-  }
-  function span(txt){
-    var p = document.createElement('span');
-    p.appendChild(document.createTextNode(txt));
-    return p;
-  }
-  function pre(txt){
-    var p = document.createElement('pre');
-    p.appendChild(document.createTextNode(txt));
-    return p;
-  }
   function communicate(data,handler=processPageUpdate){
     data.r = 0;
     data.ses = ses;
     processError = function (obj,statusStr){
       var errMsg = document.createElement('div');
-      errMsg.className="row error";
+      errMsg.className="error";
       var h3 = document.createElement('h3');
       h3.appendChild(document.createTextNode('Error in communication between JavaScript running on your machine and code on the server'));
       errMsg.appendChild(h3);
@@ -153,22 +155,6 @@ window.onload = function (){
               };
     $.ajax(request);
   }
-  function card(title,content,level=3){
-    var div = document.createElement('div');
-    if (level < 5){ /* move to half cards */
-      div.className = "card columns six";
-    }
-    div.className = "card";
-    var h = document.createElement('h'+level);
-    h.appendChild(document.createTextNode(title));
-    div.appendChild(h);
-    if(level < 3){
-      var hr = document.createElement('hr');
-      div.appendChild(hr);
-    }
-    $(div).append(content);
-    return div;
-  }
   function processPageUpdate(data,statusStr,jqXHR){
     serverResponseMsg.html(''); // clear any of the server's error messages still on the screen
     if (data.rEcho != null){
@@ -188,107 +174,170 @@ window.onload = function (){
       $('#login').html('Not logged in');
       $('#login2').html('Not logged in');
     }
-    var cards = $('#cards');
     var exrs = data.rExercises;
-
     var pages = data.rPages;
-    if(pages.length > 0){
-      $('#header').show();
-      $('#login2').hide();
-      var el = $('#nav-exercise-list');
-      el.empty();
-      for(var i=0;i<pages.length;i++){
-        (function(page){
-          var a = document.createElement('a');
-          a.className = "button u-full-width";
-          // $(a).addClass("button u-full-width");
-          a.appendChild(document.createTextNode(page.pName));
-          (function () { 
-            var pid = page.pId;
-            // note: without using jQuery's "on", jQuery's "clone" won't copy the event.
-            $(a).on('click', function()
-              { communicate({ s:pid, echo:pid }); });
-          })();
-          el.append(a);
-        })(pages[i]);
-      }
-      if (exrs.length == 0) {
-        cards.empty();
-        // repeat the pages as a main selection thingy if there are no exercises
-        cards.append(card("Exercises",el.clone(true).removeClass('dropdown-content'),2));
-      }
-    }
+    var cards = $('#cards');
 
-    if (exrs.length > 0) {
-      cards.empty();
+    fill = function (){
+      if(pages.length > 0){
+        $('#header').show();
+        $('#login2').hide();
+        var el = $('#nav-exercise-list');
+        el.empty();
+        for(var i=0;i<pages.length;i++){
+          (function(page){
+            var a = document.createElement('a');
+            a.className = "button u-full-width";
+            // $(a).addClass("button u-full-width");
+            a.appendChild(document.createTextNode(page.pName));
+            (function () { 
+              var pid = page.pId;
+              // note: without using jQuery's "on", jQuery's "clone" won't copy the event.
+              $(a).on('click', function()
+                { communicate({ s:pid, echo:pid }); });
+            })();
+            el.append(a);
+          })(pages[i]);
+        }
+        if (exrs.length == 0) {
+          // repeat the pages as a main selection thingy if there are no exercises
+          cards.append(card("Exercises",el.clone(true).removeClass('dropdown-content'),2));
+        }
+      }
+
       for(var i=0;i<exrs.length;i++){
         // Print each exercise as a card
         (function(exr){
-          var submitAction;
-          var qs = exr.eQuestion;
-          var hs = exr.eHidden;
-          var valuesH = [];
-          for(var j=0;j<hs.length;j++){
-            handleField(hs[j], valuesH);
-          }
-          var values = [];
-          var d = document.createElement('div');
-          d.className="row";
-          for(var j=0;j<qs.length;j++){
-            handleField(qs[j], values, d.appendChild);
-          }
-          var buttonRow = document.createElement('div');
-          buttonRow.className="columns row";
-          var acs = exr.eActions;
-          for(var j=0;j<acs.length;j++){
-            (function(ac){
-              var f = function(){
-                var data = {cAction:ac};
-                var vdata = {};
-                for(var j=0;j<values.length;j++){
-                  vdata[values[j].name] = values[j].getVal();
-                }
-                var hidden = {};
-                for(var j=0;j<valuesH.length;j++){
-                  data[valuesH[j].name] = valuesH[j].getVal();
-                }
-                data.cValue = vdata;
-                communicate({ex:JSON.stringify(data)});
-              };
-              elmt = document.createElement('button');
-              elmt.type = "button";
-              elmt.className="button two u-pull-right";
-              elmt.appendChild(document.createTextNode(ac.tag));
-              elmt.onclick = f;
-              submitAction = f;
-              buttonRow.appendChild(elmt);
-            })(acs[j]);
-          }
-          d.appendChild(buttonRow);
-          // elmt = document.createElement('div');
-          // elmt.className = "row";
-          // d.appendChild(document)
-          var theCard = card(exr.eTopic, d,exrs.length>2?4:3);
-          cards.append(theCard);
-        })(exrs[i]);
+            var submitAction;
+            var buttonRow = document.createElement('div');
+            // buttonRow.className="columns row"; // don't!
+            var acs = exr.eActions;
+            for(var j=0;j<acs.length;j++){
+                (function(ac){
+                var f = function(){
+                    var data = {cAction:ac};
+                    var vdata = {};
+                    for(var j=0;j<values.length;j++){
+                    vdata[values[j].name] = values[j].getVal();
+                    }
+                    var hidden = {};
+                    for(var j=0;j<valuesH.length;j++){
+                    data[valuesH[j].name] = valuesH[j].getVal();
+                    }
+                    data.cValue = vdata;
+                    communicate({ex:JSON.stringify(data) // request a Splash screen
+                                ,s:window.location.search // immediately request a next exercise
+                                });
+                };
+                elmt = document.createElement('button');
+                elmt.type = "button";
+                elmt.className="button";
+                elmt.appendChild(document.createTextNode(ac.tag));
+                elmt.onclick = f;
+                submitAction = f;
+                buttonRow.appendChild(elmt);
+                })(acs[j]);
+            }
+            var qs = exr.eQuestion;
+            var hs = exr.eHidden;
+            var valuesH = [];
+            for(var j=0;j<hs.length;j++){
+              handleField(hs[j], function(p){valuesH.push(p);});
+            }
+            var values = [];
+            var d = document.createElement('div');
+            // d.className="row"; // don't!
+            for(var j=0;j<qs.length;j++){
+              handleField(qs[j], function(p){values.push(p);}, function(a){d.appendChild(a);}, submitAction);
+            }
+            d.appendChild(buttonRow);
+            var theCard = card(exr.eTopic, d,exrs.length>2?4:3);
+            cards.append(theCard);
+          })(exrs[i]);
       }
-    }
+    };
 
+    function progress($element, obj) {
+        return $element.find('div').animate({ width: $element.width() }, obj);
+    }
+    var next = function(){
+      $(document).off('keydown');
+      $('.progressBar').remove();
+      $('#splash').hide();
+      $('#splash').empty();
+      fill();
+      $('#cards').animate({opacity:1},200);
+      $('#cards').fadeIn(200);
+      next = function(){};
+    };
     var splash = data.rSplash;
     if (splash!=null) {
-      alert('Splash! '+splash);
+        splash = splash.contents;
+        var feedb = splash.prFeedback;
+        var d = document.createElement('div');
+        d.className="popup";
+        var hNr = 1;
+        var txt;
+        switch(splash.prOutcome){
+            case "POIncorrect":
+                hNr = 'h2'; // not as exciting...
+                txt = "Incorrect !";
+            break;
+            case "POCorrect":
+                hNr = 'h1';
+                txt = "Correct !";
+            break;
+        }
+        var h = document.createElement('div');
+        // h.className = "row";
+        $(h).html("<"+hNr+'>'+txt+'</'+hNr+'>');
+        d.appendChild(h);
+        for(var j=0;j<feedb.length;j++){
+          handleField(feedb[j], _, function(a){d.appendChild(a);});
+        }
+        var buttonRow = document.createElement('div');
+        buttonRow.className="container";
+        $(buttonRow).html("<div class=\"container\"><div class=\"progressBar\"><div></div></div></div><div><button id=\"OK\" class=\"center\">Ok</button></div>");
+        d.appendChild(buttonRow);
+        $('#splash').append(d);
+        $('#splash').show();
+        cards.fadeOut(200, function() {
+          cards.empty();
+        });
+        var animation = progress($('.progressBar'), {duration:1000*splash.prTimeToRead,easing:"linear",complete:function(){ next(); }});
+        $('#splash .popup div').on('mouseenter',function(){animation.stop();$('.progressBar').animate({opacity:0},200);});
+        $('#OK').on('click',next);
+        $(document).keydown( function(event) {
+          if (event.which === 13) {
+            next();
+          }
+        }); 
+    } else {
+      if(cards.is(':empty')){
+        if($('#splash').is(':hidden')){
+          cards.fadeIn(200);
+        }
+        fill();
+      }else{
+        cards.fadeOut(200, function() {
+          cards.empty();
+          fill();
+          if($('#splash').is(':hidden')){
+            cards.fadeIn(200);
+          }
+        });
+      }
     }
   }
 
-  if(postData=='')
-    communicate({cAct:'page', // 'page' loads top header
-              c:document.cookie,
-              s:window.location.search});
+  if(signature=='')
+    communicate({cAct:'page' // 'cAct:page' to request top header with all pages (since we're not accessing this page from canvas, we use our own navigation)
+                ,s:window.location.search // request the current exercise
+                });
   else
-    communicate({cAct:'login', 
-              c:document.cookie,
-              s:window.location.search,
-              a:postData,
-              h:signature // hash
-              });
+    communicate({
+                s:window.location.search, // request the current exercise
+                a:postData, // login data to process
+                h:signature // hash
+                });
 };

@@ -85,26 +85,9 @@ exerciseResponse et eid usrData handleCur handleStale'
         = if head0 rights > 3 * head0 wrongs then 1 + nextUpStrk (drop 1 strk) else nextUpStrk strk
        nextUpStrk (c:lst) | c >= 10 = 1 + nextUpStrk lst
        nextUpStrk _ = 0
-       udNth f n lst | n > 0 = head0 lst : udNth f n (drop 1 lst)
+       udNth f n lst | n > 0 = head0 lst : udNth f (n - 1) (drop 1 lst)
         | otherwise = f (head0 lst):drop 1 lst
        head0 lst = head (lst ++ [0])
-{-
-data ExResponse
-      = ExResponse {cAction :: Action
-                   ,cValue  :: Map.Map String String
-                   ,exId    :: Int
-                   ,exTag   :: String}
-
-  
-data ExerciseType
-  = ExerciseType{ etTag :: String
-                , etMenu :: String
-                , etTitle :: String
-                , etChoices :: [ChoiceTree (Text.Text, Text.Text)]
-                , etGenEx :: (Text.Text -> Exercise -> Exercise)
-                , etGenAns :: (Text.Text -> Text.Text -> Map.Map String String -> ProblemResponse)
-                }
-  -}
 
 -- | Populate the response with exercises based on the requested page. If there is no page, a listing is returned
 populateEx :: Maybe String -> SesIO Rsp
@@ -125,8 +108,8 @@ handleResponse mp (sesnr, clientLink)
       hasEmail <- obtainEmail clientLink
       rsp <- runWithLink hasEmail clientLink$
              foldl (<>) mempty{rSes=sesnr,rLogin=hasEmail} <$> sequenceA
-              (  [populateEx search]
-              ++ [handleExResponse rsp | rsp <- exResponse]
+              (  [ handleExResponse rsp | rsp <- exResponse]
+              ++ [ populateEx search]
               ++ [ return mempty{rPages = map mkPage pages}
                  | "page" <- concat . maybeToList $ Map.lookup "cAct" mp]
               )

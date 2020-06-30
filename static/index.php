@@ -1,20 +1,20 @@
 <html><head>
   <!-- PHP
     <?php
-    // error_reporting(E_ALL & ~E_NOTICE);
-    // ini_set("display_errors", 1);
-    require_once 'ims-blti/blti.php';
-    // we put a wrong secret here, server will check the secret, we just use this library to compute the base string.
-    // base string will be put in "OAuth_base_string"
-    $lti = new BLTI("-", false, false);
+    error_reporting(E_ALL & E_NOTICE);
+    ini_set("display_errors", 1);
+    require_once 'ims-blti/OAuth.php';
+    $request = OAuthRequest::from_request();
+    $OAuth_base_string = $request->get_signature_base_string();
+    $oauth_signature = $request->get_parameter('oauth_signature');
     ?> -->
   <title>CS30 Exercise and Test environment</title>
   <link href="https://fonts.googleapis.com/css?family=Nunito:300,400,700" rel="stylesheet">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js" defer></script>
   <script src="mathquill/mathquill.js" defer></script>
   <script>
-    var postData  = '<?php echo addslashes($OAuth_base_string); ?>';
-    var signature = '<?php echo addslashes($OAuth_last_provided_signature); ?>';
+var postData = '<?php echo addslashes($OAuth_base_string) ?>';
+var signature = '<?php echo addslashes($oauth_signature) ?>';
   </script>
   <script src="js/cs30.js" defer></script>
   <!-- FONT -->
@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="mathquill/mathquill.css"/>
   <link rel="stylesheet" href="css/normalize.css">
   <link rel="stylesheet" href="css/skeleton.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <!-- <?php
   if (false) {
@@ -37,7 +38,7 @@
     echo '--'.'!'.'><';
     echo 'body';
     // if we're not in Canvas, add some margin:
-    if (strlen($OAuth_base_string)>1) echo ' class="inCanvas"'; else echo ' class="top"'; 
+    if (strlen($oauth_signature)>1) echo ' class="inCanvas"'; else echo ' class="top"'; 
     echo '><!--';
   } ?>
 -->
@@ -47,13 +48,15 @@
   Those exercises need to be retrieved through json, so there really is no soft fallback (short of writing your own client to the api).
 </noscript>
 <div class="container" id="header" style="display:none;margin-bottom:15px">
-<div class="u-pull-left" id="nav">
+<div id="nav">
   <div id="nav-exercises" class="dropdown">
   <span class="u-full-width">Exercises</span>
   <div id="nav-exercise-list" class="dropdown-content"></div>
   </div>
 </div>
-<div class="u-pull-right" id="login"></div>
+<div id="login" style="margin: auto 0;"></div>
+</div>
+<div class="overlay" id="splash" style="display:none">
 </div>
 <div class="container"><div class="u-pull-right" id="login2"></div></div>
 <div class="row"></div>

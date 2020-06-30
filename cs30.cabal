@@ -35,7 +35,8 @@ executable cs30.cgi
                        transformers,
                        th-lift-instances,
                        parser-combinators,
-                       megaparsec
+                       megaparsec,
+                       ghc
   hs-source-dirs:      src
   default-language:    Haskell2010
   other-modules:       Paths_cs30,
@@ -44,4 +45,5 @@ executable cs30.cgi
                        CS30.Data,
                        CS30.Exercises,
                        CS30.Pages
-  ghc-options:         -Wall
+  ghc-options:         -Wall 
+  -- profiling which doesnt work: "-with-rtsopts=-p -po/net/ifs-users/sjc/cs30data/cs30prof"
