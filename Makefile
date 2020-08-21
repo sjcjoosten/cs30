@@ -8,11 +8,11 @@
 # if local, sync with server and call 'make' on server
 
 # directory that must exist server-side (for establishing that we are on the server)
-homedir = /net/ifs-users/sjc/
+homedir = /home/sjc/
 # directory that must exist developer-side (for establishing that we are on the developer code)
 devdir = /Users/sjc/
 # server address from the client side
-server = sjc@flume.cs.dartmouth.edu
+server = f004d0r@www.cs.dartmouth.edu
 # remaining directories are server side:
 # installation directory for cgi scripts
 installdir = $(homedir)public_html/cs30/
