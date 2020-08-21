@@ -56,7 +56,7 @@ sync : checkdev
 dir : checkserver $(installdir) $(hidir)
 
 # cgi executables
-cgi : $(testcgi) $(maincgi)
+cgi : $(maincgi)
 
 $(hidir) :
 	mkdir -p $(hidir)
@@ -71,10 +71,6 @@ $(installdir) : $(shell find $(staticdir) -type f -name '*')
 	chmod 755 $(installdir)
 	echo "WARNING: files in this directory are generated automatically and may be overwritten." > $(installdir)WARNING.md
 	cp -R $(staticdir)* $(installdir)
-
-$(testcgi) : dir $(tesths)
-	@ghc --make $(tesths) -hidir=$(hidir) -odir=$(hidir) -o $(testcgi)
-	@chmod 755 $(testcgi)
 
 $(maincgi) : dir $(mainhs) $(datadir)
 	printf "$(datadir)" > data/dir
