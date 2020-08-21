@@ -1,15 +1,22 @@
 {-# LANGUAGE DeriveLift      #-}
 {-# LANGUAGE TemplateHaskell #-}
-module CS30.Data where
+module CS30.Data {-
+                 (ProblemResponse(..), ProblemOutcome(..), Exercise(..), Field(..)
+                 ,ClientLink(..),Authentication(..),SesIO,SesData(..)
+                 ,Rsp(..),ExResponse(..),LevelProblem(..),Action(..),ProblemResolve(..),Page(..),LevelData(..),Splash(..)
+                 ,startData,isTemp,dataFile,defaultExercise,defaultLevelData
+                 ,globalDataDir,globalSalt)
+                 -}
+                 where
 import           Control.Applicative
 import           Control.Monad.Trans.State.Lazy as StateT
 import           Data.Aeson as JSON
 import           Data.Aeson.TH
 import qualified Data.Map as Map
 import qualified Data.Text.Lazy as Text
+import           Data.Void
 import           Instances.TH.Lift()
 import           Language.Haskell.TH.Syntax
-import           Data.Void
 
 -- table of content:
 -- 1. Global constants
@@ -212,18 +219,20 @@ type SesIO = StateT SesData IO
 data Authentication = Auth{aEmail::String,aUID::String,aRoles::[String]}
   deriving Show
 
--- Env is used for passing around global information
-data Env = Env{eSes :: String -- session string (to be communicated back and forth)
-              ,eMap :: Map.Map String [String] -- all query info
-              ,eStorage :: FilePath -- where information is stored about current user
-              }
+-- | Data-structure for terms to and from LaTeX
+type STerm = Term (String, String) String String
+-- | More general data-structure for terms, allows the insertion of 'Void' to remove certain cases
+data Term b v c -- binder, variable and (function)-constant representations
+ = Bind !b (Term b v c) (Term b v c) -- e.g. Bind ("exists", ".") (TFun "\\in" [TVar "x", TVar "S"]) (some term in x)
+ | TVar !v
+ | TFun !c [Term b v c] -- e.g. TFun "3" [] or TFun "+" [a,b]
 
+$(deriveJSON defaultOptions ''Term)
 $(deriveJSON defaultOptions ''Exercise)
 $(deriveJSON defaultOptions ''ExResponse)
 $(deriveJSON defaultOptions ''Rsp)
 $(deriveJSON defaultOptions ''Splash)
 $(deriveJSON defaultOptions ''ProblemResponse)
-$(deriveJSON defaultOptions ''Env)
 $(deriveJSON defaultOptions ''Authentication)
 $(deriveJSON defaultOptions ''Field)
 $(deriveJSON defaultOptions ''Action)

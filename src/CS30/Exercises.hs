@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
 module CS30.Exercises where
+import           Control.Monad.Combinators.Expr as Expr
 import           CS30.Data
 import           Data.Aeson
 import           Data.Functor.Identity
@@ -14,7 +14,6 @@ import           Data.Void
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           Util
-
 
 correct,wrong :: ProblemResponse
 wrong = ProblemResponse{prOutcome = POIncorrect, prFeedback = [], prTimeToRead = 0}
@@ -38,8 +37,8 @@ data ExerciseType
                 , etMenu :: String
                 , etTitle :: String
                 , etChoices :: [ChoiceTree (Text.Text, Text.Text)]
-                , etGenEx :: (Text.Text -> Exercise -> Exercise)
-                , etGenAns :: (Text.Text -> Text.Text -> Map.Map String String -> ProblemResponse)
+                , etGenEx :: Text.Text -> Exercise -> Exercise
+                , etGenAns :: Text.Text -> Text.Text -> Map.Map String String -> ProblemResponse
                 }
 
 -- http://math.chapman.edu/~jipsen/mathquill/test/MathQuillsymbolsMathJax.html
@@ -50,54 +49,31 @@ pages, tests :: [ExerciseType]
 pages = [ exerciseType "Roster" "L1.1" "Roster notation" roster (\quer ->rosterQuer [FText quer]) (\quer -> rosterFeedback [FText quer])
         , exerciseType "PowSet" "L1.2" "Powerset operations" powst rosterQuer rosterFeedback2
         , exerciseType "SetOps" "L1.3" "More set operations" setop rosterQuer rosterFeedback
+        -- , exerciseType "Negation" "L4.1" "Push negation inwards" negation pni (calcCheck False negationRules)
         ]
  where
-  -- generate three disjoint sets, none are empty
-  threeSets = Branch [ replace (\digits1 -> Branch
-                               [ replace (\digits2 -> Branch 
-                                         [ fmap (\digits3 -> (digits1, digits2, digits3)
-                                               )
-                                               (genDigit ((allDigits \\ digits1) \\ digits2) no_digits3)
-                                         | no_digits3 <- [(1::Int)..3] ])
-                                     (genDigit (allDigits \\ digits1) no_digits2)
-                               | no_digits2 <- [(1::Int)..3] ])
-                             (genDigit allDigits no_digits1)
-                     | no_digits1 <- [(1::Int)..3] ]
-  -- generate three disjoint sets, of which at least one is empty
-  threeSets_oneEmpty
-   = Branch [ Branch [ replace (\digits1 -> Branch
-                           [ replace (\digits2 -> Branch 
-                                     [ fmap (\digits3 -> (digits1, digits2, digits3)
-                                           )
-                                           (genDigit ((allDigits \\ digits1) \\ digits2) no_digits3)
-                                     | no_digits3 <- if emptyS == 3 then [0] else [(0::Int)..3] ])
-                                 (genDigit (allDigits \\ digits1) no_digits2)
-                           | no_digits2 <- if emptyS == 2 then [0] else [(0::Int)..3] ])
-                         (genDigit allDigits no_digits1)
-                     | no_digits1 <- if emptyS == 1 then [0] else [(0::Int)..3] ]
-            | emptyS <- [1..3]  ]
   setop_f ts
-   = ([ fmap (\(digits1,digits2,digits3) -> let set1 = sort$ map show $ nub (digits1 ++ digits2)
-                                                set2 = sort$ map show $ nub (digits2 ++ digits3)
-                                                inter = Set.toList$
-                                                        Set.union (Set.fromList digits2)
-                                                                  (Set.intersection (Set.fromList digits1) (Set.fromList digits3))
-                                             in ([FText "the set ",FMath$ dispSet set1 ++" \\cap "++dispSet set2],map show inter)
-             ) ts
-      , fmap (\(digits1,digits2,digits3) -> let set1 = sort$ map show $ nub (digits1 ++ digits2)
-                                                set2 = sort$ map show $ nub (digits2 ++ digits3)
-                                                uni = Set.toList$
-                                                        Set.union (Set.fromList digits2)
-                                                                  (Set.union (Set.fromList digits1) (Set.fromList digits3))
-                                             in ([FText "the set ",FMath$ dispSet set1 ++" \\cup "++dispSet set2],map show uni)
-             ) ts
-      , fmap (\(digits1,digits2,digits3) -> let set1 = sort$ map show $ nub (digits1 ++ digits2)
-                                                set2 = sort$ map show $ nub (digits2 ++ digits3)
-                                                uni = Set.toList$
-                                                        (Set.difference (Set.fromList digits1) (Set.fromList digits3))
-                                             in ([FText "the set ",FMath$ dispSet set1 ++" \\setminus "++dispSet set2],map show uni)
-             ) ts
-      ])
+   = [ fmap (\(digits1,digits2,digits3) -> let set1 = sort$ map show $ nub (digits1 ++ digits2)
+                                               set2 = sort$ map show $ nub (digits2 ++ digits3)
+                                               inter = Set.toList$
+                                                       Set.union (Set.fromList digits2)
+                                                                 (Set.intersection (Set.fromList digits1) (Set.fromList digits3))
+                                            in ([FText "the set ",FMath$ dispSet set1 ++" \\cap "++dispSet set2],map show inter)
+            ) ts
+     , fmap (\(digits1,digits2,digits3) -> let set1 = sort$ map show $ nub (digits1 ++ digits2)
+                                               set2 = sort$ map show $ nub (digits2 ++ digits3)
+                                               uni = Set.toList$
+                                                       Set.union (Set.fromList digits2)
+                                                                 (Set.union (Set.fromList digits1) (Set.fromList digits3))
+                                            in ([FText "the set ",FMath$ dispSet set1 ++" \\cup "++dispSet set2],map show uni)
+            ) ts
+     , fmap (\(digits1,digits2,digits3) -> let set1 = sort$ map show $ nub (digits1 ++ digits2)
+                                               set2 = sort$ map show $ nub (digits2 ++ digits3)
+                                               uni = Set.toList$
+                                                       (Set.difference (Set.fromList digits1) (Set.fromList digits3))
+                                            in ([FText "the set ",FMath$ dispSet set1 ++" \\setminus "++dispSet set2],map show uni)
+            ) ts
+     ]
   setop = setop_f threeSets ++ setop_f threeSets_oneEmpty
   powst = [ nodes [ ( [FText "the powerset 𝒫",FMath$ "(\\left\\{"++d1++","++d2++"\\right\\})"]
                     , [[],[d1],[d2],[d1,d2]]
@@ -139,15 +115,49 @@ pages = [ exerciseType "Roster" "L1.1" "Roster notation" roster (\quer ->rosterQ
                      | no_digits <- [(1::Int)..8] -- final number is one longer because of the addDouble
                      ]
             ]
-  genDigit opts n | n > 0 = Branch [fmap (o:) (genDigit (delete o opts) (n-1)) | o<-opts]
-  genDigit _ _ = Node []
-  genDigits n | n > 0 = Branch [fmap (o:) (genDigits (n-1)) | o<-allDigits]
-  genDigits _ = Node []
-  addDouble lst = Branch [ nodes [ take n lst++l:drop n lst
-                                 | n<-[0..length lst]]
-                         | l<-lst ]
 -- | Tests are not publicly visible and need to be accessed through canvas
 tests = []
+
+
+-- generate three disjoint sets, none are empty
+threeSets :: ChoiceTree ([Int], [Int], [Int])
+threeSets = Branch [ replace (\digits1 -> Branch
+                              [ replace (\digits2 -> Branch 
+                                        [ fmap (\digits3 -> (digits1, digits2, digits3)
+                                              )
+                                              (genDigit ((allDigits \\ digits1) \\ digits2) no_digits3)
+                                        | no_digits3 <- [(1::Int)..3] ])
+                                    (genDigit (allDigits \\ digits1) no_digits2)
+                              | no_digits2 <- [(1::Int)..3] ])
+                            (genDigit allDigits no_digits1)
+                    | no_digits1 <- [(1::Int)..3] ]
+-- generate three disjoint sets, of which at least one is empty
+threeSets_oneEmpty :: ChoiceTree ([Int], [Int], [Int])
+threeSets_oneEmpty
+  = Branch [ Branch [ replace (\digits1 -> Branch
+                          [ replace (\digits2 -> Branch 
+                                    [ fmap (\digits3 -> (digits1, digits2, digits3)
+                                          )
+                                          (genDigit ((allDigits \\ digits1) \\ digits2) no_digits3)
+                                    | no_digits3 <- if emptyS == (3::Int) then [0] else [(0::Int)..3] ])
+                                (genDigit (allDigits \\ digits1) no_digits2)
+                          | no_digits2 <- if emptyS == 2 then [0] else [(0::Int)..3] ])
+                        (genDigit allDigits no_digits1)
+                    | no_digits1 <- if emptyS == 1 then [0] else [(0::Int)..3] ]
+          | emptyS <- [1..3]  ]
+
+
+genDigit :: [Int] -> Int -> ChoiceTree [Int]
+genDigit opts n | n > 0 = Branch [fmap (o:) (genDigit (delete o opts) (n-1)) | o<-opts]
+genDigit _ _ = Node []
+genDigits :: Int -> ChoiceTree [Int]
+genDigits n | n > 0 = Branch [fmap (o:) (genDigits (n-1)) | o<-allDigits]
+genDigits _ = Node []
+-- | duplicate one of the elements in the list, put it in a random place
+addDouble :: [a] -> ChoiceTree [a]
+addDouble lst = Branch [ nodes [ take n lst++l:drop n lst
+                               | n<-[0..length lst]]
+                       | l<-lst ]
 
 exerciseType
       :: (ToJSON a, FromJSON a, ToJSON b, FromJSON b)
@@ -275,6 +285,8 @@ removeQuotes lst
           then removePairs (q1,q2) [Text.drop l1 (Text.dropEnd l2 l) | l<-lst']
           else lst
 
+
+
 -- todo: move to latex/math-parser library
 type Parser = ParsecT Void Text.Text Identity
 
@@ -283,9 +295,14 @@ parseSet = parseWS *> (    (string "\\{" *> parseInnerSet <* string "\\}")
                        <|> (string "{" *> parseInnerSet <* string "}") -- shouldn't be writable in math mode but we're allowing it for accessibility
                       ) <* parseWS
 parseWS :: Parser Text.Text
-parseWS = ((<>) <$> (string " " <|> string "\n" <|> string "\r" <|> string "\t" <|> string "\\ " <|> string "\\left" <|> string "\\right" <|> string "\\Left" <|> string "\\Right") 
-                <*> parseWS -- todo: parse LaTeX comments starting with %. Problematic because escaped % should be kept. Solution for now is to keep %.
-          ) <|> return mempty
+parseWS = ((<>) <$> (string " " <|> string "\n" <|> string "\r" <|> string "\t" <|> string "\\ " <|> string "\\left" <|> string "\\right" <|> string "\\Left" <|> string "\\Right"
+                     <|> ((<>) <$> string "%" <*> untilEOL)) 
+                <*> parseWS
+          )
+          <|> return mempty
+        where untilEOL = (do c <- Text.singleton <$> anySingle
+                             if c == "\n" || c == "\r" then return c else (c <>) <$> untilEOL)
+                         <|> return mempty
 parseInnerSet :: Parser [Text.Text]
 parseInnerSet = sepBy (parseSatisfy) (string ",")
   where
