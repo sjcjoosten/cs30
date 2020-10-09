@@ -31,7 +31,7 @@ getHandler
     -> LevelProblem
     -> SesIO (ProblemResolve, Rsp)
 getHandler _ et usr lp
- = do let pr = (etGenAns et) (lpPuzzelStored lp) usr
+ = do let pr = etGenAns et (lpPuzzelStored lp) usr defaultProblemResponse
       return (ProblemResolve lp usr (prOutcome pr),mempty{rSplash = Just (SplashPR pr)})
 
 exerciseResponse :: ExerciseType

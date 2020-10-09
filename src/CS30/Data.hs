@@ -51,9 +51,11 @@ data ProblemResponse
                         }
   deriving (Show)
 
-correct,wrong :: ProblemResponse
-wrong = ProblemResponse{prOutcome = POIncorrect, prFeedback = [], prTimeToRead = 0}
-correct = ProblemResponse{prOutcome = POCorrect, prFeedback = [], prTimeToRead = 0}
+defaultProblemResponse :: ProblemResponse
+defaultProblemResponse = ProblemResponse{prOutcome = POCorrect, prFeedback = [], prTimeToRead = 0}
+markWrong,markCorrect :: ProblemResponse -> ProblemResponse
+markWrong pr = pr{prOutcome = POIncorrect}
+markCorrect pr = pr{prOutcome = POCorrect}
 
 data ProblemOutcome
       = POCorrect -- ^ Full points, user answered correct

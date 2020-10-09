@@ -11,10 +11,11 @@ import qualified Data.Text.Lazy as Text
 import           Data.Void
 import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
+-- TODO: get rid of code duplication
 
 -- | Answer whether a user-given set matches the set in the solution for sets of elements (no sets within sets)
-rosterFeedback :: ([Field], [String]) -> Map.Map String String -> ProblemResponse
-rosterFeedback (quer, sol) usr'
+rosterFeedback :: ([Field], [String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+rosterFeedback (quer, sol) usr' defaultRsp
   = reTime$ case pr of
                  Nothing -> wrong{prFeedback= rsp++(FText "Your answer was "):rspwa}
                  Just v -> if nub v == v then
@@ -33,9 +34,11 @@ rosterFeedback (quer, sol) usr'
         rspwa = case usr of
                 Nothing -> [FText "- ??? - (perhaps report this as a bug?)"]
                 Just v -> [FMath v]
+        wrong = markWrong defaultRsp
+        correct = markCorrect defaultRsp
 -- | Answer whether a user-given set matches the set in the solution for sets of sets (no sets within those, just elements)
-rosterFeedback2 :: ([Field], [[String]]) -> Map.Map String String -> ProblemResponse
-rosterFeedback2 (quer, sol) usr'
+rosterFeedback2 :: ([Field], [[String]]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+rosterFeedback2 (quer, sol) usr' defaultRsp
   = reTime$ case pr of
                  Nothing -> wrong{prFeedback= rsp++(FText "Your answer was "):rspwa}
                  Just v -> if nub (map (nubSort) v) == (map sort v) then
@@ -59,6 +62,8 @@ rosterFeedback2 (quer, sol) usr'
         rspwa = case usr of
                 Nothing -> [FText "- ??? - (perhaps report this as a bug?)"]
                 Just v -> [FMath v]
+        wrong = markWrong defaultRsp
+        correct = markCorrect defaultRsp
 
 
 -- get set in roster notation as a list of strings, duplicates are kept, whitespace, quotes and parentheses are removed when appropriate

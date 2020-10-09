@@ -14,7 +14,7 @@ data ExerciseType
                 , etTitle :: String
                 , etChoices :: [ChoiceTree Text.Text]
                 , etGenEx :: Text.Text -> Exercise -> Exercise
-                , etGenAns :: Text.Text -> Map.Map String String -> ProblemResponse
+                , etGenAns :: Text.Text -> Map.Map String String -> ProblemResponse -> ProblemResponse
                 }
 
 -- | Helperfunction to create an ExerciseType
@@ -25,7 +25,7 @@ exerciseType
       -> String -- ^ Title of the exercise
       -> [ChoiceTree a] -- ^ list of exercises, which is supposed to be in increasing difficulty.
       -> (a -> Exercise -> Exercise) -- ^ A function that produces the exercise, first argument is the default exercise
-      -> (a -> Map.Map String String -> ProblemResponse) -- ^ Generate the Response popup from the exercise (a) and the client's response (a map with POST data)
+      -> (a -> Map.Map String String -> ProblemResponse -> ProblemResponse) -- ^ Generate the Response popup from the exercise (a) and the client's response (a map with POST data)
       -> ExerciseType
 exerciseType tg mn rn ct exGen fbGen
  = ExerciseType tg mn rn (map (fmap enc) ct) exGen' fbGen'
@@ -34,7 +34,7 @@ exerciseType tg mn rn ct exGen fbGen
        exGen' t = case decode (Text.encodeUtf8 t) of
                     Just t' -> exGen t'
                     Nothing -> error "Decoding error of the exercise (with poor debug trace)"
-       fbGen' :: Text.Text -> Map.Map String String -> ProblemResponse
+       fbGen' :: Text.Text -> Map.Map String String -> ProblemResponse -> ProblemResponse
        fbGen' a
          = case decode (Text.encodeUtf8 a) of
              Just a' -> fbGen a'
