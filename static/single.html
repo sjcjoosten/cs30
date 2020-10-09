@@ -1,0 +1,43 @@
+<html><head>
+  <title>CS30 Exercise and Test environment</title>
+  <link href="https://fonts.googleapis.com/css?family=Nunito:300,400,700" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js" defer></script>
+  <script src="mathquill/mathquill.js" defer></script>
+  <script>
+  </script>
+  <script src="js/cs30.js" defer></script>
+  <!-- FONT -->
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="mathquill/mathquill.css"/>
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/skeleton.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+    <body class="top noPHP"><div class="container">Single user mode.</div>
+<noscript>
+  You need to enable JavaScript to use this page.
+  This page is meant to help you practice with interactive exercises.
+  Those exercises need to be retrieved through json, so there really is no soft fallback (short of writing your own client to the api).
+</noscript>
+<div class="container" id="header" style="display:none;margin-bottom:15px">
+<div id="nav">
+  <div id="nav-exercises" class="dropdown">
+  <span class="u-full-width">Exercises</span>
+  <div id="nav-exercise-list" class="dropdown-content"></div>
+  </div>
+</div>
+<div id="login" style="margin: auto 0;"></div>
+</div>
+<div class="overlay" id="splash" style="display:none">
+</div>
+<div class="container"><div class="u-pull-right" id="login2"></div></div>
+<div class="row"></div>
+<form onsubmit="return false;">
+  <div class="container">
+  <span id="serverCGI"></span>
+  <div id="cards"></div>
+  </div>
+</form>
+</body></html>

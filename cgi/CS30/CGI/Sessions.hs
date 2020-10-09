@@ -1,12 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
-module CS30.Sessions where
+module CS30.CGI.Sessions where
+import           CS30.CGI.Globals
+import           CS30.CGI.Util
+import           CS30.CGI.Data
 import           CS30.Data
 import           CS30.Util
+import           Control.Monad.IO.Class (MonadIO(liftIO))
 import           Control.Monad.Trans.State.Lazy
 import           Data.Aeson as JSON
-import           Data.ByteString.Base64.URL as B64URL
 import           Data.ByteString.Base64 as B64
+import           Data.ByteString.Base64.URL as B64URL
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.ByteString.Lazy.Char8 as L8
@@ -15,11 +19,9 @@ import qualified Data.Map as Map
 import           Data.Maybe
 import           Data.Text.Lazy.Encoding
 import           Data.Time.Clock.POSIX
-import           Network.CGI as CGI
-import           Network.CGI.Cookie as CGI
+import           Network.HTTP.Base as CGI
 import           Paths_cs30
 import           System.Directory
-import           System.Directory (createDirectoryIfMissing,doesPathExist)
 import           System.Environment
 import           Text.Read (readMaybe)
 
@@ -47,7 +49,7 @@ handleRequest :: BS.ByteString
 handleRequest uid mp
  = do cookies' <- lookupEnv "HTTP_COOKIE"
       let extract :: Maybe String -> Map.Map String String
-          extract = Map.fromListWith const . CGI.readCookies . CGI.urlDecode . concat . maybeToList
+          extract = Map.fromListWith const . readCookies . CGI.urlDecode . concat . maybeToList
            -- semigroup for Map prefers left operand values,
            -- we consistently prefer JavaScript's reported cookies over the browser's cookies
           cookies = extract (listToMaybe =<< Map.lookup "c" mp) <> extract cookies'
@@ -135,3 +137,5 @@ authenticate str hash
   roles = concatMap (uncalate ',' . CGI.urlDecode) <$> (Map.lookup "roles" =<< mp)
   userFn = safeFilename =<< listToMaybe =<< Map.lookup "user_id" =<< mp
   res = Auth <$> emailMaybe <*> userFn <*> roles -- credentials the user is trying to get
+
+  

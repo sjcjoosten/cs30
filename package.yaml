@@ -1,0 +1,52 @@
+name:                cs30
+version:             0.1.1.0
+license:             SJC
+author:              sjcjoosten
+maintainer:          sjcjoosten+github@gmail.com
+extra-source-files:
+    - data/*
+dependencies:
+    - base
+    - containers
+    - utf8-string
+    - bytestring
+    - directory
+    - aeson
+    - text
+    - time
+    - random
+    - template-haskell
+    - transformers
+    - th-lift-instances
+    - parser-combinators
+    - megaparsec
+    - extra
+    - HTTP
+ghc-options:  -Wall
+
+source-dirs:
+    - src
+
+executables:
+    cs30.cgi:
+        source-dirs:  cgi
+        main:         CGI.hs
+        dependencies: 
+            - SHA
+            - base64-bytestring
+    cs30:
+        source-dirs:  serve
+        main:         Serve.hs
+        dependencies: 
+            - warp
+            - wai
+            - wai-extra
+            - http-types
+            - mime-types
+            - th-lift-instances
+tests:
+    spec:
+        main:   test.hs
+        source-dirs:
+            - test
+  # profiling which doesnt work: "-with-rtsopts=-p -po/net/ifs-users/sjc/cs30data/cs30prof"
