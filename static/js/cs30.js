@@ -330,14 +330,14 @@ window.onload = function (){
     }
   }
 
-  if(signature=='')
-    communicate({cAct:'page' // 'cAct:page' to request top header with all pages (since we're not accessing this page from canvas, we use our own navigation)
-                ,s:window.location.search // request the current exercise
-                });
+  if(typeof signature == 'undefined' || signature=='')
+      communicate({cAct:'page' // 'cAct:page' to request top header with all pages (since we're not accessing this page from canvas, we use our own navigation)
+                  ,s:window.location.search // request the current exercise
+                  });
   else
-    communicate({
-                s:window.location.search, // request the current exercise
-                a:postData, // login data to process
-                h:signature // hash
-                });
+      communicate({
+                  s:window.location.search, // request the current exercise
+                  a:postData, // login data to process
+                  h:signature // hash
+                  });
 };

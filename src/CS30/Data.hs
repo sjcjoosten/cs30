@@ -1,13 +1,7 @@
 {-# LANGUAGE DeriveLift      #-}
 {-# LANGUAGE TemplateHaskell #-}
-module CS30.Data {-
-                 (ProblemResponse(..), ProblemOutcome(..), Exercise(..), Field(..)
-                 ,ClientLink(..),Authentication(..),SesIO,SesData(..)
-                 ,Rsp(..),ExResponse(..),LevelProblem(..),Action(..),ProblemResolve(..),Page(..),LevelData(..),Splash(..)
-                 ,startData,isTemp,dataFile,defaultExercise,defaultLevelData
-                 ,globalDataDir,globalSalt)
-                 -}
-                 where
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
+module CS30.Data where
 import           Control.Applicative
 import           Control.Monad.Trans.State.Lazy as StateT
 import           Data.Aeson as JSON
@@ -19,20 +13,11 @@ import           Instances.TH.Lift()
 import           Language.Haskell.TH.Syntax
 
 -- table of content:
--- 1. Global constants
--- 2. Data types that go back and forth between client and server
--- 3. Data types for communicating to the client (potentially stored)
--- 4. Data types for communicating from the client (potentially stored)
--- 5. Data that is only stored on the server, never communicated
--- 6. Other data types?
-
--- * Global constants
-globalDataDir :: FilePath
-globalDataDir = $( do txt <- runIO$ readFile "data/dir"
-                      [e|txt|] )
-globalSalt :: Text.Text
-globalSalt = $( do txt <- (runIO$ readFile "data/salt")
-                   [e|Text.pack txt|] )
+-- 1. Data types that go back and forth between client and server
+-- 2. Data types for communicating to the client (potentially stored)
+-- 3. Data types for communicating from the client (potentially stored)
+-- 4. Data that is only stored on the server, never communicated
+-- 5. Other data types: they only exist on runtime, are not stored
 
 -- * Data types that go back and forth between client and server
 
@@ -58,7 +43,6 @@ data Field = FText String -- text to be displayed
 -- They don't specify the actual page
 data Page = Page{pId::String, pName::String}
   deriving (Show)
-  
 
 data ProblemResponse
       = ProblemResponse {prOutcome :: ProblemOutcome
@@ -67,10 +51,14 @@ data ProblemResponse
                         }
   deriving (Show)
 
+correct,wrong :: ProblemResponse
+wrong = ProblemResponse{prOutcome = POIncorrect, prFeedback = [], prTimeToRead = 0}
+correct = ProblemResponse{prOutcome = POCorrect, prFeedback = [], prTimeToRead = 0}
+
 data ProblemOutcome
       = POCorrect -- ^ Full points, user answered correct
       | POIncorrect -- ^ No points, user answered incorrect
-      -- -- | POSkip -- ^ No points, reduced penalty, user chose to skip
+      | POSkip -- ^ No points, reduce penalty? user chose to report and skip this problem
   deriving (Show, Lift, Eq)
 
 -- | Exercises as sent to the client (via Json). Documentation describes the client's interpretation
@@ -123,30 +111,13 @@ data ExResponse
   deriving (Show)
 
 -- * Data that is only stored on the server
--- | How a client is linked to our application
-data ClientLink
- = TempSession
-     String -- ^ temporary session storage file
- | PermSession
-     String -- ^ permanent session storage file
-     String -- ^ user credentials
-  deriving (Show)
-
-isTemp :: ClientLink -> Bool
-isTemp (TempSession _) = True
-isTemp _ = False
-
-dataFile :: ClientLink -> String
-dataFile (TempSession x) = x
-dataFile (PermSession x _) = x
 
 -- | After generating a problem instance, store relevant info on disk so we can ask it again or generate feedback
 data LevelProblem
       = LevelProblem {lpPuzzelID :: Int
                      ,lpLevel :: Int -- how hard is the puzzel?
                      ,lpPuzzelGen :: [Int] -- how it was randomly generated
-                     ,lpPuzzelQst :: Text.Text -- json encoded question (handler specific)
-                     ,lpPuzzelSol :: Text.Text -- json encoded solution (handler specific)
+                     ,lpPuzzelStored :: Text.Text -- json encoded question (handler specific)
                      }
   deriving (Show, Lift)
 -- | After a problem instance has been handled, we store how it was handled (potentially for overviews)
@@ -216,8 +187,7 @@ startData = SesData{sdLevelData=Map.empty,sdEmail=Nothing}
 type SesIO = StateT SesData IO
 
 
-data Authentication = Auth{aEmail::String,aUID::String,aRoles::[String]}
-  deriving Show
+-- * Other data structures
 
 -- | Data-structure for terms to and from LaTeX
 type STerm = Term (String, String) String String
@@ -227,13 +197,13 @@ data Term b v c -- binder, variable and (function)-constant representations
  | TVar !v
  | TFun !c [Term b v c] -- e.g. TFun "3" [] or TFun "+" [a,b]
 
+-- code below is template haskell code
 $(deriveJSON defaultOptions ''Term)
 $(deriveJSON defaultOptions ''Exercise)
 $(deriveJSON defaultOptions ''ExResponse)
 $(deriveJSON defaultOptions ''Rsp)
 $(deriveJSON defaultOptions ''Splash)
 $(deriveJSON defaultOptions ''ProblemResponse)
-$(deriveJSON defaultOptions ''Authentication)
 $(deriveJSON defaultOptions ''Field)
 $(deriveJSON defaultOptions ''Action)
 $(deriveJSON defaultOptions ''Page)
@@ -242,4 +212,3 @@ $(deriveJSON defaultOptions ''LevelProblem)
 $(deriveJSON defaultOptions ''ProblemResolve)
 $(deriveJSON defaultOptions ''LevelData)
 $(deriveJSON defaultOptions ''SesData)
-$(deriveJSON defaultOptions ''ClientLink)

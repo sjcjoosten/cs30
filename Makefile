@@ -7,9 +7,9 @@
 # if on server, install cgi
 # if local, sync with server and call 'make' on server
 
-# directory that must exist server-side (for establishing that we are on the server)
+# directory that must exist server-side only (for establishing that we are on the server)
 homedir = /home/sjc/
-# directory that must exist developer-side (for establishing that we are on the developer code)
+# directory that must exist developer-side only (for establishing that we are on the developer code)
 devdir = /Users/sjc/
 # server address from the client side
 server = f004d0r@www.cs.dartmouth.edu
@@ -40,15 +40,15 @@ all : checkserver cgi dir
 
 # run a check to ensure we're on the dev machine
 checkdev :
-	@file $(devdir) > /dev/null
+	@test -e $(devdir) || (echo "This makefile is intended to help Sebastiaan install his software on a server, you should call 'stack' directly instead, per the README instructions" && exit 1)
 
 # run a check to ensure we're on the server
 checkserver :
-	@file $(homedir) > /dev/null
+	@test -e $(homedir)
 
 sync : checkdev
-	@echo "Synchronising code with server:"
-	rsync -varz --exclude=".?*" --delete-after . $(server):cs30
+	@echo "Synchronising code with server (ensure you are connected via VPN!):"
+	rsync -varz --exclude=".?*" --exclude="data" --delete-after . $(server):cs30
 	@echo "\nBuilding code server-side:"
 	ssh -t $(server) "cd cs30/&&make all"
 
@@ -61,7 +61,6 @@ cgi : $(maincgi)
 $(hidir) :
 	mkdir -p $(hidir)
 
-# not used currently
 $(datadir) :
 	mkdir -p $(datadir)
 	chmod 711 $(datadir)

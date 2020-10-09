@@ -1,21 +1,17 @@
-{-# LANGUAGE DeriveFunctor   #-}
-{-# LANGUAGE TemplateHaskell #-}
 module CS30.Pages where
 import           CS30.Data
+import           CS30.Util (err500)
 import           CS30.Exercises
-import           CS30.Sessions
-import           CS30.Util
-import           Control.Monad.IO.Class
+import           CS30.Exercises.Data
 import           Control.Monad.Trans.State.Lazy
 import           Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.Map as Map
 import           Data.Maybe
 import qualified Data.Text.Lazy as Text
-import           System.Random
 
 pageLookup :: String -> Maybe ExerciseType
-pageLookup = flip Map.lookup $ Map.fromList (map (\et -> (etTag et,et)) (pages ++ tests))
+pageLookup = flip Map.lookup $ Map.fromList (map (\et -> (etTag et,et)) pages)
 
 -- | Handle a response from an exercise
 handleExResponse :: String -> SesIO Rsp
@@ -35,7 +31,7 @@ getHandler
     -> LevelProblem
     -> SesIO (ProblemResolve, Rsp)
 getHandler _ et usr lp
- = do let pr = (etGenAns et) (lpPuzzelQst lp) (lpPuzzelSol lp) usr
+ = do let pr = (etGenAns et) (lpPuzzelStored lp) usr
       return (ProblemResolve lp usr (prOutcome pr),mempty{rSplash = Just (SplashPR pr)})
 
 exerciseResponse :: ExerciseType
@@ -63,6 +59,7 @@ exerciseResponse et eid usrData handleCur handleStale'
                                                     ld{ ldStreakPerLevel = udNth (const 0) (lpLevel lp) (ldStreakPerLevel ld)
                                                       , ldWrongPerLevel = udNth ((+) 1) (lpLevel lp) (ldWrongPerLevel ld)
                                                       }
+                                                  POSkip -> ld
                                                 ){ ldOpenProblem = Nothing
                                                  , ldPastProblems = reslv{lrUserAnswer = usrData}:ldPastProblems ld}
                                      put ses{sdLevelData=Map.insert nm newD lDat}
@@ -100,40 +97,13 @@ populateEx _ = return mempty
 mkPage :: ExerciseType -> Page
 mkPage etp = Page (etTag etp) (etMenu etp ++ " - " ++ etTitle etp)
 
-handleResponse :: Map.Map String [String] -- POST data
-               -> (String, ClientLink) -> IO ()
-handleResponse mp (sesnr, clientLink)
- = do let search = listToMaybe =<< Map.lookup "s" mp -- 's' is used when looking for a page (example: 'ex1')
-      let exResponse = concat . maybeToList$ Map.lookup "ex" mp :: [String] -- 'ex' is used when responding to an exercise. json-encoded.
-      hasEmail <- obtainEmail clientLink
-      rsp <- runWithLink hasEmail clientLink$
-             foldl (<>) mempty{rSes=sesnr,rLogin=hasEmail} <$> sequenceA
-              (  [ handleExResponse rsp | rsp <- exResponse]
-              ++ [ populateEx search]
-              ++ [ return mempty{rPages = map mkPage pages}
-                 | "page" <- concat . maybeToList $ Map.lookup "cAct" mp]
-              )
-      respond rsp{rEcho = listToMaybe =<< Map.lookup "echo" mp}
- where
-    respond :: Rsp -> IO ()
-    respond rsp = do putStrLn "Content-type: application/json\n"
-                     L8.putStrLn (JSON.encode rsp)
-                     return ()
-
--- | Get a random thing from a tree
-randomSelect :: MonadIO m => ChoiceTree a -> m ([Int], a)
-randomSelect (Branch lst)
-  = do nr <- liftIO$ randomRIO (0,length lst-1)
-       (is,a) <- randomSelect (lst!!nr)
-       return (nr:is,a)
-randomSelect (Node a) = return ([], a)
 
 -- | Select a puzzle (either the most recent or a randomly selected one),
 -- | store the answer in the Ses for later processing (if necessary),
 -- | return the selected puzzle and its ID.
 -- | This function is also where the automated level selection comes in
 smartSelect :: String
-            -> [ChoiceTree (Text.Text, Text.Text)]
+            -> [ChoiceTree Text.Text]
             -> SesIO (Int, Text.Text)
 smartSelect nm lst
   = do ses <- get
@@ -141,7 +111,7 @@ smartSelect nm lst
        case ldOpenProblem ld of
          Nothing -> do let lvl = ldCurrentLevel ld
                        let maxL = length lst - 1
-                       (genInfo,(puzzleQ,puzzleS))
+                       (genInfo,puzzle)
                          <- if lvl > maxL
                             then randomSelect (Branch lst)
                             else randomSelect (lst !! lvl)
@@ -151,14 +121,13 @@ smartSelect nm lst
                        let newProblem = LevelProblem {lpPuzzelID=nextNr
                                                      ,lpLevel=if lvl > maxL then head genInfo else lvl
                                                      ,lpPuzzelGen=genInfo
-                                                     ,lpPuzzelQst=puzzleQ
-                                                     ,lpPuzzelSol=puzzleS
+                                                     ,lpPuzzelStored=puzzle
                                                      }
                        -- store the problem:
                        let ld' = Map.insert nm ld{ldOpenProblem = Just newProblem} (sdLevelData ses)
                        put (ses{sdLevelData = ld'})
-                       return (nextNr, puzzleQ)
-         Just v -> return (lpPuzzelID v, (lpPuzzelQst v))
+                       return (nextNr, puzzle)
+         Just v -> return (lpPuzzelID v, (lpPuzzelStored v))
 
 paintExercise :: ExerciseType -> SesIO Exercise
 paintExercise et

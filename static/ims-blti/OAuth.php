@@ -1,7 +1,7 @@
 <?php
 
 class OAuthRequest {
-  private $parameters;
+  public $parameters;
   private $http_method;
   private $http_url;
   // for debug purposes
@@ -15,7 +15,6 @@ class OAuthRequest {
     $this->http_method = $http_method;
     $this->http_url = $http_url;
   }
-
 
   /**
    * attempt to build up a request from what was passed to the server

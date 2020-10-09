@@ -26,7 +26,7 @@
 #
 
 HOME_LOCAL_BIN="$HOME/.local/bin"
-DEFAULT_DEST="~/bin/stack"
+DEFAULT_DEST="$HOME/.local/bin/stack"
 # Windows doesn't have a good place for DEST, but all CI systems (Appveyor, Travis, Azure) support /bin
 DEFAULT_DEST_WINDOWS="/bin/stack"
 DEST=""
