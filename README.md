@@ -5,6 +5,8 @@ topics in Discrete Mathematics (students). If you would like to
 get started with this environment locally (on your own computer)
 you can run cs30 in single user mode.
 
+There is also a Canvas mode available through 'LTI'.
+
 ## Installation in Single user mode
 
 Prerequisites: stack, and a browser. Please install stack using the
