@@ -22,10 +22,14 @@ dependencies:
     - megaparsec
     - extra
     - HTTP
-ghc-options:  -Wall
+ghc-options:
+    - -Wall
+    - -fwarn-tabs
+    - -fwarn-incomplete-uni-patterns
+    - -fwarn-incomplete-record-updates
 
-source-dirs:
-    - src
+library:
+    source-dirs: src
 
 executables:
     cs30.cgi:
@@ -34,7 +38,8 @@ executables:
         dependencies: 
             - SHA
             - base64-bytestring
-    cs30:
+            - cs30
+    serve:
         source-dirs:  serve
         main:         Serve.hs
         dependencies: 
@@ -44,9 +49,9 @@ executables:
             - http-types
             - mime-types
             - th-lift-instances
+            - cs30
 tests:
     spec:
         main:   test.hs
         source-dirs:
             - test
-  # profiling which doesnt work: "-with-rtsopts=-p -po/net/ifs-users/sjc/cs30data/cs30prof"

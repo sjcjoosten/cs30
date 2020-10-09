@@ -18,7 +18,7 @@ installation if you use it for other projects.
 
 Installation instructions:
 
-* Run 'stack run serve'
+* Run 'stack exec serve --package cs30:serve'
 
   After a while (first time is slower) you should see the message:
 
@@ -55,3 +55,26 @@ name and random content, which is to be comunicated with Canvas.
 In Canvas, a manual custom tool is to be added with the key set
 to the filename and the secret set to the content of the file.
 To select a specific exercise, like 'Roster', add ?Roster to the url.
+
+## For developers, running and testing
+
+Avoid using the above instructions, use this instead:
+  
+  ```console
+  stack run serve
+  ```
+
+This builds everything, which should give you a larger overhead once,
+but it will also alert you if you make breaking changes to the cgi part.
+
+To run the test-suite:
+  
+```console
+stack test
+```
+
+### Contributing code
+
+Please for the repository, make your changes there,
+add your name to the CONTRIBUTORS.md file, and send me a pull.
+

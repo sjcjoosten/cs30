@@ -17,11 +17,9 @@ server = f004d0r@www.cs.dartmouth.edu
 # installation directory for cgi scripts
 installdir = $(homedir)public_html/cs30/
 maincgi = $(installdir)cs30.cgi
-testcgi = $(installdir)test.cgi
-srcdir = src/
+srcdir = cgi/
 staticdir = static/
-tesths = $(srcdir)test.hs
-mainhs = $(srcdir)Main.hs
+mainhs = $(srcdir)CGI.hs
 datadir = $(homedir)cs30data/
 hidir = .tmp
 
@@ -73,7 +71,7 @@ $(installdir) : $(shell find $(staticdir) -type f -name '*')
 
 $(maincgi) : dir $(mainhs) $(datadir)
 	printf "$(datadir)" > data/dir
-	@~/.local/bin/stack install --local-bin-path=$(installdir)
+	@~/.local/bin/stack build cs30:cs30.cgi --copy-bins --local-bin-path=$(installdir)
 	@chmod 755 $(maincgi)
 
 # Q: Why is there no make clean?
