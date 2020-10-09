@@ -1,9 +1,17 @@
 # cs30
 
 This is a practice environment for people who want to learn about
-topics in Discrete Mathematics (students). If you would like to
-get started with this environment locally (on your own computer)
-you can run cs30 in single user mode.
+topics in Discrete Mathematics (students). This tool works as a
+web-application, so students interact with it in a browser.
+
+### Help wanted! Edit this file...
+If you know what this tool is about, perhaps you can add a bit
+to the description here.
+
+If you would like to get started with this environment locally
+(on your own computer) you can run cs30 in single user mode.
+That will set up a simple (non-configurable) web-server and
+direct you to use the application from there.
 
 There is also a Canvas mode available through 'LTI'.
 
