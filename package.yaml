@@ -8,20 +8,19 @@ extra-source-files:
 dependencies:
     - base
     - containers
+    - HTTP
+    - extra
+    - random
     - utf8-string
     - bytestring
     - directory
     - aeson
     - text
-    - time
-    - random
     - template-haskell
     - transformers
     - th-lift-instances
     - parser-combinators
     - megaparsec
-    - extra
-    - HTTP
 ghc-options:
     - -Wall
     - -fwarn-tabs
@@ -38,6 +37,7 @@ executables:
         dependencies: 
             - SHA
             - base64-bytestring
+            - time
             - cs30
     serve:
         source-dirs:  serve
