@@ -1,1 +1,3 @@
-
+static/mathquill/* linguist-vendored
+install_stack_foreign.sh linguist-vendored
+static/ims-blti/OAuth.php linguist-vendored
