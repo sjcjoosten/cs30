@@ -7,6 +7,7 @@ import           Control.Monad.Trans.State.Lazy as StateT
 import           Data.Aeson as JSON
 import           Data.Aeson.TH
 import qualified Data.Map as Map
+import           Data.Semigroup as S
 import qualified Data.Text.Lazy as Text
 import           Data.Void
 import           Instances.TH.Lift()
@@ -91,7 +92,7 @@ data Rsp = Rsp{rPages::[Page] -- list of pages one can go to
   deriving (Show)
 instance Monoid Rsp where
   mempty = Rsp mempty mempty Nothing mempty Nothing Nothing mempty
-instance Semigroup Rsp where
+instance S.Semigroup Rsp where
   (<>) x y
    = mempty{rPages = rPages x <> rPages y
            ,rExercises = rExercises x <> rExercises y
