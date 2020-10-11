@@ -8,7 +8,8 @@ cabal: "2.4"
 
 cache:
   directories:
-  - "$HOME/.cabal/store"
+  - "$HOME/.cabal"
+  - "$HOME/.ghc"
   - "$HOME/.stack"
   - "$TRAVIS_BUILD_DIR/.stack-work"
 
@@ -16,9 +17,9 @@ matrix:
   include:
 
   # Cabal
-  - ghc: 8.2.2
   - ghc: 8.4.4
   - ghc: 8.6.5
+  - ghc: 8.8.3
 
   # Stack
   - ghc: 8.6.5
@@ -41,7 +42,7 @@ install:
 
       # build project with stack
       stack --version
-      stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks
+      stack build --system-ghc --test --bench --no-run-benchmarks
     fi
 
 script:
