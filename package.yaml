@@ -15,6 +15,7 @@ dependencies:
     - bytestring
     - directory
     - aeson
+    - texmath
     - text
     - template-haskell
     - transformers
@@ -55,3 +56,11 @@ tests:
         main:   test.hs
         source-dirs:
             - test
+        dependencies: 
+            - cs30
+            - tasty
+            - tasty-hunit
+            - tasty-quickcheck
+            - QuickCheck
+            - texmath
+            

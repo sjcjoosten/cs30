@@ -1,7 +1,126 @@
-module Main where
-import System.Environment
+import           CS30.Data
+import           CS30.Exercises (pages)
+import           CS30.Exercises.Data
+import qualified Data.Text as Text
+import qualified Test.QuickCheck.Property as QCP
+-- import Test.Tasty.HUnit
+import           Test.Tasty
+-- import Test.Tasty.SmallCheck as SC
+import           Test.Tasty.QuickCheck as QC
+import           Text.TeXMath.Readers.TeX (readTeX)
 
-main = do putStrLn "Access-Control-Allow-Origin: *"
-          putStrLn "Content-type: text/html\n\nHello world"
-          v<- getEnvironment
-          print v
+main :: IO ()
+main = defaultMain tests
+
+tests :: TestTree
+tests = testGroup "Tests" [pagesStandardTests]
+
+pagesStandardTests :: TestTree
+pagesStandardTests
+ = testGroup "StandardTests" [testPage page | page <- pages]
+ where testPage et
+         = testGroup (etTag et)
+            [ QC.testProperty "Case tree has no dead-ends"
+                (withMaxSuccess 5000 $ noDeadEnds "" (etChoices et))
+            , choiceT "There must be at least 11 problems for every difficulty level (ideally 50+)"
+                (once . over 10 . enumAll)
+            , choiceT "Sanity checks on Field in the generated problem"
+                (someTrees validFields)
+            ]
+         where choiceT s f
+                = testGroup s [ QC.testProperty ("Problem "++show i) (f c)
+                              | (c,i) <- zip (etChoices et) [(0::Int)..] ]
+               validFields f = conjoin (map checkField (let ex = etGenEx et f defaultExercise
+                                                        in eQuestion ex ++ eHidden ex))
+
+checkField :: Field -> Property
+checkField = property . validField
+
+validField :: Field -> QCP.Result
+validField (FFieldMath str) = validHTMLName "The Field with constructor FFieldMath" str
+validField (FText str) = seq str QCP.succeeded
+validField (FNote str) = seq str QCP.succeeded
+validField (FValue a b)
+ = seq b (validHTMLName "The Field with constructor FValue" a)
+validField (FValueS a b)
+ = seq b (validHTMLName "The Field with constructor FValueS" a)
+validField (FMath str)
+  = case readTeX (Text.pack str) of
+         Left e -> QCP.failed{QCP.reason = "The string "++str++" wasn't parsed as valid LaTeX-math.\n"++Text.unpack e}
+         Right _lst -> QCP.succeeded -- TODO: check latex fields and match to MathQuill
+
+validHTMLName :: String -> String -> QCP.Result
+validHTMLName where' str
+ = QCP.rejected{QCP.ok = Just (all (flip elem (['A'..'Z']++"_"++['a'..'z']++['0'..'9'])) str)
+               ,QCP.reason = where' ++" has "++show str++" as argument, but this argument needs to be a valid HTML-form name for POST data, use only characters, underscore and numbers."
+               }
+
+someTrees :: (a -> Property) -> ChoiceTree a -> Property
+someTrees f (Node a) = f a
+someTrees f (Branch lst) = forAllBlind (QC.elements lst) (someTrees f)
+
+enumAll :: ChoiceTree a -> [a]
+enumAll (Node a) = [a]
+enumAll (Branch lst) = concatMap enumAll lst
+
+over :: Int -> [a] -> Property
+over i lst = property$ case drop i lst of
+               [] -> QCP.failed{QCP.reason = "Too few elements, only "++show (length lst)}
+               _ -> QCP.succeeded
+
+
+ok :: Property
+ok = property QCP.succeeded
+
+noDeadEnds :: String -> [ChoiceTree a] -> Property
+noDeadEnds s [] = property (QCP.failed{QCP.reason = "Empty list, path in ChoiceTree was: "++s})
+noDeadEnds s lst
+   = if length branches == 0
+     then ok
+     else forAllBlind (QC.elements branches) id
+   where branches = [ noDeadEnds (s ++ "/" ++ show i) lst'
+                    | (Branch lst', i) <- zip lst [(0::Int)..]]
+{-
+
+data ExerciseType
+  = ExerciseType{ etTag :: String
+                , etMenu :: String
+                , etTitle :: String
+                , etChoices :: [ChoiceTree Text.Text]
+                , etGenEx :: Text.Text -> Exercise -> Exercise
+                , etGenAns :: Text.Text -> Map.Map String String -> ProblemResponse -> ProblemResponse
+                }
+-}
+    
+{-   
+scProps = testGroup "(checked by SmallCheck)"
+  [ SC.testProperty "sort == sort . reverse" $
+      \list -> sort (list :: [Int]) == sort (reverse list)
+  , SC.testProperty "Fermat's little theorem" $
+      \x -> ((x :: Integer)^7 - x) `mod` 7 == 0
+  -- the following property does not hold
+  , SC.testProperty "Fermat's last theorem" $
+      \x y z n ->
+        (n :: Integer) >= 3 SC.==> x^n + y^n /= (z^n :: Integer)
+  ]
+
+qcProps = testGroup "(checked by QuickCheck)"
+  [ QC.testProperty "sort == sort . reverse" $
+      \list -> sort (list :: [Int]) == sort (reverse list)
+  , QC.testProperty "Fermat's little theorem" $
+      \x -> ((x :: Integer)^7 - x) `mod` 7 == 0
+  -- the following property does not hold
+  , QC.testProperty "Fermat's last theorem" $
+      \x y z n ->
+        (n :: Integer) >= 3 QC.==> x^n + y^n /= (z^n :: Integer)
+  ]
+
+unitTests = testGroup "Unit tests"
+  [ testCase "List comparison (different length)" $
+      [1, 2, 3] `compare` [1,2] @?= GT
+
+  -- the following test does not hold
+  , testCase "List comparison (same length)" $
+      [1, 2, 3] `compare` [1,2,2] @?= LT
+  ]
+-}

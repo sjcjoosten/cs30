@@ -80,7 +80,14 @@ but it will also alert you if you make breaking changes to the cgi part.
 To run the test-suite:
   
 ```console
-stack test
+stack test --ta ""
+```
+
+If you need to reproduce errors, put the relevant arguments between the "".
+For example:
+
+```console
+stack test --ta "--quickcheck-replay=569579"
 ```
 
 ### Contributing code

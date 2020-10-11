@@ -9,7 +9,7 @@ allDigits = [0..9]
 -- | first two levels are without duplicates, then three levels with duplicates
 roster :: [ChoiceTree ([Field], [String])] -- question and solution pairs
 roster = fmap (fmap (\(str,ans) -> ([FText str], ans)))
-           [ Branch [ nodes [ ("the set of letters in the word "++show word, map (:[]) word)
+            [ Branch [ nodes [ ("the set of letters in the word "++show word, map (:[]) word)
                              | word <- withoutDoubleLetters ]
                      , Branch [ fmap (\digits -> let nr = concatMap show digits in ("the set of digits in the number "++nr, map (:[]) nr))
                                      (tailBranch  -- using tailBranch so we don't get the leading zero in numbers
@@ -23,12 +23,13 @@ roster = fmap (fmap (\(str,ans) -> ([FText str], ans)))
                               | end <- [start+2 .. start+10] ]
                      | start <- allDigits
                      ]
-            , nodes [ ("the set of letters in the word "++show word, map (:[]) word)
-                    | word <- withDoubleLetters ]
-            , Branch [ fmap (\digits -> let nr = concatMap show digits in ("the set of digits in the number "++nr, map (:[]) nr))
-                            (replace addDouble (tailBranch -- using tailBranch so we don't get the leading zero in numbers
-                                                  (genDigits no_digits)))
-                     | no_digits <- [(1::Int)..8] -- final number is one longer because of the addDouble
+            , Branch [ nodes [ ("the set of letters in the word "++show word, map (:[]) word)
+                             | word <- withDoubleLetters ]
+                     , Branch [ fmap (\digits -> let nr = concatMap show digits in ("the set of digits in the number "++nr, map (:[]) nr))
+                                     (replace addDouble (tailBranch -- using tailBranch so we don't get the leading zero in numbers
+                                                           (genDigits no_digits)))
+                              | no_digits <- [(1::Int)..8] -- final number is one longer because of the addDouble
+                              ]
                      ]
             ]
 

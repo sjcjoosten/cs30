@@ -13,7 +13,7 @@ powerset = [ nodes [ ( [FText "the powerset 𝒫",FMath$ "(\\left\\{"++d1++","++
            , nodes [ ( [FText "the powerset 𝒫",FMath$ "(\\left\\{"++d1++"\\right\\})"]
                      , [[],[d1]]
                      )
-                   | d1 <- map show allDigits ]
+                   | d1 <- map show allDigits ++ map show ['a'..'z'] ]
            , Branch [ nodes [ ( [FText "the powerset 𝒫",FMath$ "(\\left\\{"++d1++","++d2++","++d3++"\\right\\})"]
                               , nubSort (map nubSort ([[],[d1],[d2],[d1,d2]]++(map (d3:) [[],[d1],[d2],[d1,d2]])))
                               )
