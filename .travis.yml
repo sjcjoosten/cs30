@@ -29,6 +29,10 @@ install:
     if [ -z "$STACK_YAML" ]; then
       ghc --version
       cabal --version
+      # install hpack
+      curl -sSL https://github.com/sol/hpack/raw/master/get-hpack.sh | bash
+      hpack --version
+      hpack
       cabal new-update
       cabal new-build --enable-tests --enable-benchmarks
     else
