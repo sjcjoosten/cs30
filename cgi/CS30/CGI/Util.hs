@@ -2,6 +2,7 @@
 module CS30.CGI.Util (safeFilename, readCookies, readWithDefault) where
 import           Control.Exception (try)
 import           Data.Char (isSpace)
+import System.Directory (createDirectory)
 
 -- | Gets all the cookies from a Cookie: header value
 readCookies :: String             -- ^ String to parse
@@ -29,11 +30,14 @@ safeFilename str
 -- | For dealing with globals
 readWithDefault :: String -> IO String
 readWithDefault str = try (readFile str) >>= warnAndDefault
-  where warnAndDefault :: Either IOError String -> IO String
+  where cru :: Either IOError a -> IO ()
+        cru _ = return () -- const return unit
+        warnAndDefault :: Either IOError String -> IO String
         warnAndDefault (Left e)
           = do print e
                putStrLn$ "As the file "++str++" could not be read, we attempt to create a new file with a default value of "++show str++"."
                putStrLn$ "If you are installing this on a production server, this will need to be fixed!"
+               try (createDirectory "data") >>= cru
                writeFile str str
                return str
         warnAndDefault (Right v)
