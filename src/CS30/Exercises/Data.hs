@@ -4,17 +4,15 @@ import           CS30.Data
 import           Control.Monad.IO.Class (MonadIO(liftIO))
 import           Data.Aeson
 import qualified Data.Map as Map
-import qualified Data.Text.Lazy as Text
-import qualified Data.Text.Lazy.Encoding as Text
 import           System.Random (randomRIO)
 
 data ExerciseType
   = ExerciseType{ etTag :: String
                 , etMenu :: String
                 , etTitle :: String
-                , etChoices :: [ChoiceTree Text.Text]
-                , etGenEx :: Text.Text -> Exercise -> Exercise
-                , etGenAns :: Text.Text -> Map.Map String String -> ProblemResponse -> ProblemResponse
+                , etChoices :: [ChoiceTree Value]
+                , etGenEx :: Value -> Exercise -> Exercise
+                , etGenAns :: Value -> Map.Map String String -> ProblemResponse -> ProblemResponse
                 }
 
 -- | Helperfunction to create an ExerciseType
@@ -29,19 +27,22 @@ exerciseType
       -> ExerciseType
 exerciseType tg mn rn ct exGen fbGen
  = ExerciseType tg mn rn (map (fmap enc) ct) exGen' fbGen'
- where enc x = Text.decodeUtf8 $ encode x
-       exGen' :: Text.Text -> Exercise -> Exercise
-       exGen' t = case decode (Text.encodeUtf8 t) of
-                    Just t' -> exGen t'
-                    Nothing -> error "Decoding error of the exercise (with poor debug trace)"
-       fbGen' :: Text.Text -> Map.Map String String -> ProblemResponse -> ProblemResponse
+ where enc x = toJSON x
+       exGen' :: Value -> Exercise -> Exercise
+       exGen' t = case fromJSON t of
+                    Success t' -> exGen t'
+                    Error e -> error$ "Decoding error of the exercise ("++e++")"
+       fbGen' :: Value -> Map.Map String String -> ProblemResponse -> ProblemResponse
        fbGen' a
-         = case decode (Text.encodeUtf8 a) of
-             Just a' -> fbGen a'
-             Nothing -> error "Decoding error of the exercise (with poor debug trace)"
+         = case fromJSON a of
+             Success a' -> fbGen a'
+             Error e -> error$ "Decoding error of the exercise ("++e++")"
 
 -- | Data-structure to take (perhaps randomly) 
 data ChoiceTree a = Node a | Branch [ChoiceTree a] deriving Functor
+
+boolTree :: ChoiceTree Bool -- | True or False
+boolTree = nodes [True,False]
 
 -- | Super unsafe function! Requires its input to be a branch of at least two elements and removes the first.
 tailBranch :: ChoiceTree a -> ChoiceTree a

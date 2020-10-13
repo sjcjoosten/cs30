@@ -42,8 +42,9 @@ rosterFeedback2 (quer, sol) usr' defaultRsp
   = reTime$ case pr of
                  Nothing -> wrong{prFeedback= rsp++(FText "Your answer was "):rspwa}
                  Just v -> if nub (map (nubSort) v) == (map sort v) then
-                              (if Set.fromList (map Set.fromList v) == Set.fromList (map Set.fromList sol) then correct{prFeedback=reverse (drop 2 (reverse (rsp))) }
-                               else wrong{prFeedback=rsp++[FText$ ". You answered a different set: "]++rspwa})
+                              ( if Set.fromList (map Set.fromList v) == Set.fromList (map Set.fromList sol)
+                                then correct{prFeedback=rsp }
+                                else wrong{prFeedback=rsp++[FText$ ". You answered a different set: "]++rspwa})
                            else wrong{prFeedback=rsp++[FText ". Your answer contained duplicate elements: "]++rspwa}
   where solTeX = dispSet (map dispSet sol)
         usr = Map.lookup "roster" usr'
@@ -108,6 +109,8 @@ type Parser = ParsecT Void Text.Text Identity
 parseSet :: Parser [Text.Text]
 parseSet = parseWS *> (    (string "\\{" *> parseInnerSet <* string "\\}")
                        <|> (string "{" *> parseInnerSet <* string "}") -- shouldn't be writable in math mode but we're allowing it for accessibility
+                       <|> (string "\\emptyset" *> return [])
+                       <|> (string "\\Emptyset" *> return [])
                       ) <* parseWS
 parseWS :: Parser Text.Text
 parseWS = ((<>) <$> (string " " <|> string "\n" <|> string "\r" <|> string "\t" <|> string "\\ " <|> string "\\left" <|> string "\\right" <|> string "\\Left" <|> string "\\Right"

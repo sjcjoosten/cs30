@@ -37,6 +37,7 @@ checkField :: Field -> Property
 checkField = property . validField
 
 validField :: Field -> QCP.Result
+validField (FGraph _ _) = QCP.succeeded -- TODO: think about sanity checks some more
 validField (FFieldMath str) = validHTMLName "The Field with constructor FFieldMath" str
 validField (FText str) = seq str QCP.succeeded
 validField (FNote str) = seq str QCP.succeeded

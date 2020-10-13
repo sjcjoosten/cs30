@@ -169,10 +169,8 @@ window.onload = function (){
     if (data.rSes != null) ses = data.rSes;
     if (data.rLogin != null) {
       $('#login').html(data.rLogin);
-      $('#login2').html(data.rLogin);
     }else{
       $('#login').html('Not logged in');
-      $('#login2').html('Not logged in');
     }
     var exrs = data.rExercises;
     var pages = data.rPages;

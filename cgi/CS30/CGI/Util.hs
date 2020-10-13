@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -O2 #-}
 module CS30.CGI.Util (safeFilename, readCookies, readWithDefault) where
-import           Control.Exception (try)
-import           Data.Char (isSpace)
+import Control.Exception (try)
+import Data.Char (isSpace)
 import System.Directory (createDirectory)
 
 -- | Gets all the cookies from a Cookie: header value

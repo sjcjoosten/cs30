@@ -6,9 +6,9 @@ import           Control.Applicative
 import           Control.Monad.Trans.State.Lazy as StateT
 import           Data.Aeson as JSON
 import           Data.Aeson.TH
+import           Data.Char (toLower)
 import qualified Data.Map as Map
 import           Data.Semigroup as S
-import qualified Data.Text.Lazy as Text
 import           Data.Void
 import           Instances.TH.Lift()
 import           Language.Haskell.TH.Syntax
@@ -32,12 +32,35 @@ data Action = Submit | Check | TooHard Int
 -- * Data types only for communicating to the client
 
 -- | A field in an exercise (text, textfield, help button, etc..)
-data Field = FText String -- text to be displayed
-           | FFieldMath String -- fieldname to attach the response to
-           | FValue{fvName::String,fvVal::Int} -- numeric value to be returned verbatim
-           | FValueS{fvName::String,fvValS::String} -- like FValue, but a string
-           | FMath String -- text to display as math
-           | FNote String -- text to be displayed in a small font on a separate line
+data Field = FText String -- ^ text to be displayed
+           | FFieldMath String -- ^ fieldname to attach the response to
+           | FValue{fvName::String,fvVal::Int} -- ^ numeric value to be returned verbatim
+           | FValueS{fvName::String,fvValS::String} -- ^ like FValue, but a string
+           | FMath String -- ^ text to display as math
+           | FNote String -- ^ text to be displayed in a small font on a separate line
+           | FGraph JSGraph JSOptions -- ^ graph displayed in a separate block
+  deriving (Show)
+
+data JSGraph = JSGraph {jsgNodes :: [JSNode]
+                       ,jsgEdges :: [JSEdge]}
+  deriving (Show)
+data JSEdge = JSEdge {jseFrom :: Int
+                     ,jseTo :: Int
+                     ,jseOptions :: JSOption}
+  deriving (Show)
+data JSNode = JSNode {jsnId :: Int
+                     ,jsnOptions :: JSOption}
+  deriving (Show)
+data JSFont = JSFont {jsfMulti :: Maybe String}
+  deriving (Show)
+data JSOptions = JSOptions {jsoNodes :: JSOption
+                           ,jsoEdges :: JSOption}
+  deriving (Show)
+data JSOption = JSOption
+                     {jsoShape :: Maybe String
+                     ,jsoSize :: Maybe Int
+                     ,jsoLabel :: Maybe String
+                     ,jsoFont :: Maybe JSFont}
   deriving (Show)
 
 -- These are page references
@@ -70,11 +93,12 @@ data Exercise
                 ,eQuestion::[Field] -- ^ Content of the question
                 ,eActions::[Action] -- ^ Buttons under the question
                 ,eHidden::[Field] -- ^ Meta-info (not displayed)
+                ,eBroughtBy::[String] -- ^ Exercise was brought to you by: ... (UTF8)
                 }
   deriving (Show)
 
 defaultExercise :: Exercise
-defaultExercise = Exercise "" [] [] []
+defaultExercise = Exercise "" [] [] [] []
 
 data Splash = SplashPR ProblemResponse
             | XXX !Void -- there will be more fields later (sum-types generate different JSON structures, hence this field)
@@ -99,7 +123,7 @@ instance S.Semigroup Rsp where
            ,rSes = rSes x
            ,rCurrentPage = rCurrentPage x <|> rCurrentPage y
            ,rLogin = rLogin x <|> rLogin y
-           ,rEcho = rEcho y
+           ,rEcho = rEcho x <|> rEcho y
            ,rSplash = rSplash x <|> rSplash y
            -- ,rDebug = rDebug y
            }
@@ -120,7 +144,7 @@ data LevelProblem
       = LevelProblem {lpPuzzelID :: Int
                      ,lpLevel :: Int -- how hard is the puzzel?
                      ,lpPuzzelGen :: [Int] -- how it was randomly generated
-                     ,lpPuzzelStored :: Text.Text -- json encoded question (handler specific)
+                     ,lpPuzzelStored :: Value -- json encoded question (handler specific)
                      }
   deriving (Show, Lift)
 -- | After a problem instance has been handled, we store how it was handled (potentially for overviews)
@@ -189,25 +213,24 @@ startData = SesData{sdLevelData=Map.empty,sdEmail=Nothing}
 
 type SesIO = StateT SesData IO
 
-
--- * Other data structures
-
--- | Data-structure for terms to and from LaTeX
-type STerm = Term (String, String) String String
--- | More general data-structure for terms, allows the insertion of 'Void' to remove certain cases
-data Term b v c -- binder, variable and (function)-constant representations
- = Bind !b (Term b v c) (Term b v c) -- e.g. Bind ("exists", ".") (TFun "\\in" [TVar "x", TVar "S"]) (some term in x)
- | TVar !v
- | TFun !c [Term b v c] -- e.g. TFun "3" [] or TFun "+" [a,b]
+instance Semigroup JSOption where
+  JSOption a1 b1 c1 d1 <> JSOption a2 b2 c2 d2 = JSOption (a1 <|> a2) (b1 <|> b2) (c1 <|> c2) (d1 <|> d2)
+instance Monoid JSOption where
+  mempty = JSOption Nothing Nothing Nothing Nothing
 
 -- code below is template haskell code
-$(deriveJSON defaultOptions ''Term)
 $(deriveJSON defaultOptions ''Exercise)
 $(deriveJSON defaultOptions ''ExResponse)
 $(deriveJSON defaultOptions ''Rsp)
 $(deriveJSON defaultOptions ''Splash)
 $(deriveJSON defaultOptions ''ProblemResponse)
 $(deriveJSON defaultOptions ''Field)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSGraph)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, unwrapUnaryRecords = True} ''JSNode)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, unwrapUnaryRecords = True} ''JSEdge)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSOption)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSOptions)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSFont)
 $(deriveJSON defaultOptions ''Action)
 $(deriveJSON defaultOptions ''Page)
 $(deriveJSON defaultOptions ''ProblemOutcome)

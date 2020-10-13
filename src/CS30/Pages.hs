@@ -8,7 +8,6 @@ import           Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.Map as Map
 import           Data.Maybe
-import qualified Data.Text.Lazy as Text
 
 pageLookup :: String -> Maybe ExerciseType
 pageLookup = flip Map.lookup $ Map.fromList (map (\et -> (etTag et,et)) pages)
@@ -103,8 +102,8 @@ mkPage etp = Page (etTag etp) (etMenu etp ++ " - " ++ etTitle etp)
 -- | return the selected puzzle and its ID.
 -- | This function is also where the automated level selection comes in
 smartSelect :: String
-            -> [ChoiceTree Text.Text]
-            -> SesIO (Int, Text.Text)
+            -> [ChoiceTree Value]
+            -> SesIO (Int, Value)
 smartSelect nm lst
   = do ses <- get
        let ld = fromMaybe (defaultLevelData (length lst)) $ Map.lookup nm (sdLevelData ses)

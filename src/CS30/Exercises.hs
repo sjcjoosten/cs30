@@ -1,7 +1,7 @@
 module CS30.Exercises (pages) where
 import CS30.Exercises.Data (ExerciseType)
 import CS30.Exercises.SetBasics (rosterEx, powsetEx, setOpsEx)
-
+import CS30.Exercises.Graphs (graphStub)
 
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
 -- http://math.chapman.edu/~jipsen/mathquill/test/MathQuillsymbolsMathJax.html
@@ -9,8 +9,12 @@ import CS30.Exercises.SetBasics (rosterEx, powsetEx, setOpsEx)
 
 pages :: [ExerciseType]
 pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
+        -- , graphStub -- not done yet
         ]
 
+-- the definition below is to prevent warnings about unused imports
+_ignorable :: [ExerciseType]
+_ignorable = [graphStub]
 
 
 

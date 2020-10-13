@@ -24,6 +24,7 @@ import           Paths_cs30
 import           System.Directory
 import           System.Environment
 import           Text.Read (readMaybe)
+import System.Posix.Files
 
 runWithLink :: Maybe String -- ^ Email if any 
             -> ClientLink -> SesIO a -> IO a
@@ -63,12 +64,17 @@ handleRequest uid mp
       createDirectoryIfMissing True (globalDataDir++"ses/") -- session storage directory (may be deleted occasionally, but better to let Haskell do this so links to tmp are followed and also deleted)
       createDirectoryIfMissing True (globalDataDir++"tmp/") -- temporary storage directory (may be deleted at will, will be re-created as needed)
       createDirectoryIfMissing True (globalDataDir++"perm/") -- permanent storage directory (like tmp, but has user ids associated, so should not be deleted)
+      setFileMode (globalDataDir++"ses/") accessModes
+      setFileMode (globalDataDir++"tmp/") accessModes
+      setFileMode (globalDataDir++"perm/") accessModes
       aut <- authenticate (listToMaybe =<< Map.lookup "a" mp) (listToMaybe =<< Map.lookup "h" mp)
       isf <- doesPathExist fname
       curLink <- if isf then decodeFileStrict fname else return (Nothing :: Maybe ClientLink)
       newLink <- case (curLink, aut) of
-                   (Just (TempSession tmpDir), Nothing) -> return (TempSession tmpDir)
-                   (Just (PermSession pmDir usr), Nothing) -> return (PermSession pmDir usr)
+                   (Just (TempSession tmpDir), Nothing) ->
+                     do return (TempSession tmpDir)
+                   (Just (PermSession pmDir usr), Nothing) ->
+                     do return (PermSession pmDir usr)
                    (Nothing, Nothing) -> return (TempSession ("tmp/" <> sesName))
                    (_, Just auth)
                      -> do case curLink of
