@@ -16,10 +16,6 @@ cache:
 
 matrix:
   include:
-
-  # Cabal
-  - ghc: 8.4.4
-  - ghc: 8.6.5
   
   # Stack
   - ghc: 8.8.3
