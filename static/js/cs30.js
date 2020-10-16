@@ -104,7 +104,7 @@ function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_, submitAction
           // <label class="switch"><input type="checkbox" id="togBtn">
           // <div class="slider round"><!--ADDED HTML --><span class="on">ON</span><span class="off">OFF</span><!--END-->
           // </div></label>
-          var lbl = document.createElement('label')
+          var lbl = document.createElement('label');
           lbl.className = "switch";
           var inp = document.createElement('input');
           inp.setAttribute('name',q.ffResponse);
