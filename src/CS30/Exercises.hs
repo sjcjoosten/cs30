@@ -3,6 +3,7 @@ import CS30.Exercises.Data (ExerciseType)
 import CS30.Exercises.SetBasics (rosterEx, powsetEx, setOpsEx)
 import CS30.Exercises.Graphs (graphStub)
 import CS30.Exercises.CombinatoricsIntegers
+import CS30.Exercises.Table (tableStub)
 
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
 -- http://math.chapman.edu/~jipsen/mathquill/test/MathQuillsymbolsMathJax.html
