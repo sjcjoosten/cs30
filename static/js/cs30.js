@@ -80,6 +80,48 @@ function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_, submitAction
           pushHandler({name:q.fvName, q:q, getVal:function(){return q.fvValS;}});
     break; case "FValue":
           pushHandler({name:q.fvName, q:q, getVal:function(){return q.fvVal;}});
+    break; case "FTable":
+          var tbl = document.createElement('table');
+          for (var i=0; i<q.contents.length; i++){
+            var rowCts = q.contents[i];
+            var row = document.createElement('tr');
+            tbl.appendChild(row);
+            for (var j=0; j<rowCts.length;j++){
+              var c = rowCts[j].contents;
+              var cell;
+              switch(rowCts[j].tag){
+                case null: console.log(q.contents); abort('Malformed table cell: rowCts[j].tag = null'); appendHandler(document.createTextNode("[[- Null encountered in tag -]]"));
+                break; case "Header": cell = document.createElement('th');
+                break; case "Cell": cell = document.createElement('td');
+                break; default: appendHandler(document.createTextNode('[[ '+rowCts[j].tag+' ]]')); console.log(rowCts[j]); abort('Unknown cell tag: '+rowCts[j].tag, false);
+              }
+              row.appendChild(cell);
+              handleField(rowCts[j].contents, pushHandler, function(a){cell.appendChild(a);}, submitAction);
+            }
+          }
+          appendHandler(tbl);
+    break; case "FFieldBool":
+          // <label class="switch"><input type="checkbox" id="togBtn">
+          // <div class="slider round"><!--ADDED HTML --><span class="on">ON</span><span class="off">OFF</span><!--END-->
+          // </div></label>
+          var lbl = document.createElement('label')
+          lbl.className = "switch";
+          var inp = document.createElement('input');
+          inp.setAttribute('name',q.ffResponse);
+          inp.setAttribute('type',"checkbox");
+          pushHandler({name:q.ffResponse, q:q, getVal:function(){return (inp.indeterminate ? "X" : (inp.checked ? "T" : "F"));}});
+          if (q.ffDefault == null) inp.indeterminate = true;
+          else inp.checked = q.ffDefault;
+          lbl.appendChild(inp);
+          var slider = document.createElement('div');
+          slider.className = "slider";
+          lbl.appendChild(slider);
+          var onField = document.createElement('span');var offField = document.createElement('span');
+          onField.className = "on"; offField.className = "off";
+          slider.appendChild(onField);slider.appendChild(offField);
+          handleField(q.ffOpt1, pushHandler, function(a){onField.appendChild(a);}, submitAction);
+          handleField(q.ffOpt2, pushHandler, function(a){offField.appendChild(a);}, submitAction);
+          appendHandler(lbl);
     break; default:
           appendHandler(document.createTextNode('[[ '+q.tag+' ]]'));
           console.log(q);
@@ -92,6 +134,7 @@ var ses;
 var serverCGI = "/~sjc/cs30/cs30.cgi";
 var disconnects = 0;
 var serverResponseMsg;
+var graphLoaded = false; // we don't load the graph by default, but when we do, we ensure it is only loaded once
 window.onload = function (){
   
   if (typeof $ == 'undefined'){
@@ -216,11 +259,11 @@ window.onload = function (){
                     var data = {cAction:ac};
                     var vdata = {};
                     for(var j=0;j<values.length;j++){
-                    vdata[values[j].name] = values[j].getVal();
+                      vdata[values[j].name] = values[j].getVal();
                     }
                     var hidden = {};
                     for(var j=0;j<valuesH.length;j++){
-                    data[valuesH[j].name] = valuesH[j].getVal();
+                      data[valuesH[j].name] = valuesH[j].getVal();
                     }
                     data.cValue = vdata;
                     communicate({ex:JSON.stringify(data) // request a Splash screen
