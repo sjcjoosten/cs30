@@ -11,3 +11,4 @@ been given one, but might effect the license of future updates.
 
 - Sebastiaan J.C. Joosten
 - Tyler Vergho
+- Rachael Williams
