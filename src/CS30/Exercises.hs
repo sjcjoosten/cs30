@@ -10,7 +10,7 @@ import CS30.Exercises.Table (tableStub)
 -- http://math.chapman.edu/~jipsen/mathquill/test/test.html
 
 pages :: [ExerciseType]
-pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
+pages = [ rosterEx, powsetEx, setOpsEx, combinEx-- from SetBasics
         -- , graphStub -- does not pass tests, since it's not a valid exercise. It's also not yet implemented on the frontend.
         -- , tableStub -- does not pass tests, since it's not a valid exercise, but uncomment to see how tables are displayed.
         ]
