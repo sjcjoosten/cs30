@@ -1,3 +1,5 @@
+-- | This module doesn't really have an exercise, it is just there to show how to draw graphs.
+--   The exported exercise 'stub' does only that: draw a graph with three vertices and two edges.
 module CS30.Exercises.Graphs (graphStub) where
 import CS30.Data
 import CS30.Exercises.Data
