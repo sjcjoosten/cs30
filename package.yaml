@@ -40,7 +40,6 @@ executables:
             - base64-bytestring
             - time
             - cs30
-            - unix
     serve:
         source-dirs:  serve
         main:         Serve.hs

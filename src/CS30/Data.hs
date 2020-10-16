@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveLift      #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 module CS30.Data where
 import           Control.Applicative
@@ -33,12 +34,18 @@ data Action = Submit | Check | TooHard Int
 
 -- | A field in an exercise (text, textfield, help button, etc..)
 data Field = FText String -- ^ text to be displayed
+           | FMath String -- ^ text to display as math
            | FFieldMath String -- ^ fieldname to attach the response to
+           | FFieldBool{ffOpt1::Field,ffOpt2::Field,ffDefault::(Maybe Bool),ffResponse::String} -- ^ Ask the user to choose between two options (first two arguments). Last argument is a name to attach the response to
            | FValue{fvName::String,fvVal::Int} -- ^ numeric value to be returned verbatim
            | FValueS{fvName::String,fvValS::String} -- ^ like FValue, but a string
-           | FMath String -- ^ text to display as math
+           | FTable [[Cell]] -- ^ Table, should be a rectangular, nonempty matrix
            | FNote String -- ^ text to be displayed in a small font on a separate line
-           | FGraph JSGraph JSOptions -- ^ graph displayed in a separate block
+           | FGraph{fgGraph::JSGraph, fgOptions::JSOptions} -- ^ graph displayed in a separate block
+  deriving (Show)
+
+data Cell = Cell Field
+          | Header Field
   deriving (Show)
 
 data JSGraph = JSGraph {jsgNodes :: [JSNode]
@@ -225,9 +232,29 @@ $(deriveJSON defaultOptions ''Rsp)
 $(deriveJSON defaultOptions ''Splash)
 $(deriveJSON defaultOptions ''ProblemResponse)
 $(deriveJSON defaultOptions ''Field)
+$(deriveJSON defaultOptions ''Cell)
+instance ToJSON JSNode where
+  toJSON (JSNode id' settings)
+    = case (object [("id", toJSON id')], toJSON settings) of
+        (Object a, Object b) -> Object (a <> b)
+        _ -> error "Expecting Objects in toJSON instance"
+instance ToJSON JSEdge where
+  toJSON (JSEdge from to settings)
+    = case (object [("from", toJSON from),("to", toJSON to)], toJSON settings) of
+        (Object a, Object b) -> Object (a <> b)
+        _ -> error "Expecting Objects in toJSON instance"
+instance FromJSON JSNode where
+  parseJSON obj
+    = withObject "JSNode" parseObj obj
+    where parseObj v = JSNode <$> v .: "id" -- Note: this is using the 'overloadedString' extension to make "id" of type Text
+                              <*> parseJSON obj
+instance FromJSON JSEdge where
+  parseJSON obj
+    = withObject "JSNode" parseObj obj
+    where parseObj v = JSEdge <$> v .: "from" -- Note: this is using the 'overloadedString' extension to make "id" of type Text
+                              <*> v .: "to" -- Note: this is using the 'overloadedString' extension to make "id" of type Text
+                              <*> parseJSON obj
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSGraph)
-$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, unwrapUnaryRecords = True} ''JSNode)
-$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, unwrapUnaryRecords = True} ''JSEdge)
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSOption)
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSOptions)
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSFont)
