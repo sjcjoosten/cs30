@@ -38,6 +38,9 @@ checkField = property . validField
 
 validField :: Field -> QCP.Result
 validField (FGraph _ _) = QCP.succeeded -- TODO: think about sanity checks some more
+validField (FFieldBool _ _ _ _) = QCP.succeeded -- TODO: think about sanity checks some more
+validField (FTable _o@(h:tl)) = if (all ((== length h) . length) tl) then QCP.succeeded else QCP.failed{QCP.reason = "The table is not a rectangle (different numbers of columns)."} -- TODO: recurse into table
+validField (FTable []) = QCP.failed{QCP.reason = "The table is empty, empty tables should not be generated."}
 validField (FFieldMath str) = validHTMLName "The Field with constructor FFieldMath" str
 validField (FText str) = seq str QCP.succeeded
 validField (FNote str) = seq str QCP.succeeded
