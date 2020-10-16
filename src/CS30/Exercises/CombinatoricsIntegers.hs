@@ -19,22 +19,27 @@ The user&#39;s answer should simply be checked for equality against the integer 
 As extra challenge, consider generating problems about positive rational numbers (i.e
 any number of the form a/b, where a and b are positive integers).-}
 
+{-# LANGUAGE TemplateHaskell #-}
 module CS30.Exercises.CombinatoricsIntegers where
-import CS30.Data
-import CS30.Exercises.Data (ExerciseType,exerciseType)
-import CS30.Exercises.SetBasics.Powerset
-import CS30.Exercises.SetBasics.Roster
-import CS30.Exercises.SetBasics.SetOps
-import CS30.Exercises.SetBasics.SolutionChecker
+import           CS30.Data
+import           CS30.Exercises.Data
+import           Data.Aeson as JSON
+import           Data.Aeson.TH
+import qualified Data.Map as Map
 
 data CombinEx = CombinEx deriving Show
+$(deriveJSON defaultOptions ''CombinEx)
 
 combinEx :: ExerciseType
 combinEx = exerciseType "Combinatorics" "L?.?" "Combinatorics: Integers" 
                         [Node CombinEx] 
                         genQuestion
                         genFeedback
-                    where genFeedback _ _ pr = pr
 
-genQuestion :: a -> Exercise -> Exercise
-genQuestion _ def = def{ eQuestion = [ FText ]}
+genQuestion :: CombinEx -> Exercise -> Exercise
+genQuestion _ def = def{ eQuestion = [ FText "Some question..." ]}
+
+genFeedback :: CombinEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
+genFeedback _ _ pr
+ = markCorrect$ pr{prFeedback = [FText "This is the response"]
+                  , prTimeToRead = 60}
