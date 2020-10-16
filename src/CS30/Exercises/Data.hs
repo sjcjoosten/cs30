@@ -18,7 +18,7 @@ data ExerciseType
 -- | Helperfunction to create an ExerciseType
 exerciseType
       :: (ToJSON a, FromJSON a) -- ^ We must be able to encode and decode in order to store the exercise properly
-      => String -- ^ Identifier for URL
+      -> String -- ^ Identifier for URL
       -> String -- ^ Lecture this is part of
       -> String -- ^ Title of the exercise
       -> [ChoiceTree a] -- ^ list of exercises, which is supposed to be in increasing difficulty.
