@@ -10,3 +10,4 @@ Changing a license does not invalidate the license of those who have
 been given one, but might effect the license of future updates.
 
 - Sebastiaan J.C. Joosten
+- Paul Gralla
