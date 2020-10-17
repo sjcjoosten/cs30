@@ -9,7 +9,7 @@ import qualified Data.Map as Map
 modN :: ExerciseType
 modN = exerciseType "Modulo N" "Modulo N" "True or False" 
               [boolTree] genTable modNFeedback
-        where unknownFeedback _ _ pr = pr
+        -- where unknownFeedback _ _ pr = pr
 
 genTable :: a -> Exercise -> Exercise
 genTable _ def 
@@ -28,13 +28,13 @@ genTable _ def
 -- Inputs for these TBD, maybe random seed?
 
 -- generates a congruent addition example
-gen_addition :: String
+gen_addition :: Int -> String  -- always congruent
 gen_addition = ""
 
-gen_multiplication :: String
+gen_multiplication :: String  -- always congruent
 gen_multiplication = ""
 
-gen_intPower :: String
+gen_intPower :: String -- 
 gen_intPower = ""
 
 gen_fracPower :: String
@@ -42,7 +42,7 @@ gen_fracPower = ""
 
 -- right parameters??
 modNFeedback :: Bool -> Map.Map String String -> ProblemResponse -> ProblemResponse
-modNFeedback a b defaultRsp = correct{prFeedback=[(FText "wrong you mongoose")]}
+modNFeedback a b defaultRsp = wrong{prFeedback=[(FText "wrong you mongoose")]}
 
 
     where
