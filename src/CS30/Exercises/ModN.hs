@@ -3,33 +3,50 @@
 module CS30.Exercises.ModN (modN) where
 import CS30.Data
 import CS30.Exercises.Data
+import Control.Monad.IO.Class (MonadIO(liftIO))
+import System.Random (randomRIO)
 import qualified Data.Map as Map
 
 
 modN :: ExerciseType
 modN = exerciseType "Modulo N" "Modulo N" "True or False" 
-              [boolTree] genTable modNFeedback
+              [Branch (map genProblemBaseN [4,6..20])] genTable modNFeedback
         -- where unknownFeedback _ _ pr = pr
 
-genTable :: a -> Exercise -> Exercise
-genTable _ def 
- = def{ eQuestion = [ FText $"Yo answer those questions"
-                    , FTable [row1,row2,row3,row4,row5] ]
-      , eBroughtBy = ["Paul Gralla and Joseph Hajjar"] }
- where row1 = [Header (FText "Equation"),Header (FText "True/False") ]
-       row2 = [Cell   (FText "Example 1" ), Cell   (FFieldBool (FText "True") (FText "False") (Just False) "TF_1") ]
-       row3 = [Cell   (FText "Example 2" ), Cell   (FFieldBool (FText "True") (FText "False") (Just False) "TF_2") ]
-       row4 = [Cell   (FText "Example 3" ), Cell   (FFieldBool (FText "True") (FText "False") (Just False) "TF_3") ]
-       row5 = [Cell   (FText "Example 4" ), Cell   (FFieldBool (FText "True") (FText "False") (Just False) "TF_4") ]
+genTable :: [(Field,bool)] -> Exercise -> Exercise
+genTable myProblem def 
+ = def{ eQuestion = [ FText $"Please answer those questions"
+                    , FTable ([headerRow] ++ 
+                                [ [Cell field, Cell (FFieldBool (FText "True") (FText "False") (Just False) ("TF_" ++ show i))]
+                                | ((field, _),i) <- myProblemIndexed ] )
+                    ]
+      , eBroughtBy = ["Paul Gralla","Joseph Hajjar"] }
+ where 
+       myProblemIndexed = zip myProblem [1..]
+       headerRow = [Header (FText "Equation"),Header (FText "True/False") ]
+    
 
     --    row3 = [Cell   (FFieldBool (FText "0") (FText "2") (Just True) "nr_response"),Cell   (FFieldBool (FText "B") (FText "D") Nothing "letter_response") ]
 
 
+genProblemBaseN :: Integer -> ChoiceTree [(Field, Bool)]
+genProblemBaseN modBase = Branch (map g [modBase..modBase*5])
+    where
+        g leftNum = Node [(FMath (show leftNum ++ " + " ++ show summand ++ "\\eqiv_{" ++ show modBase ++ "} " ++ show rightNum ++ " + " ++ show summand), True)]
+         where
+            rightNum = leftNum `mod` modBase
+            summand = 5
+
 -- Inputs for these TBD, maybe random seed?
 
 -- generates a congruent addition example
-gen_addition :: Int -> String  -- always congruent
-gen_addition = ""
+-- gen_addition :: Int -> String  -- always congruent
+-- gen_addition modBase = show leftNum ++ " + " ++ show summand ++ "\\eqiv_{" ++ show modBase ++ "} " ++ show rightNum ++ " + " ++ show summand
+--     where
+--         leftNum = read (show (liftIO$ randomRIO(modBase,modBase*5))) :: Int
+--         rightNum = leftNum `mod` modBase
+--         summand = read (show (liftIO$ randomRIO(1,modBase*2))) :: Int
+
 
 gen_multiplication :: String  -- always congruent
 gen_multiplication = ""
@@ -41,8 +58,8 @@ gen_fracPower :: String
 gen_fracPower = ""
 
 -- right parameters??
-modNFeedback :: Bool -> Map.Map String String -> ProblemResponse -> ProblemResponse
-modNFeedback a b defaultRsp = wrong{prFeedback=[(FText "wrong you mongoose")]}
+modNFeedback :: [(Field, Bool)] -> Map.Map String String -> ProblemResponse -> ProblemResponse
+modNFeedback a b defaultRsp = wrong{prFeedback=[(FText "wrong")]}
 
 
     where
