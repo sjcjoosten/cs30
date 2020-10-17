@@ -10,7 +10,7 @@ import qualified Data.Map as Map
 
 modN :: ExerciseType
 modN = exerciseType "Modulo N" "Modulo N" "True or False" 
-              [Branch (map genProblemBaseN [4,6..20])] genTable modNFeedback
+              [easyExercise] genTable modNFeedback
         -- where unknownFeedback _ _ pr = pr
 
 genTable :: [(Field,bool)] -> Exercise -> Exercise
@@ -28,14 +28,32 @@ genTable myProblem def
 
     --    row3 = [Cell   (FFieldBool (FText "0") (FText "2") (Just True) "nr_response"),Cell   (FFieldBool (FText "B") (FText "D") Nothing "letter_response") ]
 
-
-genProblemBaseN :: Integer -> ChoiceTree [(Field, Bool)]
-genProblemBaseN modBase = Branch (map g [modBase..modBase*5])
+easyExercise = Branch [ replace (f modBase) (easyMultiplication modBase) | modBase <- [4,6..20] ]
     where
-        g leftNum = Node [(FMath (show leftNum ++ " + " ++ show summand ++ "\\eqiv_{" ++ show modBase ++ "} " ++ show rightNum ++ " + " ++ show summand), True)]
-         where
-            rightNum = leftNum `mod` modBase
-            summand = 5
+        f modBase exercise = replace (g exercise) (easyAddition modBase)
+        g e1 e2 = Node (e1 ++ e2)
+
+
+easyAddition modBase = Branch [ Branch [g leftNum summand modBase| summand <- [1..modBase*2] ] | leftNum <- [modBase..modBase*5]] 
+    where
+        g leftNum summand modBase = Node [(FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ " ++ show rightNum ++ " + " ++ show summand), True)]
+            where
+                rightNum = leftNum `mod` modBase
+
+
+easyMultiplication modBase = Branch [ Branch [g leftNum factor modBase| factor <- [1..modBase*2] ] | leftNum <- [modBase..modBase*5]]
+    where
+        g leftNum factor modBase = Node [(FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ " ++ show rightNum ++ " \\cdot " ++ show factor), True)]
+            where
+                rightNum = leftNum `mod` modBase
+
+-- genProblemBaseN :: Integer -> ChoiceTree [(Field, Bool)]
+-- genProblemBaseN modBase = Branch (map g [modBase..modBase*5])
+--     where
+--         g leftNum summand = Node [(FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ " ++ show rightNum ++ " + " ++ show summand), True)]
+--          where
+--             rightNum = leftNum `mod` modBase
+--             summand = Branch [1..modBase*5]
 
 -- Inputs for these TBD, maybe random seed?
 
