@@ -37,6 +37,7 @@ cardinality = [
                    | d1 <- map show allDigits, d2 <- map show allDigits, 
                      d3 <- map show allDigits, d4 <- map show allDigits, 
                      d1 /= d2, d3 /= d4 ]
+            -- cardinality of set x its powerset
            , Branch [ nodes [ ( [[FText"|A| ", FMath$"= "++d1++d2],
                                 [FText"|", FMath$"A x ", FText"𝒫", FMath"(A)", FText"|"]]
                               ,[d1++d2++"*2^"++d1++d2, -- needs \\cdot and {}
