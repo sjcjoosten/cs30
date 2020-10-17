@@ -27,6 +27,7 @@ import           Data.Aeson as JSON
 import           Data.Aeson.TH
 import qualified Data.Map as Map
 
+
 data CombinEx = CombinEx deriving Show
 $(deriveJSON defaultOptions ''CombinEx)
 
@@ -37,9 +38,19 @@ combinEx = exerciseType "Combinatorics" "L?.?" "Combinatorics: Integers"
                         genFeedback
 
 genQuestion :: CombinEx -> Exercise -> Exercise
-genQuestion _ def = def{ eQuestion = [ FText "Some question..." ]}
+genQuestion _ def = def{ eQuestion = [ FText "How many 6 digit positive integers are there such that the sum of the digits is at most 51?" ]}
 
 genFeedback :: CombinEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
 genFeedback _ _ pr
- = markCorrect$ pr{prFeedback = [FText "This is the response"]
+ = markCorrect$ pr{prFeedback = [FText "The solution is: 56"]
                   , prTimeToRead = 60}
+
+{-combinFeedback :: CombinEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
+combinFeedback (quer, sol) usr' defaultRsp
+  = reTime$ if (snd usr) == "56" then correct{prFeedback=rsp}
+            else wrong{prFeedback=rsp++[FText$ ". You answered a different number: "]++rspwa}
+  where usr = head (Map.toList usr')
+        rsp = [FText $ "The solution to "]++quer++[FText " is: ", FMath sol]
+        rspwa = [FMath (snd usr)]
+        wrong = markWrong defaultRsp
+        correct = markCorrect defaultRsp-}
