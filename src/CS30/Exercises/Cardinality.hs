@@ -19,40 +19,36 @@ cardEx = exerciseType "Cardinality" "L??" "Cardinality of Expression"
             cardQuer 
             cardFeedback
 
-allDigits :: [Int]
-allDigits = [0..9]
+allCards :: [Int]
+allCards = [1..99]
 
 cardinality :: [ChoiceTree ([[Field]], [String])]
 cardinality = [ 
             -- cardinality of a power set
-            nodes [ ( [[FText"|A| ", FMath$ "= "++d1++d2], [FText "|𝒫",FMath$ "(A)", FText"|"]]
-                     , ["2^"++ d1++d2 ] -- needs {}
+            nodes [ ( [[FText"|A| ", FMath$ "= "++d1], [FText "|𝒫",FMath$ "(A)", FText"|"]]
+                     , ["2^"++d1] -- needs {}
                      )
-                   | d1 <- map show allDigits, d2 <- map show allDigits, d1 /= d2 ]
+                   | d1 <- map show allCards]
             -- cardinality of the cartesian product of two sets
-           , nodes [ ( [[FText"|A| ", FMath$ "= "++d1++d2, FText" and |B| ", FMath$"= "++d3++d4], 
+           , nodes [ ( [[FText"|A| ", FMath$ "= "++d1, FText" and |B| ", FMath$"= "++d2], 
                         [FText"|", FMath$ "A x B", FText"|"]]
-                     , [show (read (d1++d2) * read(d3++d4))] -- this actually does out the mulitplication (but idk if we necessarily want them to, smthg to think about)
+                     , [show (read (d1) * read(d2))] -- this actually does out the mulitplication (but idk if we necessarily want them to, smthg to think about)
                      )
-                   | d1 <- map show allDigits, d2 <- map show allDigits, 
-                     d3 <- map show allDigits, d4 <- map show allDigits, 
-                     d1 /= d2, d3 /= d4 ]
+                   | d1 <- map show allCards, d2 <- map show allCards]
             -- cardinality of set x its powerset
-           , Branch [ nodes [ ( [[FText"|A| ", FMath$"= "++d1++d2],
+           , Branch [ nodes [ ( [[FText"|A| ", FMath$"= "++d1],
                                 [FText"|", FMath$"A x ", FText"𝒫", FMath"(A)", FText"|"]]
-                              ,[d1++d2++"*2^"++d1++d2, -- needs \\cdot and {}
-                                "2^"++d1++d2++"*"++d1++d2] -- needs \\cdot and {}
+                              ,[d1++"*2^"++d1, -- needs \\cdot and {}
+                                "2^"++d1++"*"++d1] -- needs \\cdot and {}
                               )
-                            | d1 <- map show allDigits, d2 <- map show allDigits, d1 /= d2]
+                            | d1 <- map show allCards]
                      ] 
             -- cardinality with set builder notatino (like ex from the assignment sheet)
-           , Branch [ nodes [ ( [[FText"|B| ", FMath$ "= "++d3++d4],
-                                 [FText"|", FMath$"\\left\\{A | A \\subseteq B, |A| ="++d1++d2++"\\right\\}", FText"|"]]
-                              , [d3++d4++" choose "++ d1++d2]
+           , Branch [ nodes [ ( [[FText"|B| ", FMath$ "= "++d2],
+                                 [FText"|", FMath$"\\left\\{A | A \\subseteq B, |A| ="++d1++"\\right\\}", FText"|"]]
+                              , [d2++" choose "++ d1]
                               )
-                            | d1 <- map show allDigits, d2 <- map show allDigits, 
-                              d3 <- map show allDigits, d4 <- map show allDigits, 
-                              d1 /= d2, d3 /= d4 ]
+                            | d1 <- map show allCards, d2 <- map show allCards]
                     ]
            ]
 
