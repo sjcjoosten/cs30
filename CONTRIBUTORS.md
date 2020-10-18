@@ -12,3 +12,9 @@ been given one, but might effect the license of future updates.
 - Sebastiaan J.C. Joosten
 - Anmol Chachra
 - Sanket Joshi
+- Fei
+- Kyle Bensink
+- Paul Gralla
+- Joseph Hajjar
+- Donia Tung
+- Bennett Clark
