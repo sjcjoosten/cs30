@@ -26,6 +26,7 @@ import           CS30.Exercises.Data
 import           Data.Aeson as JSON
 import           Data.Aeson.TH
 import qualified Data.Map as Map
+import Debug.Trace
 
 
 data CombinEx = CombinEx deriving Show
@@ -38,19 +39,16 @@ combinEx = exerciseType "Combinatorics" "L?.?" "Combinatorics: Integers"
                         genFeedback
 
 genQuestion :: CombinEx -> Exercise -> Exercise
-genQuestion _ def = def{ eQuestion = [ FText "How many 6 digit positive integers are there such that the sum of the digits is at most 51?" ]}
+genQuestion _ ex = ex{eQuestion = [ FText "How many 6 digit positive integers are there such that the sum of the digits is at most 51?", FFieldMath "answer"]}
 
 genFeedback :: CombinEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
-genFeedback _ _ pr
- = markCorrect$ pr{prFeedback = [FText "The solution is: 56"]
-                  , prTimeToRead = 60}
+-- genFeedback _ _ pr
+--  = markCorrect$ pr{prFeedback = [FText "The solution is: 56"]
+--                   , prTimeToRead = 60}
 
-{-combinFeedback :: CombinEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
-combinFeedback (quer, sol) usr' defaultRsp
-  = reTime$ if (snd usr) == "56" then correct{prFeedback=rsp}
-            else wrong{prFeedback=rsp++[FText$ ". You answered a different number: "]++rspwa}
-  where usr = head (Map.toList usr')
-        rsp = [FText $ "The solution to "]++quer++[FText " is: ", FMath sol]
-        rspwa = [FMath (snd usr)]
-        wrong = markWrong defaultRsp
-        correct = markCorrect defaultRsp-}
+genFeedback _ mStrs rsp
+  = trace ("genFeedback " ++ show mStrs) $
+    case Map.lookup "answer" mStrs of 
+      Just v -> if v == "56" then markCorrect $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
+                else markWrong $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
+      Nothing -> error "Answer field expected."
