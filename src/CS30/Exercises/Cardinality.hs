@@ -67,7 +67,7 @@ cardinality = [
 
 cardQuer :: ([[Field]],[String]) -> Exercise -> Exercise
 cardQuer (quer, _solution) exer 
-  = trace("solution " ++  show _solution) -- for testing 
+  = -- trace("solution " ++  show _solution) -- for testing (I've disabled this as it clutters the 'stack test' output)
     exer { eQuestion=[FText "Given "] ++ rule ++ 
                      [FText ", compute "] ++ question ++ 
                      [FFieldMath "answer"]}
