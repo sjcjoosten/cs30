@@ -34,21 +34,48 @@ $(deriveJSON defaultOptions ''CombinEx)
 
 combinEx :: ExerciseType
 combinEx = exerciseType "Combinatorics" "L?.?" "Combinatorics: Integers" 
-                        [Node CombinEx] 
+                        combins
                         genQuestion
                         genFeedback
+                        
 
-genQuestion :: CombinEx -> Exercise -> Exercise
-genQuestion _ ex = ex{eQuestion = [ FText "How many 6 digit positive integers are there such that the sum of the digits is at most 51?", FFieldMath "answer"]}
+allDigits :: [Int]
+allDigits = [1..9]
 
-genFeedback :: CombinEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
--- genFeedback _ _ pr
---  = markCorrect$ pr{prFeedback = [FText "The solution is: 56"]
---                   , prTimeToRead = 60}
+-- To Do
+solve :: String
+solve = "56"
 
-genFeedback _ mStrs rsp
+combins :: [ChoiceTree ([Field], String)]
+combins = [nodes [ ([FText "6 digit positive integers are there such that the sum of the digits is at most 51?"], solve)]
+         , nodes [ ([FText "[This is Q2]"], solve)]
+         , nodes [ ([FText "[This is Q3]"], solve)]
+         , nodes [ ([FText "[This is Q4]"], solve)]
+         , nodes [ ([FText "[This is Q5]"], solve)]]
+
+
+genQuestion:: ([Field],a) -> Exercise -> Exercise
+genQuestion (quer, _solution) ex 
+ = ex{ eQuestion = [ FText $"How many "] ++ quer ++ [FFieldMath "answer"]}
+
+
+genFeedback :: ([Field],String) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+genFeedback (_q, sol) mStrs rsp
   = trace ("genFeedback " ++ show mStrs) $
     case Map.lookup "answer" mStrs of 
-      Just v -> if v == "56" then markCorrect $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
+      Just v -> if v == sol then markCorrect $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
                 else markWrong $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
       Nothing -> error "Answer field expected."
+
+
+
+-- genQuestion :: CombinEx -> Exercise -> Exercise
+-- genQuestion _ ex = ex{eQuestion = [ FText "How many 6 digit positive integers are there such that the sum of the digits is at most 51?", FFieldMath "answer"]}
+
+-- genFeedback :: CombinEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
+-- genFeedback _ mStrs rsp
+--   = trace ("genFeedback " ++ show mStrs) $
+--     case Map.lookup "answer" mStrs of 
+--       Just v -> if v == "56" then markCorrect $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
+--                 else markWrong $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
+--       Nothing -> error "Answer field expected."
