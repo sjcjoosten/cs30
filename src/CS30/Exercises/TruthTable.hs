@@ -7,19 +7,37 @@ import Text.Parsec
 import Text.Parsec.String
 import qualified Data.Map as Map
 
--- import CS30.Data
--- import CS30.Exercises.Data -- 'exerciseType' function
--- import Data.List
--- import qualified Data.Map as Map -- handle response
--- import Data.Aeson.TH -- for deriveJSON
--- import Debug.Trace
+import CS30.Data
+import CS30.Exercises.Data -- 'exerciseType' function
+import qualified Data.Map as Map -- handle response
+import Data.Aeson.TH -- for deriveJSON
+import Debug.Trace
 
--- myExercise :: ExerciseType
--- myExercise = exerciseType "URLTag" "L?.?"
---                "Category: Short Description"
---                choiceTreeList -- List of problems
---                genQuestion -- present question as 'Exercise'
---                genFeedback -- handle response as 'ProblemResponse'
+
+data TruthEx = TruthEx
+
+$(deriveJSON defaultOptions ''TruthEx)
+
+truthEx :: ExerciseType
+truthEx = exerciseType "URLTag" "L?????.??????"
+          "Logic: Complete a TruthTable"
+          [Node TruthEx] -- List of problems
+          genQuestion -- present question as 'Exercise'
+          genFeedback -- handle response as 'ProblemResponse'
+
+genQuestion :: TruthEx -> Exercise -> Exercise
+genQuestion _ ex = ex{eQuestion=[FTable [[Header (FText ['P']), Header (FText ['Q']), Header (FText "~P"), Header (FText "~Q"), Header (FText "~PΛ~Q")],
+                                         [Cell (FText ['T']), Cell (FText ['T']), Cell (FFieldMath "blank1"), Cell (FText ['F']), Cell (FText ['F'])],
+                                         [Cell (FText ['T']), Cell (FText ['F']), Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['F'])],
+                                         [Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['T']), Cell (FFieldMath "blank2"), Cell (FText ['F'])],
+                                         [Cell (FText ['F']), Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['T']), Cell (FText ['T'])]   
+                                        ]]}
+
+genFeedback :: TruthEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
+genFeedback _ mStrs resp = if mStrs == (Map.fromList [("blank1", ['F']), ("blank2", ['F'])]) -- Solution will be generated
+                            then markCorrect $ resp{prFeedback=[FText "Solution is correct!"]} else error "Solution is incorrect"
+
+                                
 
 --------------------------------------Data and Types-------------------------------------------
 
