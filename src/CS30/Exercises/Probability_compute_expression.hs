@@ -6,104 +6,32 @@ import CS30.Exercises.Data
 import qualified Data.Map as Map
 import           Data.Aeson.TH -- for deriveJSON
 import Debug.Trace
-import Data.Char (isNumber)
+-- import Data.Char (isNumber)
+import Text.Megaparsec.Char
+import Text.Megaparsec
+import Data.Void
+import Data.Ratio
 --import Prelude hiding (return,(>>=))
 
-
-data ProbEx = ProbChar String deriving Show
+data ProbEx = ProbAsRational [Field] Rational deriving Show
 
 $(deriveJSON defaultOptions ''ProbEx)
 
 data NumericExpression = NENumber Rational | NEAdd NumericExpression NumericExpression -- stands for a + b where a and b are NumericExpression
 
-data ParseResult a = PRError String | PRSuccess a
+numeric_value_parser :: Parser Rational
+numeric_value_parser = do fst_part <- many digitChar
+                          rmd <- rmdParser
+                          case rmd of Nothing -> return (read fst_part % 1)
+                                      Just v -> return ((read fst_part % 1) + (read v % (10 ^ length v)))
+                      where rmdParser = (Just <$> (char '.' >> many digitChar)) <|> (return Nothing)
+type Parser = Parsec Void String
+
 
 -- example : 2
 -- example : 0.75
-parser :: String -> ParseResult NumericExpression
-parser [] = PRError "No number found"
-parser [a] | isNumber a = PRSuccess (NENumber (read [a]))
-           | otherwise = PRError ("The number should between 0 and 1 and round to two decimals if it is decimal.")
-parser (a:as) | a == '0' = PRSuccess (NENumber (read (a:as)))
-              | otherwise = PRError ("The number should between 0 and 1 and round to two decimals if it is decimal.")
-
-data Parser a = P {parse :: (String -> ParseResult (a,String))}
---
-getc :: Parser Char
-getc = P f
-       where f [] = PRError "Expecting character"
-             f (c : cs) = PRSuccess (c , cs)
---
-sat :: (Char -> Bool) -> Parser Char
-sat p = check p getc
---
-check :: (a -> Bool) -> Parser a -> Parser a
-check p ps =  ps >>= f
-              where f v = if p v then return v
-                        else  (P(\rmd -> PRError "Fail"))
-
---class Monad m where
---    (>>=) :: m a -> (a -> m b) -> m b
---    return :: a -> m a
-
-instance Monad m where
-    (>>=) :: m a -> (a -> m b) -> m b
-    P parser1 >>= f = P f2
-            where f2 str = case parser1 str of
-                            PRError a -> PRError a
-                            PRSuccess (v, rmd) -> undefined
-
-    return :: a -> m a
-    return a = P (\str -> PRSuccess (a, str))
 
 
-digit :: Parser Integer
-digit = sat isNumber >>= (\d -> return $
-                            case d of
-                                '0' -> 0
-                                '1' -> 1)
-
-period :: Parser Char
-period = sat (== '.')
-
---twoDigits
-     -- = digit >>= (\d1 ->
-     --     digit >>= (\d2 ->
-     --     return (d1, d2)))
---        = do d1 <- digit
---             d2 <- digit
---             return (d1, d2)
---
---1.6
---twoDigitsWithPeriod :: Parser Rational
-      -- = digit >>= (\d1 ->
-      --     period >>= (\_ ->
-      --     digit >>= (\d2 ->
-      --     return ((d1 % 1)+ (d2 % 10)))))
---twoDigitsWithPeriod = do d1 <- digit
---                       _ <- period
---                       d2 <- digit
---                       retuurn ((d1 % 1)+ (d2 % 10))
-
-
-(<|>) :: Parser a -> Parser a -> Parser a
-P a  <|> P b = P aOrB
-     where aOrB s = case a s of
-                     PRError st -> b s
-                     PRSuccess v -> PRSuccess v
-
---- example : 11.3
-asManyDigitAsILike :: Parser [Integer]
-asManyDigitAsILike = do d1 <- digit
-                        more <- asManyDigitAsILike
-                        return (d1 : more)
-                     <|> return []
-
-many :: Parser Integer -> Parser [Integer]
-many ps = do d1 <- digit
-             more <- asManyDigitAsILike
-             return (d1 : more)
-         <|> return []
 
 probaEx :: ExerciseType
 probaEx = exerciseType "ProbaCompute" "L?.?" "Probability : compute expression"
@@ -112,33 +40,40 @@ probaEx = exerciseType "ProbaCompute" "L?.?" "Probability : compute expression"
             genFeedback
 
 choiceTreeList :: [ChoiceTree ProbEx]
-choiceTreeList = [nodes [a1, a2, a3, a4]]
+choiceTreeList = [Branch [ nodes [andExerciseEasy a b | a <- proba , b <- proba]
+                         , nodes [orExerciseEasy a b | a <- proba , b <- proba]
+                         , nodes [andExerciseHard a b | a <- proba , b <- proba]
+                         , nodes [orExerciseHard a b | a <- proba , b <- proba]]]
 
-a1 :: ProbEx
-a1 = ProbChar "Pr[A] = 0.05, Pr[A∧B] = 0.25, Events A and B are independent. What is Pr[B]?"
+--generate questions based on two numbers
+andExerciseEasy :: Rational -> Rational -> ProbEx
+andExerciseEasy a b = ProbAsRational [FText ("Pr[A] =" ++ show(a) ++ ", Pr[B] =" ++ show(b) ++ ", Events A and B are independent. What is Pr[A \\wedge B]?")] (a*b)
 
-a2 :: ProbEx
-a2 = ProbChar "Pr[A] = 0.25, Pr[A∧B] = 0.75, Events A and B are independent. What is Pr[B]?"
+orExerciseEasy :: Rational -> Rational -> ProbEx
+orExerciseEasy a b = ProbAsRational [FText ("Pr[A] =" ++ show(a) ++ ", Pr[B] =" ++ show(b) ++ ", Events A and B are independent. What is Pr[A \\vee B]?")] (a + b - a * b)
 
-a3 :: ProbEx
-a3 = ProbChar "Pr[A] = 0.15, Pr[A∧B] = 0.75, Events A and B are independent. What is Pr[B]?"
+andExerciseHard :: Rational -> Rational -> ProbEx
+andExerciseHard a b = ProbAsRational [FText ("Pr[A] =" ++ show(a) ++ ", Pr[A∧B] =" ++ show(a * b) ++ ", Events A and B are independent. What is Pr[B]?")] b
 
-a4 :: ProbEx
-a4 = ProbChar "Pr[A] = 0.05, Pr[A∧B] = 0.15, Events A and B are independent. What is Pr[B]?"
+orExerciseHard :: Rational -> Rational -> ProbEx
+orExerciseHard a b = ProbAsRational [FText ("Pr[A] =" ++ show(a) ++ ", Pr[A \\vee B] =" ++ show(a + b - a * b) ++ ", Events A and B are independent. What is Pr[B]?")] b
+
+proba :: [Ratio Integer]
+proba = [0.25, 0.5, 0.75, 0.2, 0.4, 0.6]
 
 -- randomSelect (Branch choiceTreeList)
 genQuestion :: ProbEx -> Exercise -> Exercise
-genQuestion _ ex = ex{eQuestion = [FText "" , FFieldMath "answer"]}
+genQuestion (ProbAsRational question _) ex = ex{eQuestion = question ++ [FFieldMath "answer"]}
 
 genFeedback :: ProbEx
                 -> Map.Map String String
                 -> ProblemResponse
                 -> ProblemResponse
-genFeedback _ mStrs rsp = trace ("genfeedback " ++ show mStrs) $
+genFeedback (ProbAsRational _ answer)  mStrs rsp = trace ("genfeedback " ++ show mStrs) $
                     case Map.lookup "answer" mStrs of
-                        Just v -> case parser v of
-                                    PRError e -> undefined
-                                    PRSuccess exp ->
+                        Just v -> case parse numeric_value_parser "" v of
+                                    Left e -> markWrong rsp{prFeedback = [FText ("You entered " ++ show v ++ ", parse error" ++ show e)]}
+                                    Right userAnswer ->
                                         markCorrect $
-                                        rsp{prFeedback = [FText ("You entered " ++ show v)]}
+                                        rsp{prFeedback = [FText ("You entered " ++ show userAnswer ++ ", the right answer is " ++ show answer)]} --todo change the time from 0 to sth
                         Nothing -> error "Answer field expected"
