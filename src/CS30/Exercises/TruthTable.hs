@@ -3,14 +3,15 @@
 {-# OPTIONS_GHC -Wall #-}
 
 module CS30.Exercises.TruthTable where
-import Text.Parsec
-import Text.Parsec.String
-import qualified Data.Map as Map
-
 -- import CS30.Data
 -- import CS30.Exercises.Data -- 'exerciseType' function
--- import Data.List
--- import qualified Data.Map as Map -- handle response
+
+import Text.Parsec
+import Text.Parsec.String
+
+import qualified Data.Map as Map
+import Data.List (sort)
+
 -- import Data.Aeson.TH -- for deriveJSON
 -- import Debug.Trace
 
@@ -32,6 +33,7 @@ data Expression
   deriving (Show, Eq, Ord)
 
 type Literal = Expression
+type TruthTable = ([Expression], [[Bool]])
 
 -- data BoolVal = TrueVal | FalseVal | ErrVal -- TODO : Required in the future
 
@@ -46,6 +48,23 @@ parseExpr' x = parse expr1 "<myparse>" (filter (\c->c/=' ') x)
 
 getExpr :: Either ParseError Expression -> Expression -- TODO : Make exhaustive
 getExpr (Right x) = x
+
+expr1 :: Parser Expression
+expr1 = chainl1 expr2 op
+  where op = Disjunction <$ char '|'
+         <|> Conjunction <$ char '&'
+         <|> Implication <$ char '>'
+      --    <|> Negation char '~' -- TODO : Handle negation
+
+expr2 :: Parser Expression
+expr2 = LiteralP <$ char 'P' 
+   <|> LiteralQ <$ char 'Q' 
+   <|> LiteralR <$ char 'R' 
+   <|> LiteralS <$ char 'S'
+   <|> expr3 expr1
+
+expr3 :: Parser a -> Parser a
+expr3 = between (char '(') (char ')')
 
 -- Converts an expression object to a string
 showExpr :: Expression -> String
@@ -66,49 +85,47 @@ evalExpr (Disjunction e1 e2) literalMapping = evalExpr e1 literalMapping || eval
 evalExpr (Implication e1 e2) literalMapping = not (evalExpr e1 literalMapping && not (evalExpr e2 literalMapping))
 evalExpr literal literalMapping = if Map.member literal literalMapping then literalMapping Map.! literal else True
 
-expr1 :: Parser Expression
-expr1 = chainl1 expr2 op
-  where op = Disjunction <$ char '|'
-         <|> Conjunction <$ char '&'
-         <|> Implication <$ char '>'
-      --    <|> Negation char '~' -- TODO : Handle negation
-
-expr2 :: Parser Expression
-expr2 = LiteralP <$ char 'P' 
-   <|> LiteralQ <$ char 'Q' 
-   <|> LiteralR <$ char 'R' 
-   <|> LiteralS <$ char 'S'
-   <|> expr3 expr1
-
-expr3 :: Parser a -> Parser a
-expr3 = between (char '(') (char ')')
-
 --------------------------------------Truth Table Logic-------------------------------------------
 
 -- This returns the truth table for an expression (Header: [Expression], Body: [[Bool]])
-getTruthTable :: Expression -> ([Expression], [[Bool]])
+getTruthTable :: Expression -> TruthTable
 getTruthTable e = (header, body)
                   where header = flattenExpr e ++ [e]
                         literalMappings = getAllLiteralMappings e
-                        body = map (\literalMapping -> 
-                                                      map (\headerExp -> 
-                                                                        evalExpr headerExp literalMapping 
-                                                          ) header
-                                   ) literalMappings
+                        body = getTruthTableBody header literalMappings
 
--- This breaks an expression into its components in a bottom up fashion (Header row of truth table)
+-- This validates a truth table. Given the allocation of values in literal columns, it checks the rest of the body
+isValidTruthTable :: TruthTable -> Bool
+isValidTruthTable t = input_body == getTruthTableBody input_header literalMappings
+                    where input_header = fst t
+                          input_body = snd t
+                          literals = filter isLiteral input_header
+                          literalMappings = map (\row-> Map.fromList(zip literals (take (length literals) row))) input_body
+                          
+-- This returns the truth table body given a header and a literal to boolean mapping for every row
+getTruthTableBody :: [Expression] -> [Map.Map Literal Bool] -> [[Bool]]
+getTruthTableBody header literalMappings = 
+  map (\literalMapping -> 
+                         map (\headerExp -> 
+                                           evalExpr headerExp literalMapping 
+                             ) header
+      ) literalMappings
+
+--------------------------------------Truth Table Helpers-------------------------------------------
+
+-- This breaks an expression into its components in a bottom up fashion, listing literals first, in sorted order (Header row of truth table)
 flattenExpr :: Expression -> [Expression]
-flattenExpr = dedup . flattenExpr'
+flattenExpr e = literals ++ nonLiterals
+                where flattened = (dedup . flattenExpr') e
+                      literals = sort(filter isLiteral flattened)
+                      nonLiterals = filter (not . isLiteral) flattened
 
 flattenExpr' :: Expression -> [Expression] -- Helper
-flattenExpr' LiteralP = [LiteralP]
-flattenExpr' LiteralQ = [LiteralQ]
-flattenExpr' LiteralR = [LiteralR]
-flattenExpr' LiteralS = [LiteralS]
 flattenExpr' (Negation e) = flattenExpr' e ++ [e]
 flattenExpr' (Conjunction e1 e2) = flattenExpr' e1 ++ flattenExpr' e2 ++ [e1, e2]
 flattenExpr' (Disjunction e1 e2) = flattenExpr' e1 ++ flattenExpr' e2 ++ [e1, e2]
 flattenExpr' (Implication e1 e2) = flattenExpr' e1 ++ flattenExpr' e2 ++ [e1, e2]
+flattenExpr' e = [e]
 
 -- This returns all the combinations of literals with assigned boolean values (One for each row of truth table)
 getAllLiteralMappings :: Expression -> [Map.Map Literal Bool]
@@ -116,40 +133,52 @@ getAllLiteralMappings e = map (\boolMapping -> Map.fromList(zip literals boolMap
                           where literals = getLiteralsExpr e
                                 boolMappings = cartesionProductN (length literals)
 
+-- Returns all boolean combinations of length n (One for each row of hte truth table)
 cartesionProductN :: Int -> [[Bool]] -- Helper
-cartesionProductN 1 = [[True],[False]]
-cartesionProductN n = [[True] ++ c | c <- cp] ++ [[False] ++ c | c <- cp]
+cartesionProductN 0 = [[]]
+cartesionProductN n = [True:c | c <- cp] ++ [False:c | c <- cp]
                       where cp = cartesionProductN (n-1)
 
+-- Gets the sorted literals out of an expression
 getLiteralsExpr :: Expression -> [Literal] -- Helper
-getLiteralsExpr = getLiteralsExpr' . flattenExpr
-
-getLiteralsExpr' :: [Expression] -> [Literal] -- Helper
-getLiteralsExpr' [] = []
-getLiteralsExpr' (LiteralP : xs) = [LiteralP] ++ getLiteralsExpr' xs
-getLiteralsExpr' (LiteralQ : xs) = [LiteralQ] ++ getLiteralsExpr' xs
-getLiteralsExpr' (LiteralR : xs) = [LiteralR] ++ getLiteralsExpr' xs
-getLiteralsExpr' (LiteralS : xs) = [LiteralS] ++ getLiteralsExpr' xs
-getLiteralsExpr' (_ : xs) = getLiteralsExpr' xs
+getLiteralsExpr = filter isLiteral . flattenExpr
 
 dedup :: Eq a => [a] -> [a] -- Helper
 dedup [] = []
 dedup (x:xs) = if elem x xs then dedup xs else [x] ++ dedup xs
 
+-- Checks whether two expressions are semantically equal (When their parse tree has idential splittings irrespective of  the order of their children)
+semanticallyEqual :: Expression -> Expression -> Bool
+semanticallyEqual (Conjunction e1 e2) (Conjunction e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
+semanticallyEqual (Disjunction e1 e2) (Disjunction e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
+semanticallyEqual (Implication e1 e2) (Implication e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
+semanticallyEqual (Negation e1) (Negation e2) = semanticallyEqual e1 e2
+semanticallyEqual e1 e2 | isLiteral e1 && isLiteral e2 = e1 == e2
+                        | otherwise = False
+
+-- Checks if the truth values for two expressions are the same
+logicallyEqual :: Expression -> Expression -> Bool
+logicallyEqual e1 e2 = sameLiterals && (map (evalExpr e1) alm == map (evalExpr e2) alm)
+                       where sameLiterals = sort (getLiteralsExpr e1) == sort (getLiteralsExpr e2)
+                             alm = getAllLiteralMappings e1
+
+-- Whether an expression is a pure literal
+isLiteral :: Expression -> Bool
+isLiteral x = elem x [LiteralP, LiteralQ, LiteralR, LiteralS]
+
 -- Tests
 
-_strExpr :: String
-_strExpr = "(P>Q)|(R&S)"
+_s :: String
+_s = "(P>Q)|(R&S)"
 
-_exprObj :: Expression
-_exprObj = parseExpr _strExpr
+_e :: Expression
+_e = parseExpr _s
 
-_truthTable :: ([Expression],[[Bool]])
-_truthTable = getTruthTable _exprObj
+_t :: TruthTable
+_t = getTruthTable _e
 
 {-
-Test:
-parseExpr "(P>Q)|(R&S)" == Disjunction (Implication LiteralP LiteralQ) (Conjunction LiteralR LiteralS)
-_truthTable == ([LiteralP,LiteralQ,LiteralR,LiteralS,Implication LiteralP LiteralQ,Conjunction LiteralR LiteralS,Disjunction (Implication LiteralP LiteralQ) (Conjunction LiteralR LiteralS)],[[True,True,True,True,True,True,True],[True,True,True,False,True,False,True],[True,True,False,True,True,False,True],[True,True,False,False,True,False,True],[True,False,True,True,False,True,True],[True,False,True,False,False,False,False],[True,False,False,True,False,False,False],[True,False,False,False,False,False,False],[False,True,True,True,True,True,True],[False,True,True,False,True,False,True],[False,True,False,True,True,False,True],[False,True,False,False,True,False,True],[False,False,True,True,True,True,True],[False,False,True,False,True,False,True],[False,False,False,True,True,False,True],[False,False,False,False,True,False,True]])
+Tests:
+parseExpr _s == Disjunction (Implication LiteralP LiteralQ) (Conjunction LiteralR LiteralS)
+getTruthTable _e == ([LiteralP,LiteralQ,LiteralR,LiteralS,Implication LiteralP LiteralQ,Conjunction LiteralR LiteralS,Disjunction (Implication LiteralP LiteralQ) (Conjunction LiteralR LiteralS)],[[True,True,True,True,True,True,True],[True,True,True,False,True,False,True],[True,True,False,True,True,False,True],[True,True,False,False,True,False,True],[True,False,True,True,False,True,True],[True,False,True,False,False,False,False],[True,False,False,True,False,False,False],[True,False,False,False,False,False,False],[False,True,True,True,True,True,True],[False,True,True,False,True,False,True],[False,True,False,True,True,False,True],[False,True,False,False,True,False,True],[False,False,True,True,True,True,True],[False,False,True,False,True,False,True],[False,False,False,True,True,False,True],[False,False,False,False,True,False,True]])
 -}
-
