@@ -2,4 +2,7 @@
 .exists*
 .vscode
 cs30.cabal
-data/
+
+data/dir
+
+data/salt
