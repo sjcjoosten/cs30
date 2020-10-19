@@ -50,17 +50,17 @@ getExpr :: Either ParseError Expression -> Expression -- TODO : Make exhaustive
 getExpr (Right x) = x
 
 expr1 :: Parser Expression
-expr1 = chainl1 expr2 op
+expr1 = chainl1 expr2 op <|> chainl1 expr2 op
   where op = Disjunction <$ char '|'
          <|> Conjunction <$ char '&'
          <|> Implication <$ char '>'
-      --    <|> Negation char '~' -- TODO : Handle negation
 
-expr2 :: Parser Expression
-expr2 = LiteralP <$ char 'P' 
-   <|> LiteralQ <$ char 'Q' 
-   <|> LiteralR <$ char 'R' 
+expr2 :: Parser Expression 
+expr2 = LiteralP <$ char 'P'
+   <|> LiteralQ <$ char 'Q'
+   <|> LiteralR <$ char 'R'
    <|> LiteralS <$ char 'S'
+   <|> Negation <$ char '~' <*> expr1
    <|> expr3 expr1
 
 expr3 :: Parser a -> Parser a
