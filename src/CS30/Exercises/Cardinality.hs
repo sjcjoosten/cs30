@@ -87,7 +87,7 @@ cardFeedback (quer, sol) mStrs defaultRsp
        Just v -> if v `elem` sol then 
                     markCorrect $ defaultRsp{prFeedback = [FText("you entered " ++ show v)]}
                  else markWrong $ defaultRsp{prFeedback = [FText("the correct answer is "++head sol)]}
-       Nothing -> markWrong $ defaultRsp{prFeedback = [FText("the correct answer is "++head sol)]}
+       Nothing -> markCorrect $ defaultRsp{prFeedback = [FText("the correct answer is "++head sol)]}
       where usr = Map.lookup "answer" mStrs
             pr :: Maybe String
             pr = case usr of
