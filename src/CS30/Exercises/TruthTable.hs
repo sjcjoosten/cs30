@@ -3,26 +3,28 @@
 {-# OPTIONS_GHC -Wall #-}
 
 module CS30.Exercises.TruthTable where
--- import CS30.Data
--- import CS30.Exercises.Data -- 'exerciseType' function
+import CS30.Data
+import CS30.Exercises.Data -- 'exerciseType' function
+import Data.Aeson.TH -- for deriveJSON
+import Debug.Trace
 
-import Text.Parsec
-import Text.Parsec.String
-
+import Data.Void
+import Data.Functor.Identity
+import Data.List (sort, unwords)
 import qualified Data.Map as Map
-import Data.List (sort)
+import qualified Data.Text as Text
 
--- import Data.Aeson.TH -- for deriveJSON
--- import Debug.Trace
+import Text.Megaparsec hiding (ParseError)
+import Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer as L
 
--- myExercise :: ExerciseType
--- myExercise = exerciseType "URLTag" "L?.?"
---                "Category: Short Description"
---                choiceTreeList -- List of problems
---                genQuestion -- present question as 'Exercise'
---                genFeedback -- handle response as 'ProblemResponse'
+import Control.Monad.Combinators.Expr
+import Control.Monad (void)
 
 --------------------------------------Data and Types-------------------------------------------
+
+type Parser = ParsecT Void String Identity -- parsing strings in this file
+type ParseError = ParseErrorBundle String Void -- corresponding error type
 
 data Expression
   = LiteralP | LiteralQ | LiteralR | LiteralS 
@@ -35,36 +37,18 @@ data Expression
 type Literal = Expression
 type TruthTable = ([Expression], [[Bool]])
 
--- data BoolVal = TrueVal | FalseVal | ErrVal -- TODO : Required in the future
+--------------------------------------Parser Functions-------------------------------------------
 
---------------------------------------The parsing bit-------------------------------------------
-
--- Converts an expression string to an object
+-- THE MOST IMPORTANT ONE :)
+-- Converts string to an expression
 parseExpr :: String -> Expression
 parseExpr = getExpr . parseExpr'
 
 parseExpr' :: String -> Either ParseError Expression -- Helper
-parseExpr' x = parse expr1 "<myparse>" (filter (\c->c/=' ') x)
+parseExpr' x = parse parserExpression "<myparse>" (filter (\c->c/=' ') x)
 
 getExpr :: Either ParseError Expression -> Expression -- TODO : Make exhaustive
 getExpr (Right x) = x
-
-expr1 :: Parser Expression
-expr1 = chainl1 expr2 op <|> chainl1 expr2 op
-  where op = Disjunction <$ char '|'
-         <|> Conjunction <$ char '&'
-         <|> Implication <$ char '>'
-
-expr2 :: Parser Expression 
-expr2 = LiteralP <$ char 'P'
-   <|> LiteralQ <$ char 'Q'
-   <|> LiteralR <$ char 'R'
-   <|> LiteralS <$ char 'S'
-   <|> Negation <$ char '~' <*> expr1
-   <|> expr3 expr1
-
-expr3 :: Parser a -> Parser a
-expr3 = between (char '(') (char ')')
 
 -- Converts an expression object to a string
 showExpr :: Expression -> String
@@ -84,6 +68,46 @@ evalExpr (Conjunction e1 e2) literalMapping = evalExpr e1 literalMapping && eval
 evalExpr (Disjunction e1 e2) literalMapping = evalExpr e1 literalMapping || evalExpr e2 literalMapping
 evalExpr (Implication e1 e2) literalMapping = not (evalExpr e1 literalMapping && not (evalExpr e2 literalMapping))
 evalExpr literal literalMapping = if Map.member literal literalMapping then literalMapping Map.! literal else True
+
+-------------------------------------Parser Dependencies----------------------------------------
+
+parserExpression :: Parser Expression
+parserExpression = makeExprParser parserTerm operatorTable
+
+parserTerm :: Parser Expression
+parserTerm = LiteralP <$ char 'P'
+   <|> LiteralQ <$ char 'Q'
+   <|> LiteralR <$ char 'R'
+   <|> LiteralS <$ char 'S'
+   <|> parserParenthesis parserExpression
+
+parserParenthesis :: Parser a -> Parser a
+parserParenthesis = between (symbol "(") (symbol ")")
+
+-------------------------------------Parser Utilities----------------------------------------
+
+symbol :: String -> Parser String
+symbol = L.symbol space
+
+lexeme :: Parser a -> Parser a
+lexeme = L.lexeme space
+
+binary :: String -> (Expression -> Expression -> Expression) -> Operator Parser Expression
+binary  name f = InfixL  (f <$ symbol name)
+
+prefix :: String -> (Expression -> Expression) -> Operator Parser Expression
+prefix  name f = Prefix  (f <$ symbol name)
+
+-------------------------------------Parser Operation Table----------------------------------
+
+operatorTable :: [[Operator Parser Expression]]
+operatorTable =
+  [ 
+    [prefix "~" Negation],
+    [binary "&" Conjunction],
+    [binary "|" Disjunction],
+    [binary ">" Implication]
+  ]
 
 --------------------------------------Truth Table Logic-------------------------------------------
 
@@ -165,20 +189,3 @@ logicallyEqual e1 e2 = sameLiterals && (map (evalExpr e1) alm == map (evalExpr e
 -- Whether an expression is a pure literal
 isLiteral :: Expression -> Bool
 isLiteral x = elem x [LiteralP, LiteralQ, LiteralR, LiteralS]
-
--- Tests
-
-_s :: String
-_s = "(P>Q)|(R&S)"
-
-_e :: Expression
-_e = parseExpr _s
-
-_t :: TruthTable
-_t = getTruthTable _e
-
-{-
-Tests:
-parseExpr _s == Disjunction (Implication LiteralP LiteralQ) (Conjunction LiteralR LiteralS)
-getTruthTable _e == ([LiteralP,LiteralQ,LiteralR,LiteralS,Implication LiteralP LiteralQ,Conjunction LiteralR LiteralS,Disjunction (Implication LiteralP LiteralQ) (Conjunction LiteralR LiteralS)],[[True,True,True,True,True,True,True],[True,True,True,False,True,False,True],[True,True,False,True,True,False,True],[True,True,False,False,True,False,True],[True,False,True,True,False,True,True],[True,False,True,False,False,False,False],[True,False,False,True,False,False,False],[True,False,False,False,False,False,False],[False,True,True,True,True,True,True],[False,True,True,False,True,False,True],[False,True,False,True,True,False,True],[False,True,False,False,True,False,True],[False,False,True,True,True,True,True],[False,False,True,False,True,False,True],[False,False,False,True,True,False,True],[False,False,False,False,True,False,True]])
--}
