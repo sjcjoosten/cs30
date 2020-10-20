@@ -10,6 +10,8 @@ import           Data.Functor.Identity
 import           Data.Void
 import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
+import qualified Text.Megaparsec.Char.Lexer as L
+import           Control.Monad.Combinators.Expr
 import Debug.Trace
 
 
@@ -23,6 +25,7 @@ data MathExpr = Const Int
               | Mult  MathExpr MathExpr  -- multiply two MathExpr's 
               | Expon MathExpr MathExpr  -- set first MathExpr to the second MathExpr power
               | Choose MathExpr MathExpr -- first MathExpr `choose` second MathExpr
+              deriving Show
 
 cardEx :: ExerciseType
 
@@ -92,22 +95,43 @@ cardFeedback (quer, sol) mStrs defaultRsp
             pr :: Maybe String
             pr = case usr of
                    Nothing -> Nothing
-                   Just v -> case parse parseMultiply "" v of
+                   Just v -> case parse parseExpr "" v of
                                Left _ -> Nothing -- error (errorBundlePretty str)
-                               Right st -> Just (show  ((fst st)*(snd st))) 
+                               Right st -> Just (show st) 
                                -- ^ if we parse a multiplication expression, then multiply the two numbers to see if it's right  
 
 
 type Parser = ParsecT Void String Identity
 
--- parses a multiplication expression in the form of "12\\cdot12"
--- into a tuple containing the two multiplied numbers
-parseMultiply :: Parser (Int,Int)
-parseMultiply = do 
-  n1 <- some digitChar
-  _  <- string "\\cdot"
-  n2 <- some digitChar
-  return (read n1, read n2)
+symbol = L.symbol spaceConsumer
+spaceConsumer = L.space space1 empty empty 
+-- ^ doesn't really help, since every space the user inputs seems to be encoded as "\\ "
+lexeme   = L.lexeme spaceConsumer
+
+integer :: Parser MathExpr
+integer  = do
+  n <- lexeme L.decimal
+  return (Const n)
+
+brackets :: Parser a -> Parser a
+brackets = between (symbol "{") (symbol "}")
+
+parseConstant :: Parser MathExpr
+parseConstant = integer <|> (brackets integer)
+
+operatorTable :: [[Operator Parser MathExpr]]
+operatorTable =
+  [ [binary "^" Expon] ,
+    [binary "\\cdot" Mult]
+  ]
+
+binary name f = InfixL (f <$ symbol name)
+
+parseExpr :: Parser MathExpr
+parseExpr = makeExprParser parseTerm operatorTable
+
+parseTerm :: Parser MathExpr
+parseTerm = brackets parseExpr <|> parseConstant 
 
 -- rosterFeedback :: ([Field], [String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 -- rosterFeedback (quer, sol) usr' defaultRsp
