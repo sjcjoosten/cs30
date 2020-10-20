@@ -1,16 +1,15 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -Wall #-}
 
 module CS30.Exercises.TruthTable where
+
 import CS30.Data
 import CS30.Exercises.Data -- 'exerciseType' function
-import Data.Aeson.TH -- for deriveJSON
-import Debug.Trace
 
 import Data.Void
 import Data.Functor.Identity
-import Data.List (sort, unwords)
+import Data.List (sort)
+import Data.Aeson.TH -- for deriveJSON
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 
@@ -20,6 +19,8 @@ import qualified Text.Megaparsec.Char.Lexer as L
 
 import Control.Monad.Combinators.Expr
 import Control.Monad (void)
+
+import Debug.Trace
 
 --------------------------------------Data and Types-------------------------------------------
 
@@ -57,9 +58,9 @@ showExpr LiteralQ = "Q"
 showExpr LiteralR = "R"
 showExpr LiteralS = "S"
 showExpr (Negation e) = "~" ++ showExpr e
-showExpr (Conjunction e1 e2) = "(" ++ showExpr e1 ++ " & " ++ showExpr e2 ++ ")"
-showExpr (Disjunction e1 e2) = "(" ++ showExpr e1 ++ " | " ++ showExpr e2 ++ ")"
-showExpr (Implication e1 e2) = "(" ++ showExpr e1 ++ " > " ++ showExpr e2 ++ ")"
+showExpr (Conjunction e1 e2) = "(" ++ showExpr e1 ++ " Λ " ++ showExpr e2 ++ ")"
+showExpr (Disjunction e1 e2) = "(" ++ showExpr e1 ++ " ∨ " ++ showExpr e2 ++ ")"
+showExpr (Implication e1 e2) = "(" ++ showExpr e1 ++ " → " ++ showExpr e2 ++ ")"
 
 -- Instantiates literals and evaluates the boolean value of an expression
 evalExpr :: Expression -> Map.Map Literal Bool -> Bool
@@ -104,9 +105,9 @@ operatorTable :: [[Operator Parser Expression]]
 operatorTable =
   [ 
     [prefix "~" Negation],
-    [binary "&" Conjunction],
-    [binary "|" Disjunction],
-    [binary ">" Implication]
+    [binary "Λ" Conjunction],
+    [binary "∨" Disjunction],
+    [binary "→" Implication]
   ]
 
 --------------------------------------Truth Table Logic-------------------------------------------
@@ -134,6 +135,30 @@ getTruthTableBody header literalMappings =
                                            evalExpr headerExp literalMapping 
                              ) header
       ) literalMappings
+
+--------------------------------------Truth Table Conversion--------------------------------------
+
+fromTruthTable :: TruthTable -> Field
+fromTruthTable (ttHeader, ttBody) = FTable (ftHeader : ftBody)
+                                    where ftHeader = map exprToHeader ttHeader
+                                          ftBody = map (\ttBodyRow -> map boolToCell ttBodyRow) ttBody
+
+exprToHeader :: Expression -> Cell
+exprToHeader e = Header (FText (showExpr e))
+
+boolToCell :: Bool -> Cell
+boolToCell e = Cell (FText (if e then "T" else "F"))
+
+toTruthTable :: Field -> TruthTable
+toTruthTable (FTable ft) = (ttHeader, ttBody)
+                           where ttHeader = map headerToExpr (head ft)
+                                 ttBody = map (\ftBodyRow -> map cellToBool ftBodyRow) (take 1 ft)
+
+headerToExpr :: Cell -> Expression
+headerToExpr (Header (FText x)) = parseExpr x
+
+cellToBool :: Cell -> Bool
+cellToBool (Cell (FText x)) = x == "T"
 
 --------------------------------------Truth Table Helpers-------------------------------------------
 
