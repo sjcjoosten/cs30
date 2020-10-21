@@ -14,13 +14,21 @@ possibleValues = [1..200]
 choiceTreeList :: [ChoiceTree IncExcProblem]
 choiceTreeList = [ 
       -- Question type 1: Given |A|, |B|, and |A U B|, find |A ∩ B|.
-      nodes [IEP ([
-                        [FText"|A| ", FMath$ "= "++show(d1)], 
-                        [FText"|B| ", FMath$"= "++show(d2)], 
-                        [FMath$ "|A \\cup B|", FMath$"= "++show(d3)],
-                        [FMath$ "|A \\cap B|"]
-                  ], show ((d1 + d2) - d3)) 
-            | d1 <- possibleValues, d2 <- possibleValues, d3 <- possibleValues, d3 < d1 + d2]
+      Branch [ Branch [
+                  nodes [IEP ([
+                              [FText"|A| ", FMath$ "= "++show(d1)], 
+                              [FText"|B| ", FMath$"= "++show(d2)], 
+                              [FMath$ "|A \\cup B|", FMath$"= "++show(d3)],
+                              [FMath$ "|A \\cap B|"]
+                        ], show ((d1 + d2) - d3))], 
+                  nodes [IEP ([
+                              [FText"|A| ", FMath$ "= "++show(d1)], 
+                              [FText"|B| ", FMath$"= "++show(d2)], 
+                              [FMath$ "|A \\cap B|", FMath$"= "++show(d3)],
+                              [FMath$ "|A \\cup B|"]
+                        ], show ((d1 + d2) - d3))]
+                  ]
+             | d1 <- possibleValues, d2 <- possibleValues, d3 <- possibleValues, d3 < d1 + d2]
       ]
 
 incExcCards :: ExerciseType
