@@ -237,3 +237,10 @@ logicallyEqual e1 e2 = sameLiterals && (map (evalExpr e1) alm == map (evalExpr e
 -- Whether an expression is a pure literal
 isLiteral :: Expression -> Bool
 isLiteral x = elem x [LiteralP, LiteralQ, LiteralR, LiteralS]
+
+--------------------------------------Debug Output--------------------------------------------------
+
+-- This compiles and prints debugOut : "stack exec debug --package cs30:debug"
+-- This prints the last compiled debugOut : "stack exec debug"
+debugOut :: String
+debugOut = (showExpr . parseExpr) " (S >~R)&   (P|Q)    "
