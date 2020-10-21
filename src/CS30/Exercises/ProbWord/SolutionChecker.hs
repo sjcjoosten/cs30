@@ -110,7 +110,7 @@ opToFunction Exponentiation r1 r2
 probFeedback :: ([Field], Rational) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 probFeedback (quer, sol) usr' defaultRsp
   = reTime$ case usr of 
-              Nothing -> wrong{prFeedback=rsp++[FText$ ". You answered incorrectly: "]++rspwa} -- error "Server communication error: expecting a 'prob' field"
+              Nothing -> error "Server communication error: expecting a 'prob' field"
               Just v -> case runParser rationalExpr "" v of
                            Left e -> wrong{prFeedback=[FText$ "I didn't understand what you wrote. Here's a parse-error: "++errorBundlePretty e]}
                            Right expr -> case evalRational expr of
