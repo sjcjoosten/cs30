@@ -26,7 +26,10 @@ data MathExpr = Const Int
               deriving Show
 
 choose :: Int -> Int -> Int
-choose _ _ = 0 -- not yet implemented
+choose n r 
+  | n >  r = ((choose (n-1) r) * n) `div` (n-r)
+  | n == r = 1 
+  | n <  r = 0
 
 evalExpr :: MathExpr -> Int
 evalExpr (Const x)    = x
@@ -41,7 +44,7 @@ cardEx = exerciseType "Cardinality" "L??" "Cardinality of Expression"
             cardFeedback
 
 allCards :: [Int]
-allCards = [1..30] 
+allCards = [1..99] 
 -- ^ since we are evaluating expressions to determine when they are correct
 -- we may want to keep the numbers relatively small
 
@@ -135,7 +138,8 @@ parseConstant = do
 operatorTable :: [[Operator Parser MathExpr]]
 operatorTable =
   [ [binary "^" Expon] ,
-    [binary "\\cdot" Mult]
+    [binary "\\cdot" Mult] ,
+    [binary "choose" Choose]
   ]
 
 binary name f = InfixL (f <$ symbol name)
