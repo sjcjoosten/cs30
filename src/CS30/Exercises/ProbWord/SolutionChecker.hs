@@ -119,7 +119,7 @@ probFeedback (quer, sol) usr' defaultRsp
   -- runParser ::
   -- Parsec e s a -> String -> s -> Either (ParseErrorBundle s e) a
     usr = Map.lookup "prob" usr'
-    rsp = [FText $ "The answer for "]++quer++[FText " is ", FText $ show sol]
+    rsp = [FText $ "The answer for "]++quer++[FText " is ", FMath $ show sol]
     rspwa = case usr of
             Nothing -> [FText "- ??? - (perhaps report this as a bug?)"]
             Just v -> [FMath v]
