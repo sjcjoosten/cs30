@@ -13,7 +13,7 @@ pages :: [ExerciseType]
 pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         -- , graphStub -- does not pass tests, since it's not a valid exercise. It's also not yet implemented on the frontend.
         -- , tableStub -- does not pass tests, since it's not a valid exercise, but uncomment to see how tables are displayed.
-        , modsEx
+        , modsEx -- Modular Arithmetic exercises
         ]
 
 -- the definition below is to prevent warnings about unused imports
