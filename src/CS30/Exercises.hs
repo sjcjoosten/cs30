@@ -1,6 +1,7 @@
 module CS30.Exercises (pages) where
 import CS30.Exercises.Data (ExerciseType)
 import CS30.Exercises.SetBasics (rosterEx, powsetEx, setOpsEx)
+import CS30.Exercises.Cardinality (cardEx)
 import CS30.Exercises.Graphs (graphStub)
 import CS30.Exercises.ProbWord ( probBasicEx )
 import CS30.Exercises.Table (tableStub)
