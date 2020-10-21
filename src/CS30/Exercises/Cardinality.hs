@@ -110,21 +110,27 @@ cardFeedback (quer, sol) mStrs defaultRsp
 
 type Parser = ParsecT Void String Identity
 
+spaceConsumer = L.space spaces empty empty 
+
 symbol = L.symbol spaceConsumer
-spaceConsumer = L.space space1 empty empty 
--- ^ doesn't really help, since every space the user inputs seems to be encoded as "\\ "
 lexeme   = L.lexeme spaceConsumer
 
-integer :: Parser MathExpr
-integer  = do
-  n <- lexeme L.decimal
-  return (Const n)
+-- based on Drill 6.2 scaffold
+spaces :: Parser ()
+spaces = some spc >> return ()
+ where spc = string " " <|> string "\t" <|> string "\n" <|> string "\r"
+             <|> string "\\ " <|> string "~"
 
 brackets :: Parser a -> Parser a
 brackets = between (symbol "{") (symbol "}")
 
+parens :: Parser a -> Parser a          
+parens = between (symbol "\\left(") (symbol "\\right)")
+
 parseConstant :: Parser MathExpr
-parseConstant = integer <|> (brackets integer)
+parseConstant = do
+  n <- lexeme L.decimal
+  return (Const n)
 
 operatorTable :: [[Operator Parser MathExpr]]
 operatorTable =
@@ -139,7 +145,7 @@ parseExpr :: Parser MathExpr
 parseExpr = makeExprParser parseTerm operatorTable
 
 parseTerm :: Parser MathExpr
-parseTerm = brackets parseExpr <|> parseConstant 
+parseTerm = parens parseExpr <|> brackets parseExpr <|> parseConstant 
 
 -- rosterFeedback :: ([Field], [String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 -- rosterFeedback (quer, sol) usr' defaultRsp
