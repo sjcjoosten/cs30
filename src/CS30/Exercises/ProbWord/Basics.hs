@@ -3,15 +3,18 @@ import           CS30.Data
 import           CS30.Exercises.Data
 import GHC.Real -- for (%)
 
+-- sumList :: [Integer] -> Integer
+
+
 basicprob :: [ChoiceTree ([Field], Rational)]
-basicprob = [ Branch [ nodes [ ( [FText $ show numDice ++ " fair dice are rolled, find the probability that the sum of the results is less than " ++ show sum, FFieldMath "prob"]
-                              , 1 % 54
+basicprob = [ Branch [ nodes [ ( [FText $ show numDice ++ " fair dice are rolled, find the probability that the sum of the results is less than " ++ show sumDice, FFieldMath "prob"]
+                              , (foldr (+) 0 $ if numDice == 2 then take (fromIntegral sumDice-1)[1,2,3,4,5,6,5,4,3,2,1] else take (fromIntegral sumDice-2) [1,3,6,10,15,21,25,27,27,25,21,15,10,6,3,1]) % (6 ^ numDice)
                                 )
-                              , ( [FText $ show numDice ++ " fair dice are rolled, find the probability that the sum of the results is equal to " ++ show sum, FFieldMath "prob"]
-                                , 1 % 54
+                              , ( [FText $ show numDice ++ " fair dice are rolled, find the probability that the sum of the results is equal to " ++ show sumDice, FFieldMath "prob"]
+                                , (if numDice == 2 then [1,2,3,4,5,6,5,4,3,2,1] !! (fromIntegral sumDice-2) else [1,3,6,10,15,21,25,27,27,25,21,15,10,6,3,1] !! (fromIntegral sumDice-3)) % (6 ^ numDice)
                                 )
                               ]
-                              | numDice <- [(2::Integer)..4], sum <- [numDice + 1..numDice*6 - 1]
+                              | numDice <- [(2::Integer)..3], sumDice <- [numDice + 1..numDice*6 - 1]
                               ]
             , Branch [ nodes [ ( [FText $ "there are " ++ show blue ++ " blue marbles, " ++ show red ++ " red marbles, and " ++ show green ++ " green marbles, what is the probability of picking a blue marble?", FFieldMath "prob"]
                                 , blue % (blue + red + green)
