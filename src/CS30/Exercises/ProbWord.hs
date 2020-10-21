@@ -10,4 +10,5 @@ probBasicEx = exerciseType "ProbWordProblem" "L*.*" "Basic Probability" basicpro
 probQuer :: ([Field], a) -> Exercise -> Exercise
 probQuer (quer, _solution) def
  = def{ eQuestion = [ FText $"If "] ++quer
+       , eBroughtBy = ["Fei Guo", "Kyle Bensink"]
         }
