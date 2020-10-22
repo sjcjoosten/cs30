@@ -39,26 +39,26 @@ cardinality = [
             -- cardinality of the cartesian product of two sets
            nodes [ ( [[FText"|A| ", FMath$ "= "++d1, FText" and |B| ", FMath$"= "++d2], 
                         [FText"|", FMath$ "A x B", FText"|"]]
-                     , [show (read (d1) * read(d2))] -- this actually does out the mulitplication (but idk if we necessarily want them to, smthg to think about)
+                     , [show (read (d1) * read(d2)), d1, d2] -- this actually does out the mulitplication (but idk if we necessarily want them to, smthg to think about)
                      )
                    | d1 <- map show allCards, d2 <- map show allCards]
             -- cardinality of a power set
             , nodes [ ( [[FText"|A| ", FMath$ "= "++d1], [FText "|𝒫",FMath$ "(A)", FText"|"]]
-                     , ["2^"++d1] -- needs {}
+                     , ["2^"++d1, d1] -- needs {}
                      )
                    | d1 <- map show allCards]
             -- cardinality of set x its powerset
            , Branch [ nodes [ ( [[FText"|A| ", FMath$"= "++d1],
                                 [FText"|", FMath$"A x ", FText"𝒫", FMath"(A)", FText"|"]]
                               ,[d1++"*2^"++d1, -- needs \\cdot and {}
-                                "2^"++d1++"*"++d1] -- needs \\cdot and {}
+                                "2^"++d1++"*"++d1, d1] -- needs \\cdot and {}
                               )
                             | d1 <- map show allCards]
                      ] 
             -- cardinality with set builder notatino (like ex from the assignment sheet)
            , Branch [ nodes [ ( [[FText"|B| ", FMath$ "= "++d2],
                                  [FText"|", FMath$"\\left\\{A | A \\subseteq B, |A| ="++d1++"\\right\\}", FText"|"]]
-                              , [d2++" choose "++ d1]
+                              , [d2++" choose "++ d1, d1, d2]
                               )
                             | d1 <- map show allCards, d2 <- map show allCards]
                     ]
@@ -82,13 +82,18 @@ cardQuer (quer, _solution) exer
 
 cardFeedback :: ([[Field]],[String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 cardFeedback (quer, sol) mStrs defaultRsp 
-  =  trace ("gen feedback " ++ show mStrs ++ " " ++ show pr) $ -- for testing
+  =  trace("quer: " ++ show question)
+      trace ("gen feedback " ++ show mStrs ++ " " ++ show pr) $ -- for testing
       case pr of 
-       Just v -> if v `elem` sol then 
-                    markCorrect $ defaultRsp{prFeedback = [FText("you entered " ++ show v)]}
-                 else markWrong $ defaultRsp{prFeedback = [FText("the correct answer is "++head sol)]}
-       Nothing -> markCorrect $ defaultRsp{prFeedback = [FText("the correct answer is "++head sol)]}
+       Just v -> if v == head sol then 
+                    markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FText " = "] ++ [FText v]}
+                 else if v `elem` sol then 
+                     markWrong $ defaultRsp{prFeedback = [FText("The correct answer is "++head sol ++ ". You wrote " ++ v)]}
+                     else 
+                     markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get those numbers?")]} -- Where do the numbers "++ "" ++ " come from?"
+       Nothing -> markCorrect $ defaultRsp{prFeedback = [FText("The correct answer is "++head sol ++ ". You didn't write anything.")]}
       where usr = Map.lookup "answer" mStrs
+            question = quer!!1
             pr :: Maybe String
             pr = case usr of
                    Nothing -> Nothing
