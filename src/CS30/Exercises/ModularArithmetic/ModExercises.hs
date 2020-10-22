@@ -5,7 +5,7 @@ import CS30.Data
 import CS30.Exercises.Data
 import Data.Aeson.TH
 
-type Answer = String
+type Answer = Int
 type Modulus = String
 type Questions = [Field]
 
@@ -23,19 +23,19 @@ easyExercises :: [ModEx]
 easyExercises = 
     [
         ModEx (
-            [FMath "48 \\equiv_{3}"], "3", "0"
+            [FMath "48 \\equiv_{3}"], "3", 0
         ),
         
         ModEx (
-            [FMath "-30 \\equiv_{4}"], "4", "2"
+            [FMath "-30 \\equiv_{4}"], "4", 2
         ),
 
         ModEx (
-            [FMath "-9 \\equiv_{16}"], "16", "7"
+            [FMath "-9 \\equiv_{16}"], "16", 7
         ),
 
         ModEx (
-            [FMath "83 \\equiv_{7}"], "7", "6"
+            [FMath "83 \\equiv_{7}"], "7", 6
         )
     ]
 
@@ -43,11 +43,11 @@ mediumExercises :: [ModEx]
 mediumExercises = 
     [
         ModEx (
-            [FMath "(7^{5} - 3^{5}) \\equiv_{5}"], "5", "1"
+            [FMath "(7^{5} - 3^{5}) \\equiv_{5}"], "5", 1
         ),
 
         ModEx (
-            [FMath "16 \\cdot 37^{-1} \\equiv_{11}"], "11", "4"
+            [FMath "16 \\cdot 37^{-1} \\equiv_{11}"], "11", 4
         )
     ]
 
@@ -55,11 +55,11 @@ hardExercises :: [ModEx]
 hardExercises = 
     [
         ModEx (
-            [FMath "-19^{5} \\equiv_{13}"], "13", "11"
+            [FMath "-19^{5} \\equiv_{13}"], "13", 11
         ),
 
         ModEx (
-            [FMath "(245176 + 2)^{5} \\equiv_{6}"], "6", "2"
+            [FMath "(245176 + 2)^{5} \\equiv_{6}"], "6", 2
         )
     ]
 
