@@ -143,10 +143,17 @@ operatorTable =
   ]
 
 binary name f = InfixL (f <$ symbol name)
-prefix name f = Prefix  (f <$ symbol name)
+-- prefix name f = Prefix  (f <$ symbol name)
+
+parseBinom :: Parser MathExpr
+parseBinom = do
+  _  <- symbol "\\binom" 
+  e1 <- parseExpr 
+  e2 <- parseExpr
+  return (Choose e1 e2)
 
 parseExpr :: Parser MathExpr
-parseExpr = makeExprParser parseTerm operatorTable
+parseExpr =  parseBinom <|> makeExprParser parseTerm operatorTable 
 
 parseTerm :: Parser MathExpr
 parseTerm = parens parseExpr <|> brackets parseExpr <|> parseConstant 
