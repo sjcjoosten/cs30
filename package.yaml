@@ -52,6 +52,18 @@ executables:
             - mime-types
             - th-lift-instances
             - cs30
+    debug:
+        source-dirs:  debug
+        main:         Main.hs
+        dependencies: 
+            - warp
+            - wai
+            - wai-extra
+            - http-types
+            - mime-types
+            - th-lift-instances
+            - cs30
+
 tests:
     spec:
         main:   test.hs

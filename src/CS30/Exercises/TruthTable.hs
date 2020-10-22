@@ -62,6 +62,32 @@ data Expression
 type Literal = Expression
 type TruthTable = ([Expression], [[Bool]])
 
+---------------------------------Character Definitions-------------------------------------------
+
+-- Literals
+charP, charQ, charR, charS :: Char
+charP = 'P'
+charQ = 'Q'
+charR = 'R'
+charS = 'S'
+
+-- Operations
+charNeg, charCon, charDis, charImp :: Char
+charNeg = '~'
+charCon = '&' -- 'Λ'
+charDis = '|' -- '∨'
+charImp = '>' -- '→'
+
+-- Booleans
+charTrue, charFalse :: Char
+charTrue = 'T'
+charFalse = 'F'
+
+-- Parenthesis
+charOpen, charClose :: Char
+charOpen = '('
+charClose = ')'
+
 --------------------------------------Parser Functions-------------------------------------------
 
 -- THE MOST IMPORTANT ONE :)
@@ -77,14 +103,14 @@ getExpr (Right x) = x
 
 -- Converts an expression object to a string
 showExpr :: Expression -> String
-showExpr LiteralP = "P"
-showExpr LiteralQ = "Q"
-showExpr LiteralR = "R"
-showExpr LiteralS = "S"
-showExpr (Negation e) = "~" ++ showExpr e
-showExpr (Conjunction e1 e2) = "(" ++ showExpr e1 ++ " Λ " ++ showExpr e2 ++ ")"
-showExpr (Disjunction e1 e2) = "(" ++ showExpr e1 ++ " ∨ " ++ showExpr e2 ++ ")"
-showExpr (Implication e1 e2) = "(" ++ showExpr e1 ++ " → " ++ showExpr e2 ++ ")"
+showExpr LiteralP = [charP]
+showExpr LiteralQ = [charQ]
+showExpr LiteralR = [charR]
+showExpr LiteralS = [charS]
+showExpr (Negation e) = charNeg : showExpr e
+showExpr (Conjunction e1 e2) = [charOpen] ++ showExpr e1 ++ " " ++ [charCon] ++ " " ++ showExpr e2 ++ [charClose]
+showExpr (Disjunction e1 e2) = [charOpen] ++ showExpr e1 ++ " " ++ [charDis] ++ " " ++ showExpr e2 ++ [charClose]
+showExpr (Implication e1 e2) = [charOpen] ++ showExpr e1 ++ " " ++ [charImp] ++ " " ++ showExpr e2 ++ [charClose]
 
 -- Instantiates literals and evaluates the boolean value of an expression
 evalExpr :: Expression -> Map.Map Literal Bool -> Bool
@@ -100,22 +126,19 @@ parserExpression :: Parser Expression
 parserExpression = makeExprParser parserTerm operatorTable
 
 parserTerm :: Parser Expression
-parserTerm = LiteralP <$ char 'P'
-   <|> LiteralQ <$ char 'Q'
-   <|> LiteralR <$ char 'R'
-   <|> LiteralS <$ char 'S'
+parserTerm = LiteralP <$ char charP
+   <|> LiteralQ <$ char charQ
+   <|> LiteralR <$ char charR
+   <|> LiteralS <$ char charS
    <|> parserParenthesis parserExpression
 
 parserParenthesis :: Parser a -> Parser a
-parserParenthesis = between (symbol "(") (symbol ")")
+parserParenthesis = between (symbol [charOpen]) (symbol [charClose])
 
 -------------------------------------Parser Utilities----------------------------------------
 
 symbol :: String -> Parser String
 symbol = L.symbol space
-
-lexeme :: Parser a -> Parser a
-lexeme = L.lexeme space
 
 binary :: String -> (Expression -> Expression -> Expression) -> Operator Parser Expression
 binary  name f = InfixL  (f <$ symbol name)
@@ -128,10 +151,10 @@ prefix  name f = Prefix  (f <$ symbol name)
 operatorTable :: [[Operator Parser Expression]]
 operatorTable =
   [ 
-    [prefix "~" Negation],
-    [binary "Λ" Conjunction],
-    [binary "∨" Disjunction],
-    [binary "→" Implication]
+    [prefix [charNeg] Negation],
+    [binary [charCon] Conjunction],
+    [binary [charDis] Disjunction],
+    [binary [charImp] Implication]
   ]
 
 --------------------------------------Truth Table Logic-------------------------------------------
@@ -171,7 +194,7 @@ exprToHeader :: Expression -> Cell
 exprToHeader e = Header (FText (showExpr e))
 
 boolToCell :: Bool -> Cell
-boolToCell e = Cell (FText (if e then "T" else "F"))
+boolToCell e = Cell (FText (if e then [charTrue] else [charFalse]))
 
 toTruthTable :: Field -> TruthTable
 toTruthTable (FTable ft) = (ttHeader, ttBody)
@@ -182,7 +205,7 @@ headerToExpr :: Cell -> Expression
 headerToExpr (Header (FText x)) = parseExpr x
 
 cellToBool :: Cell -> Bool
-cellToBool (Cell (FText x)) = x == "T"
+cellToBool (Cell (FText x)) = x == [charTrue]
 
 --------------------------------------Truth Table Helpers-------------------------------------------
 
@@ -220,7 +243,7 @@ dedup :: Eq a => [a] -> [a] -- Helper
 dedup [] = []
 dedup (x:xs) = if elem x xs then dedup xs else [x] ++ dedup xs
 
--- Checks whether two expressions are semantically equal (When their parse tree has idential splittings irrespective of  the order of their children)
+-- Checks whether two expressions are semantically equal (Each corresponding node in parse has same unordered set of children)
 semanticallyEqual :: Expression -> Expression -> Bool
 semanticallyEqual (Conjunction e1 e2) (Conjunction e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
 semanticallyEqual (Disjunction e1 e2) (Disjunction e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
@@ -238,3 +261,10 @@ logicallyEqual e1 e2 = sameLiterals && (map (evalExpr e1) alm == map (evalExpr e
 -- Whether an expression is a pure literal
 isLiteral :: Expression -> Bool
 isLiteral x = elem x [LiteralP, LiteralQ, LiteralR, LiteralS]
+
+--------------------------------------Debug Output--------------------------------------------------
+
+-- This compiles and prints debugOut : "stack exec debug --package cs30:debug"
+-- This prints the last compiled debugOut : "stack exec debug"
+debugOut :: String
+debugOut = (showExpr . parseExpr) " (S >~R)&   (P|Q)    "
