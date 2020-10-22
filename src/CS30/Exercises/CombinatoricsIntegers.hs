@@ -68,8 +68,8 @@ computeSumOfDigitsHelper n curr_sum
 
 
 combins :: [ChoiceTree ([Field], String)]
-combins = [nodes [ ([FText "6 digit positive integers are there such that the sum of the digits is at most 51?"], (solve2 6 51))]
-         , nodes [ ([FText "3 digit positive integers are there such that the sum of the digits is at most 10?"], (solve2 3 10))]
+combins = [nodes [ ([FText "How many 6 digit positive integers are there such that the sum of the digits is at most 51?"], (solve2 6 51))]
+         , nodes [ ([FText "How many 3 digit positive integers are there such that the sum of the digits is at most 10?"], (solve2 3 10))]
          , nodes [ ([FText "[This is Q3]"], solve)]
          , nodes [ ([FText "[This is Q4]"], solve)]
          , nodes [ ([FText "[This is Q5]"], solve)]]
@@ -87,16 +87,3 @@ genFeedback (_q, sol) mStrs rsp
       Just v -> if v == sol then markCorrect $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
                 else markWrong $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
       Nothing -> error "Answer field expected."
-
-
-
--- genQuestion :: CombinEx -> Exercise -> Exercise
--- genQuestion _ ex = ex{eQuestion = [ FText "How many 6 digit positive integers are there such that the sum of the digits is at most 51?", FFieldMath "answer"]}
-
--- genFeedback :: CombinEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
--- genFeedback _ mStrs rsp
---   = trace ("genFeedback " ++ show mStrs) $
---     case Map.lookup "answer" mStrs of 
---       Just v -> if v == "56" then markCorrect $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
---                 else markWrong $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
---       Nothing -> error "Answer field expected."
