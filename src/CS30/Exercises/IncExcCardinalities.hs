@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module CS30.Exercises.IncExcCardinalities (incExcCards) where
+module CS30.Exercises.IncExcCardinalities (incExcCards, spaces) where
 import CS30.Data
 import CS30.Exercises.Data
 import Data.Aeson as JSON -- don't think I use this
@@ -10,6 +10,7 @@ import qualified Data.Map as Map
 import Debug.Trace
 import Text.Megaparsec
 import Text.Megaparsec.Char
+import CS30.Exercises.Util
 
 data IncExcProblem = IEP ([[Field]], Int)
 $(deriveJSON defaultOptions ''IncExcProblem)
@@ -60,8 +61,7 @@ genExercise (IEP (fields, _)) def
 
 genFeedback :: IncExcProblem -> Map.Map String String -> ProblemResponse -> ProblemResponse
 genFeedback (IEP (fields, sol)) mStrs pr 
-      = trace ("gen feedback " ++ show mStrs ++ " " ++ show pr ++ show answer) $ 
-            case answer of
+      = reTime$ case answer of
                   Nothing -> trace ("wrong" ++ show rsp) wrong{prFeedback= rsp++(FText "Your answer was "):rspwa}
                   Just v -> if (v == sol) 
                               then trace ("correct" ++ show rsp) correct{prFeedback=rsp}
@@ -76,7 +76,7 @@ genFeedback (IEP (fields, sol)) mStrs pr
             wrong = markWrong pr
             correct = markCorrect pr
             rsp :: [Field]
-            rsp = [FText $ "The cardinality of "]++[answerField]++[FText " is ", FMath (show sol)]
+            rsp = [FText $ "The cardinality of "]++[answerField]++[FText " is ", FMath (show sol), FText "."]
             rspwa = case ans of
                 Nothing -> [FText "??? (perhaps report this as a bug?)"]
                 Just v -> [FMath v]
