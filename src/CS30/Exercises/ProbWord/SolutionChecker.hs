@@ -107,8 +107,8 @@ opToFunction Exponentiation r1 r2
  | (denominator r2 == 1) = return (r1 ^^ (numerator r2))
  | otherwise = Nothing
 
-probFeedback :: ([Field], Rational) -> Map.Map String String -> ProblemResponse -> ProblemResponse
-probFeedback (quer, sol) usr' defaultRsp
+probFeedback :: ([Field], (Rational,String)) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+probFeedback (quer, (sol, solType)) usr' defaultRsp
   = reTime$ case usr of 
               Nothing -> error "Server communication error: expecting a 'prob' field"
               Just v -> case runParser rationalExpr "" v of
@@ -119,7 +119,7 @@ probFeedback (quer, sol) usr' defaultRsp
   -- runParser ::
   -- Parsec e s a -> String -> s -> Either (ParseErrorBundle s e) a
     usr = Map.lookup "prob" usr'
-    rsp = [FText $ "The answer for "]++quer++[FText " is ", FMath $ show sol]
+    rsp = [FText $ "The answer for "]++quer++[FText " is ", FMath $ dispRat sol solType]
     rspwa = case usr of
             Nothing -> [FText "- ??? - (perhaps report this as a bug?)"]
             Just v -> [FMath v]
