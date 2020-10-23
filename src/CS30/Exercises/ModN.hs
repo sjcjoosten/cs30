@@ -3,6 +3,9 @@
 module CS30.Exercises.ModN (modN) where
 import CS30.Data
 import CS30.Exercises.Data
+import Data.Functor.Identity
+import CS30.Exercises.Util
+
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import System.Random (randomRIO)
 import qualified Data.Map as Map
@@ -18,7 +21,7 @@ genTable myProblem def
  = def{ eQuestion = [ FText $"Please answer those questions"
                     , FTable ([headerRow] ++ 
                                 [ [Cell field, Cell (FFieldBool (FText "True") (FText "False") (Just False) ("TF_" ++ show i))]
-                                | ((field, _),i) <- myProblemIndexed ] )
+                                    | ((field, _),i) <- myProblemIndexed ] )
                     ]
       , eBroughtBy = ["Paul Gralla","Joseph Hajjar"] }
  where 
@@ -75,11 +78,32 @@ gen_intPower = ""
 gen_fracPower :: String
 gen_fracPower = ""
 
--- right parameters??
 modNFeedback :: [(Field, Bool)] -> Map.Map String String -> ProblemResponse -> ProblemResponse
-modNFeedback a b defaultRsp = wrong{prFeedback=[(FText "wrong")]}
-
+modNFeedback qa usr defaultRsp
+    = reTime $ if (isCorrect) 
+               then correct{prFeedback=[FText "correct, you beast"] }
+               else wrong{prFeedback=[FText ("wrong"),table]}
+                
 
     where
+        table = FTable (
+                        [[Header (FText "Equation"),Header (FText "Your Answer"), Header (FText "Solution") ]] ++ 
+                            [[Cell question, Cell (FText (charToBoolStr sol)), Cell (FText $ show answer)]  | ((question, answer), sol) <- qAndA ]
+                            )
+        
+        qAndA = zip qa sols
+
+        answers = [show b | (a,b) <- qa]
+        sols = [ solLookup i | i <- [1..2]]
+        allAnsWithSol = zip answers sols
+        isCorrect = all (==True) [ givenAns == (charToBoolStr solu) | (givenAns,solu) <- allAnsWithSol]
+
+        charToBoolStr c = if(c == "F") then "False" else (if(c == "T") then "True" else "")
+
+        solLookup i = case x of
+                      Nothing -> ""
+                      Just a -> a
+                      where x = Map.lookup ("TF_"++ show i) usr 
+    
         wrong = markWrong defaultRsp
         correct = markCorrect defaultRsp
