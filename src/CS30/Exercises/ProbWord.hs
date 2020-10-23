@@ -1,14 +1,19 @@
-module CS30.Exercises.ProbWord (probBasicEx) where
+module CS30.Exercises.ProbWord (probBasicEx, probExpectEx) where
 import CS30.Data (Field(..),Exercise(..))
 import CS30.Exercises.Data (ExerciseType,exerciseType)
 import CS30.Exercises.ProbWord.Basics
+import CS30.Exercises.ProbWord.ExpectedValue
 import CS30.Exercises.ProbWord.SolutionChecker
 
 probBasicEx :: ExerciseType
-probBasicEx = exerciseType "ProbWordProblem" "L*.*" "Basic Probability" basicprob probQuer probFeedback
+probBasicEx = exerciseType "BasicProb" "L*.*" "Basic Probability" basicprob probQuer probFeedback
 
-probQuer :: ([Field], a) -> Exercise -> Exercise
+probExpectEx :: ExerciseType
+probExpectEx = exerciseType "ExpectedValue" "L*.*" "Expected Value" expectprob probQuer probExpectFeedback 
+
+probQuer :: Real a => ([Field], a) -> Exercise -> Exercise
 probQuer (quer, _solution) def
- = def{ eQuestion = [ FText $"If "] ++quer
+ = def{ eQuestion = [ FText $"If "] ++quer ++  [FText "\nYou may give your answer in decimal, percentage, or fractional form, as appropriate." ]
+            ++ [FMath $ show $ toRational _solution]
        , eBroughtBy = ["Fei Guo", "Kyle Bensink"]
         }
