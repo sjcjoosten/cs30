@@ -5,7 +5,7 @@ import           Numeric
 
 
 expectprob :: [ChoiceTree ([Field], Double)]
-expectprob = [ Branch [ nodes [ ( [FText $ "you invest $100 in a stock that will return $" ++ show winVal ++ " with probability " ++ (showFFloat (Just 1) winProb "") ++ " or $" ++ show loseVal ++ " with probability " ++ (showFFloat (Just 1) (1 - winProb) "") ++ ", what is your expected profit?", FFieldMath "prob"]
+expectprob = [ Branch [ nodes [ ( [FText $ "you invest $100 in a stock that will return $" ++ show (floor winVal) ++ " with probability " ++ (showFFloat (Just 1) winProb "") ++ " or $" ++ show (floor loseVal) ++ " with probability " ++ (showFFloat (Just 1) (1 - winProb) "") ++ ", what is your expected profit?", FFieldMath "prob"]
                                 , winVal * winProb + loseVal * (1 - winProb) - 100
                                 )
                               | winVal <- [120::Double,130..180]
