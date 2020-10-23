@@ -13,7 +13,6 @@ probExpectEx = exerciseType "ExpectedValue" "L*.*" "Expected Value" expectprob p
 
 probQuer :: Real a => ([Field], a) -> Exercise -> Exercise
 probQuer (quer, _solution) def
- = def{ eQuestion = [ FText $"If "] ++quer ++  [FText "\nYou may give your answer in decimal, percentage, or fractional form, as appropriate." ]
-            ++ [FMath $ show $ toRational _solution]
+ = def{ eQuestion = [ FText $"If "] ++quer ++  [FText "\nYou may give your answer in decimal, percentage, or fractional form, as appropriate."]            
        , eBroughtBy = ["Fei Guo", "Kyle Bensink"]
         }
