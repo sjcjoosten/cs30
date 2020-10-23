@@ -2,10 +2,7 @@
 module CS30.Exercises.Cardinality (cardEx) where
 import           CS30.Data
 import           CS30.Exercises.Data
-import           Data.List.Extra (nubSort)
 import qualified Data.Map as Map
-import           Data.Aeson.TH
-import qualified Data.Text.Lazy as Text
 import           Data.Functor.Identity
 import           Data.Void
 import           Text.Megaparsec
@@ -26,10 +23,9 @@ data MathExpr = Const Int
               deriving Show
 
 choose :: Int -> Int -> Int
-choose n r 
-  | n >  r = ((choose (n-1) r) * n) `div` (n-r)
-  | n == r = 1 
-  | n <  r = 0
+choose n r | n >  r = ((choose (n-1) r) * n) `div` (n-r)
+           | n == r = 1 
+           | n <  r = 0
 
 evalExpr :: MathExpr -> Int
 evalExpr (Const x)    = x
@@ -113,9 +109,13 @@ cardFeedback (quer, sol) mStrs defaultRsp
 
 type Parser = ParsecT Void String Identity
 
+spaceConsumer :: Parser ()
 spaceConsumer = L.space spaces empty empty 
 
+symbol :: String -> Parser String
 symbol = L.symbol spaceConsumer
+
+lexeme :: Parser a -> Parser a
 lexeme   = L.lexeme spaceConsumer
 
 -- based on Drill 6.2 scaffold
@@ -142,6 +142,7 @@ operatorTable =
     [binary "choose" Choose]
   ]
 
+binary :: String -> (a -> a -> a) -> Operator Parser a
 binary name f = InfixL (f <$ symbol name)
 
 parseBinom :: Parser MathExpr
