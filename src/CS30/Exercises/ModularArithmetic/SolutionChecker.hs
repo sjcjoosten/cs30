@@ -7,7 +7,6 @@ import           Data.Char
 import           Data.Functor.Identity (Identity)
 import qualified Data.Map as Map
 import           Data.Void(Void)
-import           Debug.Trace
 import           Text.Megaparsec
 
 type Parser = ParsecT Void String Identity
@@ -21,14 +20,6 @@ digits = do ds <- some digit
             return (foldl1 shiftl ds)
          where shiftl m n = 10 * m + n
 
--- Currently, this displays any answer as correct
-stockGenFeedback :: ModEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
-stockGenFeedback _ mStrs rsp = trace ("genFeedback: " ++ show mStrs) $ 
-                                 case Map.lookup "answer" mStrs of
-                                    Just v -> markCorrect $ rsp{prFeedback = [FText ("You entered " ++ show v)], prTimeToRead=60}
-                                    Nothing -> markWrong $ rsp{prFeedback = [FText "Error: Server failure."], prTimeToRead=60}
-
--- Accepts correct answers, rejects incorrect ones
 genFeedback :: ModEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
 genFeedback modEx mStrs rsp = case Map.lookup "answer" mStrs of
                                 Just v -> case parse digits "" val of

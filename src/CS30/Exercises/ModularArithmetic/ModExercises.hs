@@ -36,6 +36,34 @@ easyExercises =
 
         ModEx (
             [FMath "83 \\equiv_{7}"], "7", 6
+        ),
+
+        ModEx (
+            [FMath "59 \\equiv_{17}"], "17", 8
+        ),
+
+        ModEx (
+            [FMath "91 \\equiv_{26}"], "26", 13
+        ),
+     
+        ModEx (
+            [FMath "-137 \\equiv_{4}"], "4", 3
+        ),
+
+        ModEx (
+            [FMath "-41 \\equiv_{9}"], "9", 4
+        ),
+
+        ModEx (
+            [FMath "(-38 + 19) \\equiv_{6}"], "6", 5
+        ),
+
+        ModEx (
+            [FMath "3^{5} \\equiv_{13}"], "13", 9
+        ),
+
+        ModEx (
+            [FMath "(-13 * 4) \\equiv_{19}"], "19", 5
         )
     ]
 
@@ -47,6 +75,10 @@ mediumExercises =
         ),
 
         ModEx (
+            [FMath "-19^{5} \\equiv_{13}"], "13", 11
+        ),
+
+        ModEx (
             [FMath "16 \\cdot 37^{-1} \\equiv_{11}"], "11", 4
         )
     ]
@@ -54,10 +86,6 @@ mediumExercises =
 hardExercises :: [ModEx]
 hardExercises = 
     [
-        ModEx (
-            [FMath "-19^{5} \\equiv_{13}"], "13", 11
-        ),
-
         ModEx (
             [FMath "(245176 + 2)^{5} \\equiv_{6}"], "6", 2
         )
