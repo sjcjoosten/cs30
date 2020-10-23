@@ -2,6 +2,8 @@ module CS30.Exercises.Util where
 import CS30.Exercises.Data
 import CS30.Data
 import Data.List
+import Data.Ratio
+import Numeric
 
 -- | Calculate the ProblemResponse time in a simple way
 reTime :: ProblemResponse -> ProblemResponse
@@ -10,6 +12,14 @@ reTime pr = pr{prTimeToRead = length (prFeedback pr)+2} -- todo: can be much mor
 -- | Display a set of things in roster notation
 dispSet :: [String] -> String
 dispSet sol = "\\left\\{"++intercalate ", " (nub sol)++"\\right\\}"
+
+-- | Display a rational number
+dispRat :: Rational -> String -> String
+dispRat sol solType
+      | solType == "frac" = "\\frac{" ++ show (numerator sol) ++ "}{" ++ show (denominator sol) ++ "}"
+      | solType == "money" = "$" ++ (showFFloatAlt (Just (2::Int)) (fromRational sol)) ""
+      | solType == "dec" = (showFFloat (Just (5::Int)) (fromRational sol)) ""
+      | otherwise = "\\frac{" ++ show (numerator sol) ++ "}{" ++ show (denominator sol) ++ "}"
 
 -- | Produces a list with the 100 most common nouns in English, plus a few of my own.
 -- | This function has no case-sensitive words, all words are in lower-case and between 3 and 11 letters in length.

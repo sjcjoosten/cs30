@@ -2,6 +2,7 @@ module CS30.Exercises.ProbWord.Basics (basicprob) where
 import           CS30.Data
 import           CS30.Exercises.Data
 import GHC.Real -- for (%)
+import CS30.Exercises.Util (dispRat)
 
 -- sumList :: [Integer] -> Integer
 
@@ -11,7 +12,7 @@ basicprob = [ Branch [ nodes [ ( [FText $ "there are " ++ show blue ++ " blue ma
                                 , blue % (blue + red + green)
                                 )
                               , ( [FText $ "there are " ++ show blue ++ " blue marbles, " ++ show red ++ " red marbles, and " ++ show green ++ " green marbles, what is the probability of picking a marble that isn't blue?", FFieldMath "prob"]
-                                , (red + green) % (blue + red + green)
+                                , ((red + green) % (blue + red + green), "frac")
                                 )
                               ]
                               | blue <- [1..8], red <- [1..8], green <- [1..8] ]
