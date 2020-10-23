@@ -143,20 +143,19 @@ operatorTable =
   ]
 
 binary name f = InfixL (f <$ symbol name)
--- prefix name f = Prefix  (f <$ symbol name)
 
 parseBinom :: Parser MathExpr
 parseBinom = do
   _  <- symbol "\\binom" 
-  e1 <- parseExpr 
-  e2 <- parseExpr
+  e1 <- brackets parseExpr 
+  e2 <- brackets parseExpr
   return (Choose e1 e2)
 
 parseExpr :: Parser MathExpr
-parseExpr =  parseBinom <|> makeExprParser parseTerm operatorTable 
+parseExpr =  makeExprParser parseTerm operatorTable 
 
 parseTerm :: Parser MathExpr
-parseTerm = parens parseExpr <|> brackets parseExpr <|> parseConstant 
+parseTerm = parens parseExpr <|> brackets parseExpr <|> parseConstant <|> parseBinom
 
 -- rosterFeedback :: ([Field], [String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 -- rosterFeedback (quer, sol) usr' defaultRsp
