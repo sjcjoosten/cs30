@@ -2,14 +2,13 @@
 module CS30.Exercises.Cardinality (cardEx) where
 import           CS30.Data
 import           CS30.Exercises.Data
-import           Data.List.Extra (nubSort)
 import qualified Data.Map as Map
-import           Data.Aeson.TH
-import qualified Data.Text.Lazy as Text
 import           Data.Functor.Identity
 import           Data.Void
 import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
+import qualified Text.Megaparsec.Char.Lexer as L
+import           Control.Monad.Combinators.Expr
 import Debug.Trace
 
 
@@ -17,55 +16,65 @@ data CardExp = CardExp deriving Show
 -- type CardExp a = ([Field],a)
 -- $(deriveJSON defaultOptions ''CardExp)
 
--- not yet used, but we might want something like this
--- to parse the user's expressions
 data MathExpr = Const Int 
               | Mult  MathExpr MathExpr  -- multiply two MathExpr's 
               | Expon MathExpr MathExpr  -- set first MathExpr to the second MathExpr power
               | Choose MathExpr MathExpr -- first MathExpr `choose` second MathExpr
+              deriving Show
+
+choose :: Int -> Int -> Int
+choose n r | n >  r = ((choose (n-1) r) * n) `div` (n-r)
+           | n == r = 1 
+           | n <  r = 0
+
+evalExpr :: MathExpr -> Int
+evalExpr (Const x)    = x
+evalExpr (Mult e1 e2) = (evalExpr e1) * (evalExpr e2)
+evalExpr (Expon e1 e2) = (evalExpr e1) ^ (evalExpr e2)
+evalExpr (Choose e1 e2) = (evalExpr e1) `choose` (evalExpr e2)
 
 cardEx :: ExerciseType
-
 cardEx = exerciseType "Cardinality" "L??" "Cardinality of Expression" 
             cardinality
             cardQuer 
             cardFeedback
 
 allCards :: [Int]
-allCards = [1..99]
+allCards = [1..99] 
+-- ^ since we are evaluating expressions to determine when they are correct
+-- we may want to keep the numbers relatively small
 
-cardinality :: [ChoiceTree ([[Field]], [String])]
+cardinality :: [ChoiceTree ([[Field]], [Int])]
 cardinality = [ 
             -- cardinality of the cartesian product of two sets
            nodes [ ( [[FText"|A| ", FMath$ "= "++d1, FText" and |B| ", FMath$"= "++d2], 
                         [FText"|", FMath$ "A x B", FText"|"]]
-                     , [show (read (d1) * read(d2))] -- this actually does out the mulitplication (but idk if we necessarily want them to, smthg to think about)
+                     , [read (d1) * read(d2)] -- this actually does out the mulitplication (but idk if we necessarily want them to, smthg to think about)
                      )
                    | d1 <- map show allCards, d2 <- map show allCards]
             -- cardinality of a power set
             , nodes [ ( [[FText"|A| ", FMath$ "= "++d1], [FText "|𝒫",FMath$ "(A)", FText"|"]]
-                     , ["2^"++d1] -- needs {}
+                     , [2^(read d1)] -- needs {}
                      )
                    | d1 <- map show allCards]
             -- cardinality of set x its powerset
            , Branch [ nodes [ ( [[FText"|A| ", FMath$"= "++d1],
                                 [FText"|", FMath$"A x ", FText"𝒫", FMath"(A)", FText"|"]]
-                              ,[d1++"*2^"++d1, -- needs \\cdot and {}
-                                "2^"++d1++"*"++d1] -- needs \\cdot and {}
+                              ,[(read d1)*(2^(read d1))]
                               )
                             | d1 <- map show allCards]
                      ] 
             -- cardinality with set builder notatino (like ex from the assignment sheet)
            , Branch [ nodes [ ( [[FText"|B| ", FMath$ "= "++d2],
                                  [FText"|", FMath$"\\left\\{A | A \\subseteq B, |A| ="++d1++"\\right\\}", FText"|"]]
-                              , [d2++" choose "++ d1]
+                              , [(read d2) `choose` (read d1)]
                               )
                             | d1 <- map show allCards, d2 <- map show allCards]
                     ]
            ]
 
 
-cardQuer :: ([[Field]],[String]) -> Exercise -> Exercise
+cardQuer :: ([[Field]],[Int]) -> Exercise -> Exercise
 cardQuer (quer, _solution) exer 
   = -- trace("solution " ++  show _solution) -- for testing (I've disabled this as it clutters the 'stack test' output)
     exer { eQuestion=[FText "Given "] ++ rule ++ 
@@ -80,34 +89,74 @@ cardQuer (quer, _solution) exer
 --                     [ FText " in roster notation", FFieldMath "roster" ] }
 
 
-cardFeedback :: ([[Field]],[String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+cardFeedback :: ([[Field]],[Int]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 cardFeedback (quer, sol) mStrs defaultRsp 
   =  trace ("gen feedback " ++ show mStrs ++ " " ++ show pr) $ -- for testing
       case pr of 
-       Just v -> if v `elem` sol then 
+       Just v -> if (evalExpr v) ==  (head sol) then 
                     markCorrect $ defaultRsp{prFeedback = [FText("you entered " ++ show v)]}
-                 else markWrong $ defaultRsp{prFeedback = [FText("the correct answer is "++head sol)]}
-       Nothing -> markCorrect $ defaultRsp{prFeedback = [FText("the correct answer is "++head sol)]}
+                 else markWrong $ defaultRsp{prFeedback = [FText("the correct answer is "++(show $ head sol))]}
+       Nothing -> markWrong $ defaultRsp{prFeedback = [FText("the correct answer is "++(show $ head sol))]}
       where usr = Map.lookup "answer" mStrs
-            pr :: Maybe String
+            pr :: Maybe MathExpr
             pr = case usr of
                    Nothing -> Nothing
-                   Just v -> case parse parseMultiply "" v of
+                   Just v -> case parse parseExpr "" v of
                                Left _ -> Nothing -- error (errorBundlePretty str)
-                               Right st -> Just (show  ((fst st)*(snd st))) 
+                               Right st -> Just st 
                                -- ^ if we parse a multiplication expression, then multiply the two numbers to see if it's right  
 
 
 type Parser = ParsecT Void String Identity
 
--- parses a multiplication expression in the form of "12\\cdot12"
--- into a tuple containing the two multiplied numbers
-parseMultiply :: Parser (Int,Int)
-parseMultiply = do 
-  n1 <- some digitChar
-  _  <- string "\\cdot"
-  n2 <- some digitChar
-  return (read n1, read n2)
+spaceConsumer :: Parser ()
+spaceConsumer = L.space spaces empty empty 
+
+symbol :: String -> Parser String
+symbol = L.symbol spaceConsumer
+
+lexeme :: Parser a -> Parser a
+lexeme   = L.lexeme spaceConsumer
+
+-- based on Drill 6.2 scaffold
+spaces :: Parser ()
+spaces = some spc >> return ()
+ where spc = string " " <|> string "\t" <|> string "\n" <|> string "\r"
+             <|> string "\\ " <|> string "~"
+
+brackets :: Parser a -> Parser a
+brackets = between (symbol "{") (symbol "}")
+
+parens :: Parser a -> Parser a          
+parens = between (symbol "\\left(") (symbol "\\right)")
+
+parseConstant :: Parser MathExpr
+parseConstant = do
+  n <- lexeme L.decimal
+  return (Const n)
+
+operatorTable :: [[Operator Parser MathExpr]]
+operatorTable =
+  [ [binary "^" Expon] ,
+    [binary "\\cdot" Mult] ,
+    [binary "choose" Choose]
+  ]
+
+binary :: String -> (a -> a -> a) -> Operator Parser a
+binary name f = InfixL (f <$ symbol name)
+
+parseBinom :: Parser MathExpr
+parseBinom = do
+  _  <- symbol "\\binom" 
+  e1 <- brackets parseExpr 
+  e2 <- brackets parseExpr
+  return (Choose e1 e2)
+
+parseExpr :: Parser MathExpr
+parseExpr =  makeExprParser parseTerm operatorTable 
+
+parseTerm :: Parser MathExpr
+parseTerm = parens parseExpr <|> brackets parseExpr <|> parseConstant <|> parseBinom
 
 -- rosterFeedback :: ([Field], [String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 -- rosterFeedback (quer, sol) usr' defaultRsp
