@@ -2,6 +2,7 @@
 module CS30.Exercises.Cardinality (cardEx) where
 import           CS30.Data
 import           CS30.Exercises.Data
+import           CS30.Exercises.Util
 import           Data.List.Extra (nubSort)
 import qualified Data.Map as Map
 import           Data.Aeson.TH
@@ -82,15 +83,14 @@ cardQuer (quer, _solution) exer
 
 cardFeedback :: ([[Field]],[String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 cardFeedback (quer, sol) mStrs defaultRsp 
-  =  trace("quer: " ++ show question)
-      trace ("gen feedback " ++ show mStrs ++ " " ++ show pr) $ -- for testing
-      case pr of 
+  =   trace ("gen feedback " ++ show mStrs ++ " " ++ show pr) $ -- for testing
+      reTime$ case pr of 
        Just v -> if v == head sol then 
                     markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FText " = "] ++ [FText v]}
                  else if v `elem` sol then 
                      markWrong $ defaultRsp{prFeedback = [FText("The correct answer is "++head sol ++ ". You wrote " ++ v)]}
                      else 
-                     markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get those numbers?")]} -- Where do the numbers "++ "" ++ " come from?"
+                     markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get those numbers?")]} -- Where do the numbers "++ parsed numbers ++ " come from?"
        Nothing -> markCorrect $ defaultRsp{prFeedback = [FText("The correct answer is "++head sol ++ ". You didn't write anything.")]}
       where usr = Map.lookup "answer" mStrs
             question = quer!!1
