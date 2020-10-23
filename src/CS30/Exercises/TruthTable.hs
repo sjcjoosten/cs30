@@ -15,7 +15,6 @@ import qualified Data.Text as Text
 
 import Text.Megaparsec hiding (ParseError)
 import Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char.Lexer as L
 
 import Control.Monad.Combinators.Expr
 import Control.Monad (void)
@@ -36,7 +35,7 @@ data Expression
   deriving (Show, Eq, Ord)
 
 type Literal = Expression
-type TruthTable = ([Expression], [[Bool]])
+data TruthTable = TruthTable [Expression] [[Bool]]
 
 ---------------------------------Character Definitions-------------------------------------------
 
@@ -47,12 +46,12 @@ charQ = 'Q'
 charR = 'R'
 charS = 'S'
 
--- Operations
+-- Operations -- TODO : How to make special characters work?
 charNeg, charCon, charDis, charImp :: Char
 charNeg = '~'
-charCon = '&' -- 'Λ'
-charDis = '|' -- '∨'
-charImp = '>' -- '→'
+charCon = '&' -- '\923' -- 'Λ' -- 
+charDis = '|' -- '\8744' -- '∨' -- 
+charImp = '>' -- '\8594' -- '→' -- 
 
 -- Booleans
 charTrue, charFalse :: Char
@@ -96,92 +95,68 @@ evalExpr (Disjunction e1 e2) literalMapping = evalExpr e1 literalMapping || eval
 evalExpr (Implication e1 e2) literalMapping = not (evalExpr e1 literalMapping && not (evalExpr e2 literalMapping))
 evalExpr literal literalMapping = if Map.member literal literalMapping then literalMapping Map.! literal else True
 
--------------------------------------Parser Dependencies----------------------------------------
+-------------------------------------Megaparsec stuff----------------------------------------
 
 parserExpression :: Parser Expression
 parserExpression = makeExprParser parserTerm operatorTable
 
 parserTerm :: Parser Expression
-parserTerm = LiteralP <$ char charP
-   <|> LiteralQ <$ char charQ
-   <|> LiteralR <$ char charR
-   <|> LiteralS <$ char charS
-   <|> parserParenthesis parserExpression
+parserTerm = LiteralP <$ char charP <|>
+             LiteralQ <$ char charQ <|>
+             LiteralR <$ char charR <|>
+             LiteralS <$ char charS <|>
+             parserParenthesis parserExpression
 
 parserParenthesis :: Parser a -> Parser a
-parserParenthesis = between (symbol [charOpen]) (symbol [charClose])
-
--------------------------------------Parser Utilities----------------------------------------
-
-symbol :: String -> Parser String
-symbol = L.symbol space
-
-binary :: String -> (Expression -> Expression -> Expression) -> Operator Parser Expression
-binary  name f = InfixL  (f <$ symbol name)
-
-prefix :: String -> (Expression -> Expression) -> Operator Parser Expression
-prefix  name f = Prefix  (f <$ symbol name)
-
--------------------------------------Parser Operation Table----------------------------------
+parserParenthesis = between (string [charOpen]) (string [charClose])
 
 operatorTable :: [[Operator Parser Expression]]
 operatorTable =
   [ 
-    [prefix [charNeg] Negation],
-    [binary [charCon] Conjunction],
-    [binary [charDis] Disjunction],
-    [binary [charImp] Implication]
+    [Prefix (Negation <$ string [charNeg])],
+    [InfixL (Conjunction <$ string [charCon])],
+    [InfixL (Disjunction <$ string [charDis])],
+    [InfixL (Implication <$ string [charImp])]
   ]
 
 --------------------------------------Truth Table Logic-------------------------------------------
 
 -- This returns the truth table for an expression (Header: [Expression], Body: [[Bool]])
 getTruthTable :: Expression -> TruthTable
-getTruthTable e = (header, body)
-                  where header = flattenExpr e ++ [e]
-                        literalMappings = getAllLiteralMappings e
-                        body = getTruthTableBody header literalMappings
+getTruthTable e = TruthTable ttHeader ttBody
+                  where ttHeader = flattenExpr e ++ [e]
+                        ttBody = getTruthTableBody ttHeader (getAllLiteralMappings e)
 
 -- This validates a truth table. Given the allocation of values in literal columns, it checks the rest of the body
 isValidTruthTable :: TruthTable -> Bool
-isValidTruthTable t = input_body == getTruthTableBody input_header literalMappings
-                    where input_header = fst t
-                          input_body = snd t
-                          literals = filter isLiteral input_header
-                          literalMappings = map (\row-> Map.fromList(zip literals (take (length literals) row))) input_body
-                          
+isValidTruthTable (TruthTable ttHeader ttBody) 
+      = ttBody == getTruthTableBody ttHeader literalMappings
+        where literals = filter isLiteral ttHeader
+              literalMappings = map (\row-> Map.fromList(zip literals (take (length literals) row))) ttBody
+
 -- This returns the truth table body given a header and a literal to boolean mapping for every row
 getTruthTableBody :: [Expression] -> [Map.Map Literal Bool] -> [[Bool]]
 getTruthTableBody header literalMappings = 
-  map (\literalMapping -> 
-                         map (\headerExp -> 
-                                           evalExpr headerExp literalMapping 
-                             ) header
-      ) literalMappings
+  map (\literalMapping -> map (\headerExp -> 
+      evalExpr headerExp literalMapping 
+  ) header) literalMappings
 
---------------------------------------Truth Table Conversion--------------------------------------
-
+-- Converts truth table to field FTable
 fromTruthTable :: TruthTable -> Field
-fromTruthTable (ttHeader, ttBody) = FTable (ftHeader : ftBody)
-                                    where ftHeader = map exprToHeader ttHeader
-                                          ftBody = map (\ttBodyRow -> map boolToCell ttBodyRow) ttBody
+fromTruthTable (TruthTable ttHeader ttBody) 
+      = FTable (ftHeader : ftBody)
+        where exprToHeader e = Header (FText (showExpr e))
+              boolToCell e = Cell (FText (if e then [charTrue] else [charFalse]))
+              ftHeader = map exprToHeader ttHeader
+              ftBody = map (\ttBodyRow -> map boolToCell ttBodyRow) ttBody
 
-exprToHeader :: Expression -> Cell
-exprToHeader e = Header (FText (showExpr e))
-
-boolToCell :: Bool -> Cell
-boolToCell e = Cell (FText (if e then [charTrue] else [charFalse]))
-
+-- Converts truth table to field FTable
 toTruthTable :: Field -> TruthTable
-toTruthTable (FTable ft) = (ttHeader, ttBody)
-                           where ttHeader = map headerToExpr (head ft)
-                                 ttBody = map (\ftBodyRow -> map cellToBool ftBodyRow) (take 1 ft)
-
-headerToExpr :: Cell -> Expression
-headerToExpr (Header (FText x)) = parseExpr x
-
-cellToBool :: Cell -> Bool
-cellToBool (Cell (FText x)) = x == [charTrue]
+toTruthTable (FTable fTable) = TruthTable ttHeader ttBody
+                               where headerToExpr (Header (FText x)) = parseExpr x
+                                     cellToBool (Cell (FText x)) = x == [charTrue]
+                                     ttHeader = map headerToExpr (head fTable)
+                                     ttBody = map (\ftBodyRow -> map cellToBool ftBodyRow) (take 1 fTable)
 
 --------------------------------------Truth Table Helpers-------------------------------------------
 
@@ -244,3 +219,9 @@ isLiteral x = elem x [LiteralP, LiteralQ, LiteralR, LiteralS]
 -- This prints the last compiled debugOut : "stack exec debug"
 debugOut :: String
 debugOut = (showExpr . parseExpr) " (S >~R)&   (P|Q)    "
+-- debugOut = (showExpr . parseExpr) " (S \8594~R)\923   (P\8744Q)    "
+-- debugOut = " (S \8594~R)\923   (P\8744Q)    "
+
+-- Λ : '\923'
+-- ∨ : '\8744'
+-- → : '\8594'
