@@ -49,7 +49,7 @@ rationalExpr = lt_spaces *> makeExprParser termP oprs <* lt_spaces
                 (do _ <- string "."
                     rmdr <- some digit
                     lt_spaces
-                    perc <- (return True <* string "%") <|> return False
+                    perc <- (return True <* string "\\%") <|> return False
                     lt_spaces
                     let ans = parseDec rmdr % 10^(length rmdr)
                     return (Const (if perc then ans / 100 else ans)))
