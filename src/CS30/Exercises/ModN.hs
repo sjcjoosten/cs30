@@ -5,7 +5,7 @@ import CS30.Data
 import CS30.Exercises.Data
 import Data.Functor.Identity
 import CS30.Exercises.Util
-
+import Data.List
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import System.Random (randomRIO)
 import qualified Data.Map as Map
@@ -31,43 +31,61 @@ genTable myProblem def
 
     --    row3 = [Cell   (FFieldBool (FText "0") (FText "2") (Just True) "nr_response"),Cell   (FFieldBool (FText "B") (FText "D") Nothing "letter_response") ]
 
-easyExercise = Branch [ replace (f modBase) (easyMultiplication modBase) | modBase <- [4,6..20] ]
+easyExercise = Branch [ replace (f modBase) (easyFractionPower modBase) | modBase <- [4,6..20] ]
     where
         f modBase exercise = replace (g exercise) (easyAddition modBase)
         g e1 e2 = Node (e1 ++ e2)
 
 
-easyAddition modBase = Branch [ Branch [g leftNum summand modBase| summand <- [1..modBase*2] ] | leftNum <- [modBase..modBase*5]] 
+easyIntegerPowerSame modBase = Branch [ Branch [g leftNum exponent modBase| exponent <- [modBase..modBase*2] ] | leftNum <- getLeftNums modBase]
     where
-        g leftNum summand modBase = Node [(FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ " ++ show rightNum ++ " + " ++ show summand), True)]
+        g leftNum exponent modBase = Node [(FMath (show leftNum ++ "^{" ++ show exponent ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent ++ "}"), True)]
             where
                 rightNum = leftNum `mod` modBase
 
 
-easyMultiplication modBase = Branch [ Branch [g leftNum factor modBase| factor <- [1..modBase*2] ] | leftNum <- [modBase..modBase*5]]
+easyIntegerPowerDiff modBase = Branch [ Branch [g leftNum exponent1 exponent2 modBase| (exponent1, exponent2) <- (zip [modBase, modBase + 2..modBase*2] (reverse [modBase - 1, modBase + 1..modBase*2])) ] | leftNum <- getLeftNums modBase]
     where
-        g leftNum factor modBase = Node [(FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ " ++ show rightNum ++ " \\cdot " ++ show factor), True)]
+        g leftNum exponent1 exponent2 modBase = Node [(FMath (show leftNum ++ "^{" ++ show exponent1 ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent2 ++ "}"), isCorrect)]
+            where
+                rightNum = leftNum `mod` modBase
+                isCorrect = modExp leftNum exponent1 modBase == modExp rightNum exponent2 modBase
+
+
+easyFractionPower modBase = Branch [ Branch [ g leftNum rightNum modBase | leftNum <- (filter (\x -> (x `mod` modBase == rightNum `mod` modBase) && x /=rightNum ) squares)] | rightNum <- squares]
+    where
+        g leftNum rightNum modBase = Node [(FMath ("\\sqrt{" ++ show leftNum ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ \\sqrt{" ++ show rightNum ++ "}"), isCorrect)]
+            where
+                isCorrect = (rootOfPerfectSquare leftNum) `mod` modBase == (rootOfPerfectSquare rightNum) `mod` modBase  
+
+
+easyAddition modBase = Branch [ Branch [g leftNum summand modBase| summand <- [1..modBase*2] ] | leftNum <- getLeftNums modBase]
+    where
+        g leftNum summand modBase = Node [(FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ " + " ++ show summand), True)]
             where
                 rightNum = leftNum `mod` modBase
 
--- genProblemBaseN :: Integer -> ChoiceTree [(Field, Bool)]
--- genProblemBaseN modBase = Branch (map g [modBase..modBase*5])
---     where
---         g leftNum summand = Node [(FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ " ++ show rightNum ++ " + " ++ show summand), True)]
---          where
---             rightNum = leftNum `mod` modBase
---             summand = Branch [1..modBase*5]
 
--- Inputs for these TBD, maybe random seed?
+easyMultiplication modBase = Branch [ Branch [g leftNum factor modBase| factor <- [1..modBase*2] ] | leftNum <- getLeftNums modBase]
+    where
+        g leftNum factor modBase = Node [(FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\  " ++ show rightNum ++ " \\cdot " ++ show factor), True)]
+            where
+                rightNum = leftNum `mod` modBase
 
--- generates a congruent addition example
--- gen_addition :: Int -> String  -- always congruent
--- gen_addition modBase = show leftNum ++ " + " ++ show summand ++ "\\eqiv_{" ++ show modBase ++ "} " ++ show rightNum ++ " + " ++ show summand
---     where
---         leftNum = read (show (liftIO$ randomRIO(modBase,modBase*5))) :: Int
---         rightNum = leftNum `mod` modBase
---         summand = read (show (liftIO$ randomRIO(1,modBase*2))) :: Int
+squares = [x*x | x <- [1..20]]
+rootOfPerfectSquare :: Integer -> Integer
+rootOfPerfectSquare i = 
+    case index of
+        Just index -> toInteger index
+        Nothing -> -1
+        where index = elemIndex i [x*x | x <- [1..20]]
 
+-- taken from https://gist.github.com/trevordixon/6788535
+modExp :: Integer -> Integer -> Integer -> Integer
+modExp  x y n = mod (x^(mod y (n-1))) (n)
+
+getLeftNums :: Integer -> [Integer]
+getLeftNums modBase = (filter (\x -> x `mod` modBase /= 0)[modBase..modBase*5])
 
 gen_multiplication :: String  -- always congruent
 gen_multiplication = ""
@@ -88,8 +106,8 @@ modNFeedback qa usr defaultRsp
     where
         table = FTable (
                         [[Header (FText "Equation"),Header (FText "Your Answer"), Header (FText "Solution") ]] ++ 
-                            [[Cell question, Cell (FText (charToBoolStr sol)), Cell (FText $ show answer)]  | ((question, answer), sol) <- qAndA ]
-                            )
+                        [[Cell question, Cell (FText (charToBoolStr sol)), Cell (FText $ show answer)]  | ((question, answer), sol) <- qAndA ]
+                        )
         
         qAndA = zip qa sols
 
