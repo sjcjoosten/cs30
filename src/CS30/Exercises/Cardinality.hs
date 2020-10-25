@@ -19,12 +19,12 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Control.Monad.Combinators.Expr
-import Debug.Trace
 
 data CardExp = CardExp deriving Show
 -- type CardExp a = ([Field],a)
 -- $(deriveJSON defaultOptions ''CardExp)
 
+-- datatype that we try to parse all user responses into 
 data MathExpr = Const Integer 
               | Fact MathExpr            -- factorial
               | Divide MathExpr MathExpr  -- division
@@ -159,7 +159,7 @@ cardFeedback (quer, sol) mStrs defaultRsp
           pr = case usr of
                  Nothing -> Nothing
                  Just v -> case parse parseExpr "" v of
-                             Left _ -> Nothing -- error (errorBundlePretty str)
+                             Left _ -> Nothing 
                              Right st -> Just st
           ans :: Maybe Integer
           ans = case pr of
@@ -168,14 +168,9 @@ cardFeedback (quer, sol) mStrs defaultRsp
 
 type Parser = ParsecT Void String Identity
 
+-- parse spaces (used w/ symbol and lexeme)
 spaceConsumer :: Parser ()
 spaceConsumer = L.space spaces empty empty 
-
-symbol :: String -> Parser String
-symbol = L.symbol spaceConsumer
-
-lexeme :: Parser a -> Parser a
-lexeme   = L.lexeme spaceConsumer
 
 -- based on Drill 6.2 scaffold
 spaces :: Parser ()
@@ -183,38 +178,61 @@ spaces = some spc >> return ()
  where spc = string " " <|> string "\t" <|> string "\n" <|> string "\r"
              <|> string "\\ " <|> string "~"
 
+-- parse a given specific string, accounting for spaces 
+symbol :: String -> Parser String
+symbol = L.symbol spaceConsumer
+
+-- parse some lexeme, accounting for spaces
+lexeme :: Parser a -> Parser a
+lexeme   = L.lexeme spaceConsumer
+
+-- parse something between {...}
 brackets :: Parser a -> Parser a
 brackets = between (symbol "{") (symbol "}")
 
+-- parse something between (...) 
 parens :: Parser a -> Parser a          
 parens = between (symbol "\\left(") (symbol "\\right)")
 
+-- parses some integer number alone into MathExpr
 parseConstant :: Parser MathExpr
 parseConstant = do
   n <- lexeme L.decimal
   return (Const n)
 
+-- operator table for use with makeExprParser 
 operatorTable :: [[Operator Parser MathExpr]]
 operatorTable =
   [ [postfix "!" Fact],
     [binary "^" Expon] ,
-    [binary "\\cdot" Mult, binary "" Mult] ,
+    [binary "\\cdot" Mult, binary "" Mult] , 
+    -- ^ second term here lets us parse things like (3)(3) = 3*3
     [binary "choose" Choose]
+    -- ^ we allow the literal word "choose" in between two expressions
   ]
 
+-- helper function for generating an binary infix operator
+-- like multiplication or exponentiation
+-- based on documentation for Control.Monad.Combinators.Expr
 binary :: String -> (a -> a -> a) -> Operator Parser a
 binary name f = InfixL (f <$ symbol name)
 
+-- helper function for postfix operators like factorial
+-- also from Control.Monad.Combinators.Expr documentation 
 postfix :: String -> (a -> a) -> Operator Parser a
 postfix name f = Postfix (f <$ symbol name)
 
+-- parse a binomial coefficient expression, like \binom{4}{2}
 parseBinom :: Parser MathExpr
 parseBinom = do
   _  <- symbol "\\binom" 
   e1 <- brackets parseExpr 
   e2 <- brackets parseExpr
+  -- ^ we assume both expressions here are within brackets
+  -- (which seems to be how it is always generated)
   return (Choose e1 e2)
 
+-- parse a fraction, like \frac{4}{2}
 parseFrac :: Parser MathExpr
 parseFrac = do
   _  <- symbol "\\frac" 
@@ -222,9 +240,10 @@ parseFrac = do
   e2 <- brackets parseExpr
   return (Divide e1 e2)
 
-parseExpr :: Parser MathExpr
-parseExpr =  makeExprParser parseTerm operatorTable
-
+-- parses a term (some expression in brackets/parens, a constant alone, or a binom/frac)
 parseTerm :: Parser MathExpr
 parseTerm = parens parseExpr <|> brackets parseExpr <|> parseConstant <|> parseBinom <|> parseFrac
 
+-- parse a full expression (using makeExprParser)
+parseExpr :: Parser MathExpr
+parseExpr =  makeExprParser parseTerm operatorTable
