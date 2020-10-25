@@ -2,27 +2,27 @@ module CS30.Exercises.ProbWord.Basics (basicprob) where
 import           CS30.Data
 import           CS30.Exercises.Data
 import GHC.Real -- for (%)
-import CS30.Exercises.Util (dispRat)
+-- import CS30.Exercises.Util (dispRat)
 
 -- sumList :: [Integer] -> Integer
 
 
 basicprob :: [ChoiceTree ([Field], Rational)]
-basicprob = [ Branch [ nodes [ ( [FText $ "there are " ++ show blue ++ " blue marbles, " ++ show red ++ " red marbles, and " ++ show green ++ " green marbles, what is the probability of picking a blue marble?", FFieldMath "prob"]
+basicprob = [ Branch [ nodes [ ( [FText $ "there are " ++ show blue ++ " blue marbles, " ++ show red ++ " red marbles, and " ++ show green ++ " green marbles, what is the probability of picking a blue marble?"]
                                 , blue % (blue + red + green)
                                 )
-                              , ( [FText $ "there are " ++ show blue ++ " blue marbles, " ++ show red ++ " red marbles, and " ++ show green ++ " green marbles, what is the probability of picking a marble that isn't blue?", FFieldMath "prob"]
-                                , ((red + green) % (blue + red + green), "frac")
+                              , ( [FText $ "there are " ++ show blue ++ " blue marbles, " ++ show red ++ " red marbles, and " ++ show green ++ " green marbles, what is the probability of picking a marble that isn't blue?"]
+                                , (red + green) % (blue + red + green)
                                 )
                               ]
                               | blue <- [1..8], red <- [1..8], green <- [1..8] ]
-            , Branch [ nodes [ ( [FText $ show numDice ++ " fair dice are rolled, find the probability that the sum of the results is equal to " ++ show sumDice, FFieldMath "prob"]
+            , Branch [ nodes [ ( [FText $ show numDice ++ " fair dice are rolled, find the probability that the sum of the results is equal to " ++ show sumDice]
                                 , (toInteger $ nDiceEqualToK numDice sumDice) % (6 ^ numDice)
                                )
                               ]
                               | numDice <- [2..3], sumDice <- [numDice + 1..numDice*6 - 1]
                               ]
-            , Branch [ nodes [([FText $ show numDice ++ " fair dice are rolled, find the probability that the sum of the results is less than " ++ show sumDice, FFieldMath "prob"]
+            , Branch [ nodes [([FText $ show numDice ++ " fair dice are rolled, find the probability that the sum of the results is less than " ++ show sumDice]
                               , (toInteger $ nDiceLessThanK numDice sumDice) % (6 ^ numDice))                              
                               | numDice <- [2..3], sumDice <- [2*numDice..numDice*5]] -- to prevent degenerate question, only take [2*numDice, 5*numDice] as question domain -}
                         ]

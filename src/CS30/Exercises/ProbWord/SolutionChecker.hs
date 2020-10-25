@@ -84,12 +84,13 @@ rationalExpr = lt_spaces *> makeExprParser termP oprs <* lt_spaces
         lt_spaces :: Parser ()
         lt_spaces = ((string " " <|> string "\\t" <|> string "\\ ") *> lt_spaces)
                     <|> return ()
-        oprs = [ [infixL "-" Subtraction, infixL "+" Addition] -- minus and addition
-               , [ infixL "\\cdot" Multiplication -- for LaTeX
+        oprs =  [ [ infixL "^" Exponentiation
+                  , Prefix (return Negate <* string "-" <* lt_spaces)] -- negate, exponentiation
+                , [ infixL "\\cdot" Multiplication -- for LaTeX
                   , infixL "*" Multiplication -- for ASCII
                   , infixL "/" Division] -- multiplication, division
-               , [infixL "^" Exponentiation
-                 ,Prefix (return Negate <* string "-" <* lt_spaces)] -- negate, exponentiation
+                , [ infixL "-" Subtraction
+                  , infixL "+" Addition] -- minus and addition
                ]
         infixL str opr = InfixL (return (BinOp opr) <* string str <* lt_spaces)
 evalRational :: RationalExpr -> Maybe Rational
