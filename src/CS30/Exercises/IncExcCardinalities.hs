@@ -28,6 +28,7 @@ choiceTreeList = [
       -- It then becomes trivial to create and solve systems of equations for different question types.
       Branch [ Branch [Branch [Branch [Branch [Branch [Branch [
             Branch [
+                 -- Basic part of assignment --
                  -- Question type 1: Given |A|, |B|, and |A U B|, find |A ∩ B| (or vice versa).
                   nodes [IEP ([
                               [FText"|A| ", FMath$ "= "++show(a)], 
@@ -42,6 +43,8 @@ choiceTreeList = [
                               [FMath$ "|A \\cup B|", FText"."]
                         ], (a+b-d))]
                   ],
+                  
+            -- Creative part of assignment: extra problem types --
             -- Question type 2: Given |A U C|, |A U B U C|, and |A U (C ∩ B)|, find |A U B|.
             nodes [IEP ([
                   [FMath$ "|A \\cup C|", FMath$ "= "++show(a+c-e)], 
