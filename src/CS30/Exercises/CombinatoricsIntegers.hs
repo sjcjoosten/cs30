@@ -84,7 +84,7 @@ findFirstTerm x y
     smallest = 10 ^ (x - 1)
 
 genDivisibility :: (Int, Int) -> ChoiceTree ([Field], String)
-genDivisibility (numDigit, divisor) = nodes[([FText $ "How many " ++ show numDigit ++ " digit positive integers are there such that it is divisible by "
+genDivisibility (numDigit, divisor) = nodes[([FText $ show numDigit ++ " digit positive integers are there such that it is divisible by "
   ++ show divisor ++ "?"], (show $ numXDivisibleByY numDigit divisor))]
 
 {- custom condition -}
@@ -106,14 +106,14 @@ digits n = mod n 10 : digits (div n 10)
 
 -- generates a question about the uniqueness of an n digit integer
 genUnique :: Int -> ChoiceTree ([Field], String)
-genUnique n = nodes [([FText $ "How many " ++ show n ++ " digit positive numbers are there such that all digits are different?"]
+genUnique n = nodes [([FText $ show n ++ " digit positive numbers are there such that all digits are different?"]
                     , (show $ solveUnique n))]
 
 combins :: [ChoiceTree ([Field], String)]
 combins = (map genUnique [2..9]) ++
          (map (genDivisibility) [(numDigit, divisor) | numDigit <- [1..10], divisor <- [2..1000]]) ++ 
-         [ nodes [ ([FText "How many 6 digit positive integers are there such that the sum of the digits is at most 51?"], (solveSum 6 51))]
-         , nodes [ ([FText "How many 3 digit positive integers are there such that the sum of the digits is at most 10?"], (solveSum 3 10))]]
+         [ nodes [ ([FText "6 digit positive integers are there such that the sum of the digits is at most 51?"], (solveSum 6 51))]
+         , nodes [ ([FText "3 digit positive integers are there such that the sum of the digits is at most 10?"], (solveSum 3 10))]]
 
 
 genQuestion:: ([Field],a) -> Exercise -> Exercise
