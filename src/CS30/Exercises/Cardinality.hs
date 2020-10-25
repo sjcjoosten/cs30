@@ -12,8 +12,6 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Control.Monad.Combinators.Expr
-import Debug.Trace
-
 
 data CardExp = CardExp deriving Show
 -- type CardExp a = ([Field],a)
@@ -51,52 +49,48 @@ cardEx = exerciseType "Cardinality" "L??" "Cardinality of Expression"
 
 allCards :: [Integer]
 allCards = [1..99] 
--- ^ since we are evaluating expressions to determine when they are correct
--- we may want to keep the numbers relatively small
 
 cardinality :: [ChoiceTree ([[Field]], [Integer])]
 cardinality = [ 
             -- cardinality of the cartesian product of two sets
-           nodes [ ( [[FText"|A| ", FMath$ "= "++d1, FText" and |B| ", FMath$"= "++d2], 
-                        [FText"|", FMath$ "A x B", FText"|"], 
-                        [ FMath$ d1, FMath$"*",  FMath$ d2]
-                        ]
-                     , [read (d1) * read(d2), read d1, read d2] -- this actually does out the mulitplication (but idk if we necessarily want them to, smthg to think about)
+           nodes [ ( [[FMath$ "|A| = "++(show n1), FText" and ", FMath$"|B| = "++(show n2)], 
+                      [FMath$ "|A \\times B|"], 
+                      [FMath$ (show n1), FMath$"\\cdot",  FMath$ (show n2)]
+                     ]
+                     , [n1 * n2, n1, n2]
                      )
-                   | d1 <- map show allCards, d2 <- map show allCards]
+                   | n1 <- allCards, n2 <- allCards]
             -- cardinality of a power set
-            , nodes [ ( [[FText"|A| ", FMath$ "= "++d1], 
+            , nodes [ ( [[FMath"|A| ", FMath$ "= "++(show n1)], 
                         [FText "|𝒫",FMath$ "(A)", FText"|"],
-                        [FMath$ "2", FText"^{", FMath d1, FText"}" ]
+                        [FMath$ "2^{"++(show n1)++"}" ]
                         ]
-                     , [2^(read d1), 2, read d1] -- needs {}
+                     , [2^n1, 2, n1]
                      )
-                   | d1 <- map show allCards]
+                   | n1 <- allCards]
             -- cardinality of set x its powerset
-           , Branch [ nodes [ ( [[FText"|A| ", FMath$"= "++d1],
-                                [FText"|", FMath$"A x ", FText"𝒫", FMath"(A)", FText"|"],
-                                [FMath d1, FText"*", FMath"2", FText"^{", FMath d1, FText"}"]
+           , Branch [ nodes [ ( [[FMath"|A| ", FMath$"= "++(show n1)],
+                                [FMath$"|A \\times ", FText"𝒫", FMath"(A)|"],
+                                [FMath$ (show n1)++"\\cdot 2^{"++(show n1)++"}"]
                                 ]
-                              ,[(read d1)*(2^(read d1)), 2, read d1]
+                              ,[n1*(2^n1), 2, n1]
                               )
-                            | d1 <- map show allCards]
+                            | n1 <- allCards]
                      ] 
             -- cardinality with set builder notatino (like ex from the assignment sheet)
-           , Branch [ nodes [ ( [[FText"|B| ", FMath$ "= "++d1],
-                                 [FText"|", FMath$"\\left\\{A | A \\subseteq B, |A| ="++d2++"\\right\\}", FText"|"], 
-                                 [FMath"\\binom{10}{6}"] -- \binom{10}{6}
-                                 ]
-                            --   , [d2++" choose "++ d1, d1, d2]
-                              , [(read d1) `choose` (read d2), read d1, read d2]
+           , Branch [ nodes [ ( [[FMath"|B| ", FMath$ "= "++(show n1)],
+                                 [FMath$"\\left|\\left\\{A\\ \\mid\\ A \\subseteq B, \\ |A| ="++(show n2)++"\\right\\}\\right|"], 
+                                 [FMath$"\\binom{"++(show n1)++"}{"++(show n2)++"}"] -- e.g. \binom{10}{6}
+                                ]
+                              , [n1 `choose` n2, n1, n2]
                               )
-                            | d1 <- map show allCards, d2 <- map show [1..(read d1)-1]]
+                            | n1 <- allCards, n2 <- [1..n1-1] ]
                     ]
            ]
 
 cardQuer :: ([[Field]],[Integer]) -> Exercise -> Exercise
 cardQuer (quer, _solution) exer 
-  = -- trace("solution " ++  show _solution) -- for testing (I've disabled this as it clutters the 'stack test' output)
-    exer { eQuestion=[FText "Given "] ++ rule ++ 
+  = exer { eQuestion=[FText "Given "] ++ rule ++ 
                      [FText ", compute "] ++ question ++ 
                      [FFieldMath "answer"]}
                         where rule = head quer
@@ -110,17 +104,17 @@ cardFeedback (quer, sol) mStrs defaultRsp
   = reTime $ case pr of 
       Just v -> if Set.fromList numInAns `Set.isSubsetOf` (Set.fromList allowedNums) then 
                   if (evalExpr v) ==  (head sol) then 
-                    markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++ [FText (show $ head sol)]} -- TODO: show intermediate steps 
+                    markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)]} -- TODO: show intermediate steps 
                   else
-                    markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++  [FText((show $ head sol) ++ 
-                                                         ". You wrote ")] ++ [FMath$ (mStrs Map.! "answer") ]}
+                    markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath(show $ head sol)] ++ 
+                                                        [FText(". You wrote ")] ++ [FMath$ (mStrs Map.! "answer") ]}
                 else 
                   markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from?")]} 
                 where numInAns    = getNums v 
                       allowedNums = tail sol
                       notInSol    = filter (\x -> notElem x allowedNums) numInAns
                      
-      Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++ [FText (show $ head sol)] ++ [FText". You didn't write anything."]}
+      Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText". You didn't write anything."]}
     where usr = Map.lookup "answer" mStrs
           question = quer!!1
           step = quer!!2
