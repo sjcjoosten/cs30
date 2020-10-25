@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module CS30.Exercises.IncExcCardinalities (incExcCards, spaces) where
+module CS30.Exercises.IncExcCardinalities (incExcCards) where
 import CS30.Data
 import CS30.Exercises.Data
 import Data.Aeson as JSON -- don't think I use this
@@ -17,34 +17,39 @@ $(deriveJSON defaultOptions ''IncExcProblem)
 
 type Parser = Parsec Void String
 
+-- Range of possible values for the set.
 possibleValues :: [Int]
 possibleValues = [1..200]
 
 choiceTreeList :: [ChoiceTree IncExcProblem]
-choiceTreeList = [ 
-      -- Question type 1: Given |A|, |B|, and |A U B|, find |A ∩ B| (or vice versa).
-      Branch [ Branch [
+choiceTreeList = [
+      -- ChoiceTree of Branches for each variable in the equation |A U B U C| = |A| + |B| + |C| - |A ∩ B| - |A ∩ C| - |B ∩ C| + |A ∩ B ∩ C|, to represent three sets.
+      -- |A U B U C| = a + b + c + d + e + f + g
+      -- It then becomes trivial to create and solve systems of equations.
+      Branch [ Branch [Branch [Branch [Branch [Branch [Branch [
+            Branch [
+                 -- Question type 1: Given |A|, |B|, and |A U B|, find |A ∩ B| (or vice versa).
                   nodes [IEP ([
-                              [FText"|A| ", FMath$ "= "++show(d1)], 
-                              [FText"|B| ", FMath$"= "++show(d2)], 
-                              [FMath$ "|A \\cup B|", FMath$"= "++show(d3)],
+                              [FText"|A| ", FMath$ "= "++show(a)], 
+                              [FText"|B| ", FMath$"= "++show(b)], 
+                              [FMath$ "|A \\cup B|", FMath$"= "++show(d)],
                               [FMath$ "|A \\cap B|"]
-                        ], (d1+d2-d3))], 
+                        ], (a+b-d))], 
                   nodes [IEP ([
-                              [FText"|A| ", FMath$ "= "++show(d1)], 
-                              [FText"|B| ", FMath$"= "++show(d2)], 
-                              [FMath$ "|A \\cap B|", FMath$"= "++show(d3)],
-                              [FMath$ "|A \\cup B|"]
-                        ], (d1+d2-d3))]
-                  ]
-             | d1 <- possibleValues, d2 <- possibleValues, d3 <- possibleValues, d3 < d1 + d2],
-      nodes [IEP ([
-                  [FMath$ "|A \\cup C|", FMath$ "= "++show(d1)], 
-                  [FMath$ "|A \\cup B \\cup C|", FMath$"= "++show(d2)], 
-                  [FMath$ "|A \\cup (C \\cap B)|", FMath$"= "++show(d3)],
-                  [FMath$ "|A \\cup B|"]
-            ], (d1+d2-d3)) | d1 <- possibleValues, d2 <- possibleValues, d3 <- possibleValues, d3 < d1 + d2]
-      ]
+                              [FText"|A| ", FMath$ "= "++show(a)], 
+                              [FText"|B| ", FMath$"= "++show(b)], 
+                              [FMath$ "|A \\cap B|", FMath$"= "++show(d)],
+                              [FMath$ "|A \\cup B|", FText"."]
+                        ], (a+b-d))]
+                  ],
+            -- Question type 2: Given |A U C|, |A U B U C|, and |A U (C ∩ B)|, find |A U B|.
+            nodes [IEP ([
+                  [FMath$ "|A \\cup C|", FMath$ "= "++show(a+c-e)], 
+                  [FMath$ "|A \\cup B \\cup C|", FMath$"= "++show(a+b+c-d-e-f+g)], 
+                  [FMath$ "|A \\cup (C \\cap B)|", FMath$"= "++show(a+f-g)],
+                  [FMath$ "|A \\cup B|", FText"."]
+            ], (a + b - d))]
+      ] | f <- possibleValues, f < (b-50), f < (c-50), f > g] | e <- possibleValues, e < (a-50), e < (c-50), e > g] | d <- possibleValues, d > g, d < (a-50), d < (b-50)]| c <- [80..180], c > g] | b <- [80..180], b > g] | a <- [80..180], a > g] | g <- [10..70]]
 
 incExcCards :: ExerciseType
 incExcCards
@@ -68,22 +73,22 @@ genExercise (IEP (fields, _)) def
 genFeedback :: IncExcProblem -> Map.Map String String -> ProblemResponse -> ProblemResponse
 genFeedback (IEP (fields, sol)) mStrs pr 
       = reTime$ case answer of
-                  Nothing -> trace ("wrong" ++ show rsp) wrong{prFeedback= rsp++(FText "Your answer was "):rspwa}
+                  Nothing -> trace ("wrong" ++ show rsp) wrong{prFeedback= rsp++(FText "Your answer was "):rspwa} -- Error when parsing. 
                   Just v -> if (v == sol) 
-                              then trace ("correct" ++ show rsp) correct{prFeedback=rsp}
-                              else trace ("wrong" ++ show rsp) wrong{prFeedback=rsp++[FText "Your answer was "]++[FMath (show v)]}
-      where ans = Map.lookup "answer" mStrs
+                              then trace ("correct" ++ show rsp) correct{prFeedback=rsp} -- Correct answer.
+                              else trace ("wrong" ++ show rsp) wrong{prFeedback=rsp++[FText "Your answer was "]++[FMath (show v)]} -- Incorrect answer.
+      where ans = Map.lookup "answer" mStrs -- Raw user input. 
             answer :: Maybe Int
             answer = case ans of
                   Nothing -> Nothing
-                  Just v -> case parse parseAnswer "" v of 
+                  Just v -> case parse parseAnswer "" v of -- Parses the user input to look for an integer. 
                         Left _ -> Nothing
                         Right st -> Just st
             wrong = markWrong pr
             correct = markCorrect pr
             rsp :: [Field]
-            rsp = [FText $ "The cardinality of "]++[answerField]++[FText " is ", FMath (show sol), FText "."]
-            rspwa = case ans of
+            rsp = [FText $ "The cardinality of "]++[answerField]++[FText " is ", FMath (show sol), FText "."] -- Displays the correct answer.
+            rspwa = case ans of -- Displays the raw user input. 
                 Nothing -> [FText "??? (perhaps report this as a bug?)"]
                 Just v -> [FMath v]
             answerField = (head . last) fields
