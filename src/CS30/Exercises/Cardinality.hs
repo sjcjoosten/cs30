@@ -23,41 +23,46 @@ data MathExpr = Const Integer
               | Choose MathExpr MathExpr -- first MathExpr `choose` second MathExpr
               deriving Show
 
+-- fxn for calculating choose operation
 choose :: Integer -> Integer -> Integer
 choose n r | n >  r = ((choose (n-1) r) * n) `div` (n-r)
            | n == r = 1 
            | n <  r = 0
 
+-- function for executing the math of a MathExpr 
 evalExpr :: MathExpr -> Integer
 evalExpr (Const x)    = x
 evalExpr (Mult e1 e2) = (evalExpr e1) * (evalExpr e2)
 evalExpr (Expon e1 e2) = (evalExpr e1) ^ (evalExpr e2)
 evalExpr (Choose e1 e2) = (evalExpr e1) `choose` (evalExpr e2)
 
+-- fxn for extracting the numbers in a math expression 
 getNums :: MathExpr -> [Integer]
 getNums (Const x)    = [x]
 getNums (Mult e1 e2) = getNums e1++getNums e2
 getNums (Expon e1 e2) = getNums e1++getNums e2
 getNums (Choose e1 e2) = getNums e1++getNums e2
 
-
+-- cardEx definition for export to Pages.hs
 cardEx :: ExerciseType
 cardEx = exerciseType "Cardinality" "L??" "Cardinality of Expression" 
             cardinality
             cardQuer 
             cardFeedback
 
+-- for selecting a random int for question generation
 allCards :: [Integer]
 allCards = [1..99] 
 
+-- fxn for generating questions & solutions, 4 diff types of questions, implemented as nodes/Branches in the choice tree
 cardinality :: [ChoiceTree ([[Field]], [Integer])]
 cardinality = [ 
             -- cardinality of the cartesian product of two sets
-           nodes [ ( [[FMath$ "|A| = "++(show n1), FText" and ", FMath$"|B| = "++(show n2)], 
-                      [FMath$ "|A \\times B|"], 
-                      [FMath$ (show n1), FMath$"\\cdot",  FMath$ (show n2)]
+           nodes [ ( [[FMath$ "|A| = "++(show n1), FText" and ", FMath$"|B| = "++(show n2)], -- rule
+                      [FMath$ "|A \\times B|"],  -- question 
+                      [FMath$ (show n1), FMath$"\\cdot",  FMath$ (show n2)] -- intermediate step, before # solution
                      ]
-                     , [n1 * n2, n1, n2]
+                     , [n1 * n2, n1, n2] -- calculated solution and all # involved in the question
                      )
                    | n1 <- allCards, n2 <- allCards]
             -- cardinality of a power set
@@ -88,6 +93,7 @@ cardinality = [
                     ]
            ]
 
+-- for generating the actual text of the question displayed to client
 cardQuer :: ([[Field]],[Integer]) -> Exercise -> Exercise
 cardQuer (quer, _solution) exer 
   = exer { eQuestion=[FText "Given "] ++ rule ++ 
@@ -96,19 +102,22 @@ cardQuer (quer, _solution) exer
                         where rule = head quer
                               question = quer!!1
 
+-- helper fxn to get from list to strings
 list_to_string :: [Integer] -> String
 list_to_string = intercalate ", " . map show
 
+-- fxn for generating feedback to the users, based on their parsed input
 cardFeedback :: ([[Field]],[Integer]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 cardFeedback (quer, sol) mStrs defaultRsp 
-  = reTime $ case pr of 
+  = reTime $ case pr of -- if the user input has the right #s in it
       Just v -> if Set.fromList numInAns `Set.isSubsetOf` (Set.fromList allowedNums) then 
                   if (evalExpr v) ==  (head sol) then 
+                      -- if the calculated answer (from the user input) is the same as our stored solution, then tell the user it's correct! 
                     markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)]} -- TODO: show intermediate steps 
-                  else
+                  else -- otherwise, show them how their math is wrong
                     markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath(show $ head sol)] ++ 
                                                         [FText(". You wrote ")] ++ [FMath$ (mStrs Map.! "answer") ]}
-                else 
+                else -- if they didn't have the right numbers in their answer, ask them to explain it better, where did they get those answers from? 
                   markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from?")]} 
                 where numInAns    = getNums v 
                       allowedNums = tail sol
@@ -118,6 +127,7 @@ cardFeedback (quer, sol) mStrs defaultRsp
     where usr = Map.lookup "answer" mStrs
           question = quer!!1
           step = quer!!2
+          -- parse the user input
           pr :: Maybe MathExpr
           pr = case usr of
                  Nothing -> Nothing
@@ -175,27 +185,4 @@ parseExpr =  makeExprParser parseTerm operatorTable
 
 parseTerm :: Parser MathExpr
 parseTerm = parens parseExpr <|> brackets parseExpr <|> parseConstant <|> parseBinom
-
--- rosterFeedback :: ([Field], [String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
--- rosterFeedback (quer, sol) usr' defaultRsp
---   = reTime$ case pr of
---                  Nothing -> wrong{prFeedback= rsp++(FText "Your answer was "):rspwa}
---                  Just v -> if nub v == v then
---                               (if Set.fromList v == Set.fromList sol then correct{prFeedback=rsp}
---                                else wrong{prFeedback=rsp++[FText$ ". You answered a different set: "]++rspwa})
---                            else wrong{prFeedback=rsp++[FText ". Your answer contained duplicate elements: "]++rspwa}
---   where solTeX = dispSet sol
---         usr = Map.lookup "roster" usr'
---         pr :: Maybe [String]
---         pr = case usr of
---                Nothing -> Nothing
---                Just v -> case getSet (Text.pack v) of
---                            Left _ -> Nothing -- error (errorBundlePretty str)
---                            Right st -> Just (map Text.unpack st)
---         rsp = [FText $ "In roster notation, "]++quer++[FText " is ", FMath solTeX]
---         rspwa = case usr of
---                 Nothing -> [FText "- ??? - (perhaps report this as a bug?)"]
---                 Just v -> [FMath v]
---         wrong = markWrong defaultRsp
---         correct = markCorrect defaultRsp
 
