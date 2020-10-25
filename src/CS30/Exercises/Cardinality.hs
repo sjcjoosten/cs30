@@ -1,4 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
+
+{-
+authors: Bennett Clark & Donia Tung
+COSC 69.14, 20F
+Group Assignment 1 
+-}
+
 module CS30.Exercises.Cardinality (cardEx) where
 import           CS30.Data
 import           CS30.Exercises.Data
