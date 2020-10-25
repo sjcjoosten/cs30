@@ -19,24 +19,24 @@ data CardExp = CardExp deriving Show
 -- type CardExp a = ([Field],a)
 -- $(deriveJSON defaultOptions ''CardExp)
 
-data MathExpr = Const Int 
+data MathExpr = Const Integer 
               | Mult  MathExpr MathExpr  -- multiply two MathExpr's 
               | Expon MathExpr MathExpr  -- set first MathExpr to the second MathExpr power
               | Choose MathExpr MathExpr -- first MathExpr `choose` second MathExpr
               deriving Show
 
-choose :: Int -> Int -> Int
+choose :: Integer -> Integer -> Integer
 choose n r | n >  r = ((choose (n-1) r) * n) `div` (n-r)
            | n == r = 1 
            | n <  r = 0
 
-evalExpr :: MathExpr -> Int
+evalExpr :: MathExpr -> Integer
 evalExpr (Const x)    = x
 evalExpr (Mult e1 e2) = (evalExpr e1) * (evalExpr e2)
 evalExpr (Expon e1 e2) = (evalExpr e1) ^ (evalExpr e2)
 evalExpr (Choose e1 e2) = (evalExpr e1) `choose` (evalExpr e2)
 
-getNums :: MathExpr -> [Int]
+getNums :: MathExpr -> [Integer]
 getNums (Const x)    = [x]
 getNums (Mult e1 e2) = getNums e1++getNums e2
 getNums (Expon e1 e2) = getNums e1++getNums e2
@@ -49,12 +49,12 @@ cardEx = exerciseType "Cardinality" "L??" "Cardinality of Expression"
             cardQuer 
             cardFeedback
 
-allCards :: [Int]
+allCards :: [Integer]
 allCards = [1..99] 
 -- ^ since we are evaluating expressions to determine when they are correct
 -- we may want to keep the numbers relatively small
 
-cardinality :: [ChoiceTree ([[Field]], [Int])]
+cardinality :: [ChoiceTree ([[Field]], [Integer])]
 cardinality = [ 
             -- cardinality of the cartesian product of two sets
            nodes [ ( [[FText"|A| ", FMath$ "= "++d1, FText" and |B| ", FMath$"= "++d2], 
@@ -69,7 +69,7 @@ cardinality = [
                         [FText "|𝒫",FMath$ "(A)", FText"|"],
                         [FMath$ "2", FText"^{", FMath d1, FText"}" ]
                         ]
-                     , [2^(read d1), read d1] -- needs {}
+                     , [2^(read d1), 2, read d1] -- needs {}
                      )
                    | d1 <- map show allCards]
             -- cardinality of set x its powerset
@@ -77,24 +77,24 @@ cardinality = [
                                 [FText"|", FMath$"A x ", FText"𝒫", FMath"(A)", FText"|"],
                                 [FMath d1, FText"*", FMath"2", FText"^{", FMath d1, FText"}"]
                                 ]
-                              ,[(read d1)*(2^(read d1)), read d1]
+                              ,[(read d1)*(2^(read d1)), 2, read d1]
                               )
                             | d1 <- map show allCards]
                      ] 
             -- cardinality with set builder notatino (like ex from the assignment sheet)
-           , Branch [ nodes [ ( [[FText"|B| ", FMath$ "= "++d2],
-                                 [FText"|", FMath$"\\left\\{A | A \\subseteq B, |A| ="++d1++"\\right\\}", FText"|"], 
+           , Branch [ nodes [ ( [[FText"|B| ", FMath$ "= "++d1],
+                                 [FText"|", FMath$"\\left\\{A | A \\subseteq B, |A| ="++d2++"\\right\\}", FText"|"], 
                                  [FMath"\\binom{10}{6}"] -- \binom{10}{6}
                                  ]
                             --   , [d2++" choose "++ d1, d1, d2]
-                              , [(read d2) `choose` (read d1), read d1, read d2]
+                              , [(read d1) `choose` (read d2), read d1, read d2]
                               )
-                            | d1 <- map show allCards, d2 <- map show allCards]
+                            | d1 <- map show allCards, d2 <- map show [1..(read d1)-1]]
                     ]
            ]
 
 
-cardQuer :: ([[Field]],[Int]) -> Exercise -> Exercise
+cardQuer :: ([[Field]],[Integer]) -> Exercise -> Exercise
 cardQuer (quer, _solution) exer 
   = -- trace("solution " ++  show _solution) -- for testing (I've disabled this as it clutters the 'stack test' output)
     exer { eQuestion=[FText "Given "] ++ rule ++ 
@@ -103,11 +103,11 @@ cardQuer (quer, _solution) exer
                         where rule = head quer
                               question = quer!!1
 
-list_to_string :: [Int] -> String
+list_to_string :: [Integer] -> String
 list_to_string = unwords . map show
 
 
-cardFeedback :: ([[Field]],[Int]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+cardFeedback :: ([[Field]],[Integer]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 cardFeedback (quer, sol) mStrs defaultRsp 
   =    -- trace("input, unparsed" ++ mStrs Map.! "answer")
        reTime $ case pr of 
