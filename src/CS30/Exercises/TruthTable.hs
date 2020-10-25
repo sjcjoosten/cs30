@@ -24,26 +24,59 @@ import Debug.Trace
 
 
 
-data TruthEx = TruthEx
+data TruthEx = TruthEx (Field, [String])
 
 $(deriveJSON defaultOptions ''TruthEx)
+
+----------------------------------------
+
+expressions = ["(~PΛQ) ∨ (~P∨Q)"] -- list of expressions
+
 
 truthEx :: ExerciseType
 truthEx = exerciseType "URLTag" "L?????.??????"
           "Logic: Complete a TruthTable"
-          [Node TruthEx] -- List of problems
+          trtable -- List of problems
           genQuestion -- present question as 'Exercise'
           genFeedback -- handle response as 'ProblemResponse'
 
-genQuestion :: TruthEx -> Exercise -> Exercise
-genQuestion _ ex = ex{eQuestion=[FTable [[Header (FText ['P']), Header (FText ['Q']), Header (FText "~P"), Header (FText "~Q"), Header (FText "~PΛ~Q")],
-                                         [Cell (FText ['T']), Cell (FText ['T']), Cell (FFieldMath "blank1"), Cell (FText ['F']), Cell (FText ['F'])],
-                                         [Cell (FText ['T']), Cell (FText ['F']), Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['F'])],
-                                         [Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['T']), Cell (FFieldMath "blank2"), Cell (FText ['F'])],
-                                         [Cell (FText ['F']), Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['T']), Cell (FText ['T'])]   
-                                        ]]}
+trtable :: [ChoiceTree ([Field], [String])]
+trtable = [ nodes (generateProb (fromTruthTable (getTruthTable "(~PΛQ)")) 2),
+            nodes (generateProb (fromTruthTable (getTruthTable "(~PΛQ) ∨ (~P∨Q)")) 3),
+            nodes (generateProb (fromTruthTable (getTruthTable "(~PΛQ) ∨ (~P∨Q) Λ (~P∨Q) Λ (PΛQ)")) 4)
+          ]
 
-genFeedback :: TruthEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
+generateProb :: Field -> Int -> [(Field, [String])]
+generateProb (FTable xs) nblanks = [getBlankTableSol (FTable xs) blank | blanks <- orderedSubsets nblanks cells, blank <- zip blanks [1..nblanks]] -- blank = (1, 1) where snd is used to put as a key in FFieldMath
+  where
+    cells = [0..(length (concat xs)-1)]
+
+getBlankTableSol :: Field -> (Int, Int) -> (Field, [String])
+getBlankTableSol (FTable xs) blank = (FTable [insertCell (snd ri) cj | ri <- zip xs rindices, cj <- zip ri cindices],
+                                            [getCellString (fst cj) | ri <- zip xs rindices, cj <- zip ri cindices, (fst ri) == brow && (snd cj) == bcol])
+  where
+    nrows = length xs
+    ncols = length (xs !! 0)
+    rindices = [0..(nrows-1)]
+    cindices = [0..(ncols-1)]
+    brow = (fst blank) `div` ncols
+    bcol = (fst blank) `mod` ncols
+    insertCell i (Header (FText x), j) = if i == brow && j == bcol then (Header (FFieldMath (show (snd blank)))) else (Header (FText x))-- ?
+    insertCell i (Cell (FText x), j) = if i == brow && j == bcol then (Cell (FFieldMath (show (snd blank)))) else (Cell (FText x))
+    getCellString (Header (FText x)) = x
+    getCellString (Cell (FText x)) = x
+
+orderedSubsets :: Int -> [Integer] -> [[Integer]]
+orderedSubsets 0 xs = [[]]
+orderedSubsets n xs
+  | length xs < n = []
+  | otherwise   = orderedSubsets n t ++ map (h:) (orderedSubsets (n - 1) t)
+  where (h:t) = xs
+
+genQuestion :: (Field, a) -> Exercise -> Exercise
+genQuestion (quer, _solution) ex = ex{eQuestion=[ FText $"Fill the missing values in the following table. "] ++ [quer]}
+
+genFeedback :: (Field, a) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 genFeedback _ mStrs resp = if mStrs == (Map.fromList [("blank1", ['F']), ("blank2", ['F'])]) -- Solution will be generated
                             then markCorrect $ resp{prFeedback=[FText "Solution is correct!"]} else error "Solution is incorrect"
 --------------------------------------Data and Types-------------------------------------------
@@ -268,3 +301,12 @@ isLiteral x = elem x [LiteralP, LiteralQ, LiteralR, LiteralS]
 -- This prints the last compiled debugOut : "stack exec debug"
 debugOut :: String
 debugOut = (showExpr . parseExpr) " (S >~R)&   (P|Q)    "
+-- debugOut = (fromTruthTable . getTruthTable) "(~PΛQ) ∨ (~P∨Q)"
+
+
+-- genQuestion _ ex = ex{eQuestion=[FTable [[Header (FText ['P']), Header (FText ['Q']), Header (FText "~P"), Header (FText "~Q"), Header (FText "~PΛ~Q")],
+--                                          [Cell (FText ['T']), Cell (FText ['T']), Cell (FFieldMath "blank1"), Cell (FText ['F']), Cell (FText ['F'])],
+--                                          [Cell (FText ['T']), Cell (FText ['F']), Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['F'])],
+--                                          [Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['T']), Cell (FFieldMath "blank2"), Cell (FText ['F'])],
+--                                          [Cell (FText ['F']), Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['T']), Cell (FText ['T'])]   
+--                                         ]]}

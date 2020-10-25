@@ -18,7 +18,7 @@ To print the value of a string variable on command line:
 -- Print that string
 main :: IO ()     
 main = flip catch mkServerError $
-       do putStrLn debugOut
+       do putStrLn (show debugOut)
 
 -- Handle Error
 mkServerError :: SomeException -> IO ()
