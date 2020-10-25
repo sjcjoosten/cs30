@@ -87,12 +87,12 @@ genFeedback :: ([Field], Rational)
 genFeedback (question, solution)  mStrs rsp = reTime $
                   case Map.lookup "answer" mStrs of
                       Just v -> case runParser numeric_value_parser "" v of
-                                  Left e -> markWrong $ rsp{prFeedback = [FText ("You entered " ++ show v ++ ", parse error" ++ errorBundlePretty e)]}
+                                  Left e -> markWrong $ rsp{prFeedback = [FText "You entered " , FMath$ show v, FText (", parse error" ++ errorBundlePretty e)]}
                                   Right userAnswer -> case evalRational userAnswer of
                                                         Just userSolution -> if userSolution == solution then
                                                                                 markCorrect $
-                                                                                    rsp{prFeedback = [FText ("Congratulations! You entered " ++ show userAnswer ++ ", the right answer is " ++ show solution)]}
+                                                                                    rsp{prFeedback = [FText "Congratulations! You entered ", FMath$ show userAnswer, FText ", the right answer is ", FMath$ show solution]}
                                                                             else markWrong $
-                                                                                    rsp{prFeedback = [FText ("Sorry! You entered " ++ show userAnswer ++ ", the answer is wrong")]}
+                                                                                    rsp{prFeedback = [FText "Sorry! You entered ", FMath$ show userAnswer, FText ", the answer is wrong"]}
 
                       Nothing -> error "Answer field expected"
