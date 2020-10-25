@@ -121,7 +121,7 @@ cardFeedback (quer, sol) mStrs defaultRsp
                 where numInAns = getNums v 
                       notInSol = filter (\x -> notElem x sol) numInAns
                       
-       Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is "++ (show $ head sol) ++ ". You didn't write anything.")]}
+       Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++ [FText (show $ head sol)] ++ [FText". You didn't write anything."]}
       where usr = Map.lookup "answer" mStrs
             question = quer!!1
             step = quer!!2
