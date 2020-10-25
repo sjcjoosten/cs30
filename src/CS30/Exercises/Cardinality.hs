@@ -3,7 +3,7 @@ module CS30.Exercises.Cardinality (cardEx) where
 import           CS30.Data
 import           CS30.Exercises.Data
 import           CS30.Exercises.Util
-import           Data.List.Extra (nubSort)
+import           Data.List.Extra (intercalate)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Functor.Identity
@@ -93,7 +93,6 @@ cardinality = [
                     ]
            ]
 
-
 cardQuer :: ([[Field]],[Integer]) -> Exercise -> Exercise
 cardQuer (quer, _solution) exer 
   = -- trace("solution " ++  show _solution) -- for testing (I've disabled this as it clutters the 'stack test' output)
@@ -104,37 +103,34 @@ cardQuer (quer, _solution) exer
                               question = quer!!1
 
 list_to_string :: [Integer] -> String
-list_to_string = unwords . map show
-
+list_to_string = intercalate ", " . map show
 
 cardFeedback :: ([[Field]],[Integer]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 cardFeedback (quer, sol) mStrs defaultRsp 
-  =    -- trace("input, unparsed" ++ mStrs Map.! "answer")
-       reTime $ case pr of 
-       Just v -> if (evalExpr v) ==  (head sol) then 
+  = reTime $ case pr of 
+      Just v -> if Set.fromList numInAns `Set.isSubsetOf` (Set.fromList allowedNums) then 
+                  if (evalExpr v) ==  (head sol) then 
                     markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++ [FText (show $ head sol)]} -- TODO: show intermediate steps 
-                 else if Set.fromList numInAns `Set.isSubsetOf` (Set.fromList sol) then 
-                     markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++  [FText((show $ head sol) ++ 
-                                                          ". You wrote ")] ++ [FMath$ (mStrs Map.! "answer") ]}
-                     else 
-                     markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from?")]} 
-                where numInAns = getNums v 
-                      notInSol = filter (\x -> notElem x sol) numInAns
-                      
-       Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++ [FText (show $ head sol)] ++ [FText". You didn't write anything."]}
-      where usr = Map.lookup "answer" mStrs
-            question = quer!!1
-            step = quer!!2
-            pr :: Maybe MathExpr
-            pr = case usr of
-                   Nothing -> Nothing
-                   Just v -> case parse parseExpr "" v of
-                               Left _ -> Nothing -- error (errorBundlePretty str)
-                               Right st -> Just st 
-                               -- ^ if we parse a multiplication expression, then multiply the two numbers to see if it's right  
-                                   
-
-
+                  else
+                    markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++  [FText((show $ head sol) ++ 
+                                                         ". You wrote ")] ++ [FMath$ (mStrs Map.! "answer") ]}
+                else 
+                  markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from?")]} 
+                where numInAns    = getNums v 
+                      allowedNums = tail sol
+                      notInSol    = filter (\x -> notElem x allowedNums) numInAns
+                     
+      Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++ [FText (show $ head sol)] ++ [FText". You didn't write anything."]}
+    where usr = Map.lookup "answer" mStrs
+          question = quer!!1
+          step = quer!!2
+          pr :: Maybe MathExpr
+          pr = case usr of
+                 Nothing -> Nothing
+                 Just v -> case parse parseExpr "" v of
+                             Left _ -> Nothing -- error (errorBundlePretty str)
+                             Right st -> Just st 
+    
 type Parser = ParsecT Void String Identity
 
 spaceConsumer :: Parser ()
