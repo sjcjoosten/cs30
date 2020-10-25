@@ -1,7 +1,7 @@
 {-# LANGUAGE BlockArguments #-}
-module CS30.Exercises.SolutionChecker where
+module CS30.Exercises.ProblemsBasics.SolutionChecker where
 import CS30.Data
-import CS30.Exercises.Problems
+import CS30.Exercises.ProblemsBasics.Problems
 import CS30.Exercises.Util
 import CS30.Exercises.Data
 import qualified Data.Map as Map
@@ -89,10 +89,10 @@ genFeedback (question, solution)  mStrs rsp = reTime $
                       Just v -> case runParser numeric_value_parser "" v of
                                   Left e -> markWrong $ rsp{prFeedback = [FText ("You entered " ++ show v ++ ", parse error" ++ errorBundlePretty e)]}
                                   Right userAnswer -> case evalRational userAnswer of
-                                                        Just userSolution -> if userSolution == solution then  
-                                                                                markCorrect $  
-                                                                                    rsp{prFeedback = [FText ("Congratulations! You entered " ++ show userAnswer ++ ", the right answer is " ++ show solution)]}  
-                                                                            else markWrong $ 
-                                                                                    rsp{prFeedback = [FText ("Sorry! You entered " ++ show userAnswer ++ ", the answer is wrong")]}  
-                                     
+                                                        Just userSolution -> if userSolution == solution then
+                                                                                markCorrect $
+                                                                                    rsp{prFeedback = [FText ("Congratulations! You entered " ++ show userAnswer ++ ", the right answer is " ++ show solution)]}
+                                                                            else markWrong $
+                                                                                    rsp{prFeedback = [FText ("Sorry! You entered " ++ show userAnswer ++ ", the answer is wrong")]}
+
                       Nothing -> error "Answer field expected"
