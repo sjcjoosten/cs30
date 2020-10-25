@@ -38,13 +38,14 @@ combinEx = exerciseType "Combinatorics" "L?.?" "Combinatorics: Integers"
                         genQuestion
                         genFeedback
                         
+{- summing digits -}
 
 -- To Do
 solve :: String
 solve = "56"  -- This is ok if the sum of digits is equal to 51, not "at most 51".
 
-solve2 :: Int -> Int -> String
-solve2 n sum_upperbound = show $ length $ [num | num <- (generateNDigitIntegers n), computeSumOfDigits(num) <= sum_upperbound]
+solveSum :: Int -> Int -> String
+solveSum n sum_upperbound = show $ length $ [num | num <- (generateNDigitIntegers n), computeSumOfDigits(num) <= sum_upperbound]
 
 -- Generate N-digit positive integers
 generateNDigitIntegers :: Int -> [Int]
@@ -52,7 +53,6 @@ generateNDigitIntegers n = [smallest .. largest]
                            where
                              smallest = 10 ^ (n - 1)
                              largest  = 10 ^ n - 1
-
 
 -- Compute the sum of digits
 computeSumOfDigits :: Int -> Int
@@ -64,6 +64,9 @@ computeSumOfDigitsHelper n curr_sum
   | otherwise  = computeSumOfDigitsHelper n' (curr_sum + digit)
   where
     (n', digit) = divMod n 10
+
+
+{- divisibility -}
 
 -- Find how many x-digit numbers are divisible by y
 numXDivisibleByY :: Int -> Int -> Int
@@ -81,16 +84,36 @@ findFirstTerm x y
     smallest = 10 ^ (x - 1)
 
 genDivisibility :: (Int, Int) -> ChoiceTree ([Field], String)
-genDivisibility (numDigit, divisor) = nodes[([FText $ show numDigit ++ " digit positive integers are there such that it is divisible by "
+genDivisibility (numDigit, divisor) = nodes[([FText $ "How many " ++ show numDigit ++ " digit positive integers are there such that it is divisible by "
   ++ show divisor ++ "?"], (show $ numXDivisibleByY numDigit divisor))]
 
+{- custom condition -}
+
+-- returns true if all elements in a list are unique
+allUnique :: (Eq a) => [a] -> Bool
+allUnique lst = case lst of
+  [] -> True
+  (x:xs) -> (notElem x xs) && allUnique xs
+
+-- num digits -> num that have unique digits
+solveUnique :: Int -> Int
+solveUnique n = length ([lst | lst <- filter allUnique (map digits (generateNDigitIntegers n))])
+
+-- breaks an integer into a list of its digits
+digits :: Int -> [Int]
+digits 0 = []
+digits n = mod n 10 : digits (div n 10)
+
+-- generates a question about the uniqueness of an n digit integer
+genUnique :: Int -> ChoiceTree ([Field], String)
+genUnique n = nodes [([FText $ "How many " ++ show n ++ " digit positive numbers are there such that all digits are different?"]
+                    , (show $ solveUnique n))]
+
 combins :: [ChoiceTree ([Field], String)]
-combins = (map (genDivisibility) [(numDigit, divisor) | numDigit <- [1..10], divisor <- [2..1000]]) ++ [
-        nodes [ ([FText "6 digit positive integers are there such that the sum of the digits is at most 51?"], (solve2 6 51))]
-         , nodes [ ([FText "3 digit positive integers are there such that the sum of the digits is at most 10?"], (solve2 3 10))]
-         , nodes [ ([FText "[This is Q3]"], solve)]
-         , nodes [ ([FText "[This is Q4]"], solve)]
-         , nodes [ ([FText "[This is Q5]"], solve)]]
+combins = (map genUnique [2..9]) ++
+         (map (genDivisibility) [(numDigit, divisor) | numDigit <- [1..10], divisor <- [2..1000]]) ++ 
+         [ nodes [ ([FText "How many 6 digit positive integers are there such that the sum of the digits is at most 51?"], (solveSum 6 51))]
+         , nodes [ ([FText "How many 3 digit positive integers are there such that the sum of the digits is at most 10?"], (solveSum 3 10))]]
 
 
 genQuestion:: ([Field],a) -> Exercise -> Exercise
