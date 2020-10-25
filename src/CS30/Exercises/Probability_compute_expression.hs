@@ -7,7 +7,6 @@ import CS30.Exercises.Problems
 import CS30.Exercises.SolutionChecker
 import           Data.Aeson.TH 
 
-$(deriveJSON defaultOptions ''ProbEx)
 
 probaEx :: ExerciseType
 probaEx = exerciseType "ProbaCompute" "L?.?" "Probability : compute expression"
@@ -16,5 +15,5 @@ probaEx = exerciseType "ProbaCompute" "L?.?" "Probability : compute expression"
             genFeedback
 
 -- randomSelect (Branch choiceTreeList)
-genQuestion :: ProbEx -> Exercise -> Exercise
-genQuestion (ProbAsRational question _) ex = ex{eQuestion = question ++ [FFieldMath "answer"]}
+genQuestion :: ([Field], Rational) -> Exercise -> Exercise
+genQuestion (question, answer) ex = ex{eQuestion = question ++ [FFieldMath "answer"]}
