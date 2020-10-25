@@ -6,7 +6,6 @@ import CS30.Exercises.Util
 import CS30.Exercises.Data
 import qualified Data.Map as Map
 import           Data.Aeson.TH -- for deriveJSON
-import Debug.Trace
 -- import Data.Char (isNumber)
 import Text.Megaparsec.Char
 import Text.Megaparsec
@@ -26,6 +25,7 @@ digit :: Parser Integer
 digit = do a <- satisfy satiDigit
            return (toInteger ((fromEnum a - fromEnum '0')))
 
+satiDigit :: Enum a => a -> Bool
 satiDigit a = num >= 0 && num < 10
             where num = fromEnum a - fromEnum '0'
 
@@ -33,36 +33,68 @@ satiDigit a = num >= 0 && num < 10
 -- 66.7%
 -- \frac{1}{3}
 numeric_value_parser :: Parser NumericExpression
-numeric_value_parser = isSpace *> makeExprParser digits oprs <* isSpace
- where digits = (do fst_part <- many digit
-                    rmd <- (Just <$> (string "." >> many digit)) <|> (return Nothing)
-                    isSpace
-                    pectg <- (return True <* string "\\%") <|> (return False)
-                    isSpace
-                    case rmd of Nothing -> return (Const (combineDig fst_part % 1))
-                                Just v -> if pectg then return (Const (combineValue/100)) else return (Const combineValue)
-                                            where combineValue = combineDig fst_part % 1 + combineDig v % (10 ^ length v))
+numeric_value_parser = lt_spaces *> makeExprParser digits oprs <* lt_spaces
+ where digits = (do fstPart <- some digit
+                    rmdr <- (string "." *> many digit) <|> return []
+                    lt_spaces
+                    perc <- (return True <* string "\\%") <|> return False
+                    lt_spaces
+                    -- 12.5: wholePart [1,2] rmdr [5]
+                    -- 12. : wholePart [1,2] rmdr []
+                    -- 12  : wholePart [1,2] rmdr []
+                    -- .5
+                    let wholeNr = parseDec fstPart % 1
+                    let decNr = parseDec rmdr % 10^(length rmdr)
+                    let ans = wholeNr + decNr
+                    return (Const (if perc then ans / 100 else ans)))
                 <|>
                 (do _ <- string "."
-                    rmd <-  many digit
-                    isSpace
-                    return (Const (combineDig rmd % (10 ^ length rmd))))
+                    rmdr <- some digit
+                    lt_spaces
+                    perc <- (return True <* string "\\%") <|> return False
+                    lt_spaces
+                    let ans = parseDec rmdr % 10^(length rmdr)
+                    return (Const (if perc then ans / 100 else ans)))
                 <|>
                 (do _ <- string "\\frac"
-                    rmd1 <- digits
-                    rmd2 <- digits
-                    isSpace
-                    return (BinOp Division rmd1 rmd2))
-
-isSpace :: Parser ()
-isSpace = ((string " " <|> string "\\t" <|> string "\\ ") *> isSpace) <|> return ()
-
-combineDig = foldl (\x y -> x*10 + y) 0
-
-oprs = [[infixL "-" Subtraction, infixL "+" Addition] -- minus and addition
-        ,[infixL "\\cdot" Multiplication, infixL "*" Multiplication,infixL "/" Division] -- multiplication, division
-        ,[infixL "^" Exponentiation]]
-infixL str opr = InfixL (return (BinOp opr) <* string str <* isSpace)
+                    t1 <- digits
+                    t2 <- digits
+                    lt_spaces
+                    return (BinOp Division t1 t2))
+                <|>
+                (do _ <- string "\\left"
+                    _ <- openBrac
+                    lt_spaces
+                    e <- numeric_value_parser
+                    _ <- string "\\right"
+                    _ <- closeBrac
+                    lt_spaces
+                    return e
+                    )
+                <|>
+                (do _ <- openBrac
+                    lt_spaces
+                    e <- numeric_value_parser
+                    _ <- closeBrac
+                    lt_spaces
+                    return e
+                    )
+       openBrac = string "(" <|> string "{"
+       closeBrac = string ")" <|> string "}"
+       
+       parseDec = foldl (\x y -> x*10 + y) 0
+        -- Latex spaces parser, doesn't return the parsed string.
+       lt_spaces :: Parser ()
+       lt_spaces = ((string " " <|> string "\\t" <|> string "\\ ") *> lt_spaces)
+                    <|> return ()
+       oprs =  [ [ infixL "^" Exponentiation] -- negate, exponentiation
+                , [ infixL "\\cdot" Multiplication -- for LaTeX
+                    , infixL "*" Multiplication -- for ASCII
+                    , infixL "/" Division] -- multiplication, division
+                , [ infixL "-" Subtraction
+                    , infixL "+" Addition] -- minus and addition
+                ]
+       infixL str opr = InfixL (return (BinOp opr) <* string str <* lt_spaces)
 
 evalRational :: NumericExpression -> Maybe Rational
 evalRational (Const r) = return r
@@ -86,13 +118,14 @@ genFeedback :: ([Field], Rational)
               -> ProblemResponse
 genFeedback (question, solution)  mStrs rsp = reTime $
                   case Map.lookup "answer" mStrs of
+                      Nothing -> error "Server communication error: expecting a 'prob' field"
                       Just v -> case runParser numeric_value_parser "" v of
-                                  Left e -> markWrong $ rsp{prFeedback = [FText "You entered " , FMath$ show v, FText (", parse error" ++ errorBundlePretty e)]}
+                                  Left e -> markWrong $ rsp{prFeedback = [FText "You entered " , FMath $ show v, FText (", parse error" ++ errorBundlePretty e)]}
                                   Right userAnswer -> case evalRational userAnswer of
                                                         Just userSolution -> if userSolution == solution then
                                                                                 markCorrect $
-                                                                                    rsp{prFeedback = [FText "Congratulations! You entered ", FMath$ show userAnswer, FText ", the right answer is ", FMath$ show solution]}
+                                                                                    rsp{prFeedback = [FText "Congratulations! You entered ", FMath $ show userAnswer, FText ", the right answer is ", FMath$ show solution]}
                                                                             else markWrong $
-                                                                                    rsp{prFeedback = [FText "Sorry! You entered ", FMath$ show userAnswer, FText ", the answer is wrong"]}
+                                                                                    rsp{prFeedback = [FText "Sorry! You entered ", FMath $ show userAnswer, FText ", the answer is wrong"]}
 
                       Nothing -> error "Answer field expected"
