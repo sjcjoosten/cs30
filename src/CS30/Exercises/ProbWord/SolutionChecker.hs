@@ -118,6 +118,7 @@ probFeedback (quer, sol) usr' defaultRsp
                            Left e -> wrong{prFeedback=[FText$ "I didn't understand what you wrote. Here's a parse-error: "++errorBundlePretty e]}
                            Right expr -> case evalRational expr of
                                            Just userSol -> if userSol == sol then correct{prFeedback=rsp} else wrong{prFeedback=rsp++[FText$ ". You answered incorrectly: "]++rspwa}
+                                           Nothing -> wrong{prFeedback=[FText$ "That math expression isn't supported."]}
   where 
   -- runParser ::
   -- Parsec e s a -> String -> s -> Either (ParseErrorBundle s e) a
@@ -139,6 +140,7 @@ probExpectFeedback (quer, sol) usr' defaultRsp
                            Left e -> wrong{prFeedback=[FText$ "I didn't understand what you wrote. Here's a parse-error: "++errorBundlePretty e]}
                            Right expr -> case evalRational expr of
                                            Just userSol -> if realToFrac userSol ~== sol then correct{prFeedback=rsp} else wrong{prFeedback=rsp++[FText$ ". You answered incorrectly: "]++rspwa}
+                                           Nothing -> wrong{prFeedback=[FText$ "That math expression isn't supported."]}
   where 
   -- runParser ::
   -- Parsec e s a -> String -> s -> Either (ParseErrorBundle s e) a

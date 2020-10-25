@@ -1,10 +1,7 @@
 module CS30.Exercises.ProbWord.Basics (basicprob) where
 import           CS30.Data
 import           CS30.Exercises.Data
-import GHC.Real -- for (%)
--- import CS30.Exercises.Util (dispRat)
-
--- sumList :: [Integer] -> Integer
+import           GHC.Real -- for (%)
 
 
 basicprob :: [ChoiceTree ([Field], Rational)]
