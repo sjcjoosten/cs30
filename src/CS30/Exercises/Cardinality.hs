@@ -2,7 +2,10 @@
 module CS30.Exercises.Cardinality (cardEx) where
 import           CS30.Data
 import           CS30.Exercises.Data
+import           CS30.Exercises.Util
+import           Data.List.Extra (intercalate)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import           Data.Functor.Identity
 import           Data.Void
 import           Text.Megaparsec
@@ -16,22 +19,29 @@ data CardExp = CardExp deriving Show
 -- type CardExp a = ([Field],a)
 -- $(deriveJSON defaultOptions ''CardExp)
 
-data MathExpr = Const Int 
+data MathExpr = Const Integer 
               | Mult  MathExpr MathExpr  -- multiply two MathExpr's 
               | Expon MathExpr MathExpr  -- set first MathExpr to the second MathExpr power
               | Choose MathExpr MathExpr -- first MathExpr `choose` second MathExpr
               deriving Show
 
-choose :: Int -> Int -> Int
+choose :: Integer -> Integer -> Integer
 choose n r | n >  r = ((choose (n-1) r) * n) `div` (n-r)
            | n == r = 1 
            | n <  r = 0
 
-evalExpr :: MathExpr -> Int
+evalExpr :: MathExpr -> Integer
 evalExpr (Const x)    = x
 evalExpr (Mult e1 e2) = (evalExpr e1) * (evalExpr e2)
 evalExpr (Expon e1 e2) = (evalExpr e1) ^ (evalExpr e2)
 evalExpr (Choose e1 e2) = (evalExpr e1) `choose` (evalExpr e2)
+
+getNums :: MathExpr -> [Integer]
+getNums (Const x)    = [x]
+getNums (Mult e1 e2) = getNums e1++getNums e2
+getNums (Expon e1 e2) = getNums e1++getNums e2
+getNums (Choose e1 e2) = getNums e1++getNums e2
+
 
 cardEx :: ExerciseType
 cardEx = exerciseType "Cardinality" "L??" "Cardinality of Expression" 
@@ -39,42 +49,51 @@ cardEx = exerciseType "Cardinality" "L??" "Cardinality of Expression"
             cardQuer 
             cardFeedback
 
-allCards :: [Int]
+allCards :: [Integer]
 allCards = [1..99] 
 -- ^ since we are evaluating expressions to determine when they are correct
 -- we may want to keep the numbers relatively small
 
-cardinality :: [ChoiceTree ([[Field]], [Int])]
+cardinality :: [ChoiceTree ([[Field]], [Integer])]
 cardinality = [ 
             -- cardinality of the cartesian product of two sets
            nodes [ ( [[FText"|A| ", FMath$ "= "++d1, FText" and |B| ", FMath$"= "++d2], 
-                        [FText"|", FMath$ "A x B", FText"|"]]
-                     , [read (d1) * read(d2)] -- this actually does out the mulitplication (but idk if we necessarily want them to, smthg to think about)
+                        [FText"|", FMath$ "A x B", FText"|"], 
+                        [ FMath$ d1, FMath$"*",  FMath$ d2]
+                        ]
+                     , [read (d1) * read(d2), read d1, read d2] -- this actually does out the mulitplication (but idk if we necessarily want them to, smthg to think about)
                      )
                    | d1 <- map show allCards, d2 <- map show allCards]
             -- cardinality of a power set
-            , nodes [ ( [[FText"|A| ", FMath$ "= "++d1], [FText "|𝒫",FMath$ "(A)", FText"|"]]
-                     , [2^(read d1)] -- needs {}
+            , nodes [ ( [[FText"|A| ", FMath$ "= "++d1], 
+                        [FText "|𝒫",FMath$ "(A)", FText"|"],
+                        [FMath$ "2", FText"^{", FMath d1, FText"}" ]
+                        ]
+                     , [2^(read d1), 2, read d1] -- needs {}
                      )
                    | d1 <- map show allCards]
             -- cardinality of set x its powerset
            , Branch [ nodes [ ( [[FText"|A| ", FMath$"= "++d1],
-                                [FText"|", FMath$"A x ", FText"𝒫", FMath"(A)", FText"|"]]
-                              ,[(read d1)*(2^(read d1))]
+                                [FText"|", FMath$"A x ", FText"𝒫", FMath"(A)", FText"|"],
+                                [FMath d1, FText"*", FMath"2", FText"^{", FMath d1, FText"}"]
+                                ]
+                              ,[(read d1)*(2^(read d1)), 2, read d1]
                               )
                             | d1 <- map show allCards]
                      ] 
             -- cardinality with set builder notatino (like ex from the assignment sheet)
-           , Branch [ nodes [ ( [[FText"|B| ", FMath$ "= "++d2],
-                                 [FText"|", FMath$"\\left\\{A | A \\subseteq B, |A| ="++d1++"\\right\\}", FText"|"]]
-                              , [(read d2) `choose` (read d1)]
+           , Branch [ nodes [ ( [[FText"|B| ", FMath$ "= "++d1],
+                                 [FText"|", FMath$"\\left\\{A | A \\subseteq B, |A| ="++d2++"\\right\\}", FText"|"], 
+                                 [FMath"\\binom{10}{6}"] -- \binom{10}{6}
+                                 ]
+                            --   , [d2++" choose "++ d1, d1, d2]
+                              , [(read d1) `choose` (read d2), read d1, read d2]
                               )
-                            | d1 <- map show allCards, d2 <- map show allCards]
+                            | d1 <- map show allCards, d2 <- map show [1..(read d1)-1]]
                     ]
            ]
 
-
-cardQuer :: ([[Field]],[Int]) -> Exercise -> Exercise
+cardQuer :: ([[Field]],[Integer]) -> Exercise -> Exercise
 cardQuer (quer, _solution) exer 
   = -- trace("solution " ++  show _solution) -- for testing (I've disabled this as it clutters the 'stack test' output)
     exer { eQuestion=[FText "Given "] ++ rule ++ 
@@ -83,30 +102,35 @@ cardQuer (quer, _solution) exer
                         where rule = head quer
                               question = quer!!1
 
--- rosterQuer :: ([Field],a) -> Exercise -> Exercise
--- rosterQuer (quer, _solution) def 
---  = def{ eQuestion = [ FText $"Write "] ++quer++
---                     [ FText " in roster notation", FFieldMath "roster" ] }
+list_to_string :: [Integer] -> String
+list_to_string = intercalate ", " . map show
 
-
-cardFeedback :: ([[Field]],[Int]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+cardFeedback :: ([[Field]],[Integer]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 cardFeedback (quer, sol) mStrs defaultRsp 
-  =  trace ("gen feedback " ++ show mStrs ++ " " ++ show pr) $ -- for testing
-      case pr of 
-       Just v -> if (evalExpr v) ==  (head sol) then 
-                    markCorrect $ defaultRsp{prFeedback = [FText("you entered " ++ show v)]}
-                 else markWrong $ defaultRsp{prFeedback = [FText("the correct answer is "++(show $ head sol))]}
-       Nothing -> markWrong $ defaultRsp{prFeedback = [FText("the correct answer is "++(show $ head sol))]}
-      where usr = Map.lookup "answer" mStrs
-            pr :: Maybe MathExpr
-            pr = case usr of
-                   Nothing -> Nothing
-                   Just v -> case parse parseExpr "" v of
-                               Left _ -> Nothing -- error (errorBundlePretty str)
-                               Right st -> Just st 
-                               -- ^ if we parse a multiplication expression, then multiply the two numbers to see if it's right  
-
-
+  = reTime $ case pr of 
+      Just v -> if Set.fromList numInAns `Set.isSubsetOf` (Set.fromList allowedNums) then 
+                  if (evalExpr v) ==  (head sol) then 
+                    markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++ [FText (show $ head sol)]} -- TODO: show intermediate steps 
+                  else
+                    markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++  [FText((show $ head sol) ++ 
+                                                         ". You wrote ")] ++ [FMath$ (mStrs Map.! "answer") ]}
+                else 
+                  markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from?")]} 
+                where numInAns    = getNums v 
+                      allowedNums = tail sol
+                      notInSol    = filter (\x -> notElem x allowedNums) numInAns
+                     
+      Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FText " = "] ++ step ++ [FText " = "] ++ [FText (show $ head sol)] ++ [FText". You didn't write anything."]}
+    where usr = Map.lookup "answer" mStrs
+          question = quer!!1
+          step = quer!!2
+          pr :: Maybe MathExpr
+          pr = case usr of
+                 Nothing -> Nothing
+                 Just v -> case parse parseExpr "" v of
+                             Left _ -> Nothing -- error (errorBundlePretty str)
+                             Right st -> Just st 
+    
 type Parser = ParsecT Void String Identity
 
 spaceConsumer :: Parser ()
