@@ -139,12 +139,12 @@ cardFeedback (quer, sol) mStrs defaultRsp
       Just v -> if Set.fromList numInAns `Set.isSubsetOf` (Set.fromList allowedNums) then -- if the user input has the right #s in it
                   case ans of -- look at the evaluated answer
                     Just st -> if st == (head sol) then -- if the calculated answer (from the user input) is the same as our stored solution, then tell the user it's correct!
-                                 markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)]} -- TODO: show intermediate steps 
+                                 markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)]} 
                                else -- otherwise, show them how their math is wrong
                                  markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath(show $ head sol)] ++ 
                                                                      [FText(". You wrote ")] ++ [FMath$ (mStrs Map.! "answer") ]}
                     -- | if the evaluated answer has some error (divide by zero, or some fraction does not evaluate to an integer), then mark wrong
-                    Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText "We couldn't understand your answer."]}
+                    Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText ". We couldn't understand your answer."]}
                 else -- if they didn't have the right numbers in their answer, ask them to explain it better, where did they get those answers from?
                   markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from?")]} 
                 where numInAns    = getNums v 
