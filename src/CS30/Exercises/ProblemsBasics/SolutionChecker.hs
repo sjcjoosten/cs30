@@ -32,6 +32,7 @@ satiDigit a = num >= 0 && num < 10
 -- 0 \cdot 667
 -- 66.7%
 -- \frac{1}{3}
+-- parser to parse the user solutions
 numeric_value_parser :: Parser NumericExpression
 numeric_value_parser = lt_spaces *> makeExprParser digits oprs <* lt_spaces
  where digits = (do fstPart <- some digit
@@ -118,7 +119,7 @@ genFeedback :: ([Field], Rational)
               -> ProblemResponse
 genFeedback (question, solution)  mStrs rsp = reTime $
                   case Map.lookup "answer" mStrs of
-                      Nothing -> error "Expecting something could answer the question."
+                      Nothing -> error "Answer field expected"
                       Just v -> case runParser numeric_value_parser "" v of
                                   Left e -> markWrong $ rsp{prFeedback = [FText "You entered " , FMath $ show v, FText (", parse error" ++ errorBundlePretty e)]}
                                   Right userAnswer -> case evalRational userAnswer of
@@ -127,5 +128,3 @@ genFeedback (question, solution)  mStrs rsp = reTime $
                                                                                     rsp{prFeedback = [FText "Congratulations! You entered ", FMath $ show userAnswer, FText ", the right answer is ", FMath$ show solution]}
                                                                             else markWrong $
                                                                                     rsp{prFeedback = [FText "Sorry! You entered ", FMath $ show userAnswer, FText ", the answer is wrong"]}
-
-                      Nothing -> error "Answer field expected"
