@@ -118,7 +118,7 @@ genFeedback :: ([Field], Rational)
               -> ProblemResponse
 genFeedback (question, solution)  mStrs rsp = reTime $
                   case Map.lookup "answer" mStrs of
-                      Nothing -> error "Server communication error: expecting a 'prob' field"
+                      Nothing -> error "Expecting something could answer the question."
                       Just v -> case runParser numeric_value_parser "" v of
                                   Left e -> markWrong $ rsp{prFeedback = [FText "You entered " , FMath $ show v, FText (", parse error" ++ errorBundlePretty e)]}
                                   Right userAnswer -> case evalRational userAnswer of
