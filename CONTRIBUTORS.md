@@ -10,5 +10,14 @@ Changing a license does not invalidate the license of those who have
 been given one, but might effect the license of future updates.
 
 - Sebastiaan J.C. Joosten
+- Tyler Vergho
+- Rachael Williams
 - Fei
 - Kyle Bensink
+- Paul Gralla
+- Joseph Hajjar
+- Donia Tung
+- Bennett Clark
+- Jiayin Hu
+- Mengdie Ge
+

@@ -66,3 +66,4 @@ countOccurrence (x : xs') =
 -- Cartesian Product
 cp :: [[a]] -> [[a]]
 cp alist = case alist of [] -> [[]]; (xs : xss) -> [(x : ys) | x <- xs, ys <- cp xss]
+

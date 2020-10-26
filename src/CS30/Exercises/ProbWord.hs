@@ -1,3 +1,4 @@
+
 module CS30.Exercises.ProbWord (probBasicEx, probExpectEx) where
 import CS30.Data (Field(..),Exercise(..))
 import CS30.Exercises.Data (ExerciseType,exerciseType)
@@ -13,4 +14,5 @@ probQuer :: Real a => ([Field], a) -> Exercise -> Exercise
 probQuer (quer, _solution) def
  = def{ eQuestion = [ FText $"If "] ++quer ++  [FFieldMath "prob", FText "\nYou may give your answer in decimal, percentage, or fractional form, as appropriate."]            
        , eBroughtBy = ["Fei Guo", "Kyle Bensink"]
+
         }

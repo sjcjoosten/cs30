@@ -147,8 +147,11 @@ probExpectFeedback (quer, sol) usr' defaultRsp
     (~==) a b = a - b < 1e-10 && a - b > (-(1e-10))
     usr = Map.lookup "prob" usr' 
     rsp = [FText $ "The answer for "]++quer++[FText " is ", FMath $ showFFloat (Just 2) sol ""]    
+
     rspwa = case usr of
             Nothing -> [FText "- ??? - (perhaps report this as a bug?)"]
             Just v -> [FMath v]
     wrong = markWrong defaultRsp
+
     correct = markCorrect defaultRsp
+
