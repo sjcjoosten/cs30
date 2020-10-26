@@ -29,21 +29,34 @@ genTable myProblem def
        headerRow = [Header (FText "Equation"),Header (FText "True/False") ]
     
 
+cartProduct :: [ChoiceTree a] -> ChoiceTree [a]
+cartProduct [] = Node []
+cartProduct (x:xs) = replace f (cartProduct xs)
+    where
+        f xs' = fmap (:xs') x
+
     --    row3 = [Cell   (FFieldBool (FText "0") (FText "2") (Just True) "nr_response"),Cell   (FFieldBool (FText "B") (FText "D") Nothing "letter_response") ]
 
-easyExercise = Branch [ replace (f modBase) (easyFractionPower modBase) | modBase <- [4,6..20] ]
-    where
-        f modBase exercise = replace (g exercise) (easyAddition modBase)
-        g e1 e2 = Node (e1 ++ e2)
+-- easyExercise = cartProduct [easyAddition 4, easyMultiplication 4]
+    
 
+-- easyExercise = cartProduct [easyAddition 4, easyMultiplication 4]
+easyExercise :: ChoiceTree [(Field, Bool)]
+easyExercise = cartProduct [ [easyIntegerPowerSame modBase, easyAddition modBase, easyIntegerPowerSame modBase, easyIntegerPowerDiff modBase]| modBase <- [4,6..20]]
 
+-- easyExercise = Branch [ replace (f modBase) (easyFractionPower modBase) | modBase <- [4,6..20] ]
+--     where
+--         f modBase exercise = replace (g exercise) (easyAddition modBase)
+--         g e1 e2 = Node (e1 ++ e2)
+
+easyIntegerPowerSame :: Integer -> ChoiceTree [(Field, Bool)]
 easyIntegerPowerSame modBase = Branch [ Branch [g leftNum exponent modBase| exponent <- [modBase..modBase*2] ] | leftNum <- getLeftNums modBase]
     where
         g leftNum exponent modBase = Node [(FMath (show leftNum ++ "^{" ++ show exponent ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent ++ "}"), True)]
             where
                 rightNum = leftNum `mod` modBase
 
-
+easyIntegerPowerDiff :: Integer -> ChoiceTree [(Field, Bool)]
 easyIntegerPowerDiff modBase = Branch [ Branch [g leftNum exponent1 exponent2 modBase| (exponent1, exponent2) <- (zip [modBase, modBase + 2..modBase*2] (reverse [modBase - 1, modBase + 1..modBase*2])) ] | leftNum <- getLeftNums modBase]
     where
         g leftNum exponent1 exponent2 modBase = Node [(FMath (show leftNum ++ "^{" ++ show exponent1 ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent2 ++ "}"), isCorrect)]
@@ -51,21 +64,21 @@ easyIntegerPowerDiff modBase = Branch [ Branch [g leftNum exponent1 exponent2 mo
                 rightNum = leftNum `mod` modBase
                 isCorrect = modExp leftNum exponent1 modBase == modExp rightNum exponent2 modBase
 
-
+easyFractionPower :: Integer -> ChoiceTree [(Field, Bool)]
 easyFractionPower modBase = Branch [ Branch [ g leftNum rightNum modBase | leftNum <- (filter (\x -> (x `mod` modBase == rightNum `mod` modBase) && x /=rightNum ) squares)] | rightNum <- squares]
     where
         g leftNum rightNum modBase = Node [(FMath ("\\sqrt{" ++ show leftNum ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ \\sqrt{" ++ show rightNum ++ "}"), isCorrect)]
             where
                 isCorrect = (rootOfPerfectSquare leftNum) `mod` modBase == (rootOfPerfectSquare rightNum) `mod` modBase  
 
-
+easyAddition :: Integer -> ChoiceTree [(Field, Bool)]
 easyAddition modBase = Branch [ Branch [g leftNum summand modBase| summand <- [1..modBase*2] ] | leftNum <- getLeftNums modBase]
     where
         g leftNum summand modBase = Node [(FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ " + " ++ show summand), True)]
             where
                 rightNum = leftNum `mod` modBase
 
-
+easyMultiplication :: Integer -> ChoiceTree [(Field, Bool)]
 easyMultiplication modBase = Branch [ Branch [g leftNum factor modBase| factor <- [1..modBase*2] ] | leftNum <- getLeftNums modBase]
     where
         g leftNum factor modBase = Node [(FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\  " ++ show rightNum ++ " \\cdot " ++ show factor), True)]
