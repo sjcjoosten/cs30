@@ -77,7 +77,7 @@ numXDivisibleByY :: Int -> Int -> Int
 numXDivisibleByY x y =
   let firstTerm = findFirstTerm x y
       lastTerm = 10 ^ x - 1
-  in (floor $ fromIntegral $ (lastTerm - firstTerm) `div` y) + 1
+  in floor $ fromIntegral $ ((lastTerm - firstTerm) `div` y) + 1
 
 -- Find the first x-digit number that is divisible by y
 findFirstTerm :: Int -> Int -> Int
@@ -130,16 +130,33 @@ genHasDigit :: (Int, Int) -> ChoiceTree ([Field], String)
 genHasDigit (n, d) = nodes [([FText $ show n ++ " digit positive numbers are there such that " ++ show d ++ " is a digit?"]
                     , (show $ numXHasDigit n))]
 
+-- Generative functions for combinations of questions
+sumAndHasDigit :: (Int, Int, Int) -> ChoiceTree ([Field], String)
+sumAndHasDigit (n, s, d) = nodes [([FText $ show n ++ " digit positive numbers are there such that the sum of the digits is at most "
+                    ++ show s ++ ", and that " ++ show d ++ " is a digit?"]
+                    , (show $ length $ [num | num <- (generateNDigitIntegers n), computeSumOfDigits(num) <= s, num `hasDigit` d]))]
+
+divisibilityAndHasDigit :: (Int, Int, Int) -> ChoiceTree ([Field], String)
+divisibilityAndHasDigit (n, divisor, digit) = nodes [([FText $ show n ++ " digit positive numbers are there such that it is divisible by "
+                    ++ show divisor ++ ", and that " ++ show digit ++ " is a digit?"]
+                    , (show $ length $ [num | num <- (generateNDigitIntegers n), num `mod` divisor == 0, num `hasDigit` digit]))]
+
+sumAndDivisibility :: (Int, Int, Int) -> ChoiceTree ([Field], String)
+sumAndDivisibility (n, s, divisor) = nodes [([FText $ show n ++ " digit positive numbers are there such that it is  divisible by "
+                    ++ show divisor ++ ", and that the sum of the digits is at most " ++ show s ++ "?"]
+                    , (show $ length $ [num | num <- (generateNDigitIntegers n), num `mod` divisor == 0, computeSumOfDigits(num) <= s]))]
+
+
 {- questions -}
 
 combins :: [ChoiceTree ([Field], String)]
-combins = 
+combins = (map divisibilityAndHasDigit [(n, divisor, digit) | n <- [1..10], divisor <- [2..1000], digit <- [1..9]]) ++
+         (map sumAndDivisibility [(n, s, d) | n <- [1..10], s <- [2..90], d <- [2..1000]]) ++
+         (map sumAndHasDigit [(n, s, d) | n <- [1..10], s <- [2..90], d <- [1..9]]) ++
          (map genHasDigit [(n, d) | n <- [1..9], d <- [1..9]]) ++
          (map genUnique [2..9]) ++
-         (map genSumDigits [(n,s) | n <- [2..9], s <- [1..100]]) ++
-         (map genDivisibility [(numDigit, divisor) | numDigit <- [1..10], divisor <- [2..1000]])
-        --  [ nodes [ ([FText "6 digit positive integers are there such that the sum of the digits is at most 51?"], (solveSum 6 51))]
-        --  , nodes [ ([FText "3 digit positive integers are there such that the sum of the digits is at most 10?"], (solveSum 3 10))]]
+         (map genSumDigits [(n,s) | n <- [2..9], s <- [1..90]]) ++
+         (map genDivisibility [(numDigit, divisor) | numDigit <- [2..10], divisor <- [2..1000]])
 
 
 genQuestion:: ([Field],a) -> Exercise -> Exercise
