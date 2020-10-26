@@ -20,10 +20,6 @@ import           Data.Aeson.TH
 import qualified Data.Map as Map
 import Debug.Trace
 
-
-data CombinEx = CombinEx deriving Show
-$(deriveJSON defaultOptions ''CombinEx)
-
 combinEx :: ExerciseType
 combinEx = exerciseType "Combinatorics" "L?.?" "Combinatorics: Integers" 
                         combins
