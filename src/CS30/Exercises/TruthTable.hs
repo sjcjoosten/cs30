@@ -1,6 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wall #-}
-
 module CS30.Exercises.TruthTable where
 
 import CS30.Data
@@ -9,7 +7,8 @@ import CS30.Exercises.Data -- 'exerciseType' function
 import Data.Void
 import Data.Functor.Identity
 import Data.List (sort)
-import Data.Aeson.TH -- for deriveJSON
+import Data.Maybe
+
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 
@@ -21,14 +20,10 @@ import Control.Monad (void)
 
 import Debug.Trace
 
-
-----------------------------------------
-
-expressions = ["(~PΛQ) ∨ (~P∨Q)"] -- list of expressions
-
+-------------------------------------- Exercise Generation ------------------------------------
 
 truthEx :: ExerciseType
-truthEx = exerciseType "URLTag" "L?????.??????"
+truthEx = exerciseType "URLTag" "L???.???"
           "Logic: Complete a TruthTable"
           trtable -- List of problems
           genQuestion -- present question as 'Exercise'
@@ -40,13 +35,25 @@ trtable = [ nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q
             nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q) | (~P|Q) & (~R|Q) > (S&Q)"))) 4)
           ]
 
+genQuestion :: (Field, [String]) -> Exercise -> Exercise
+genQuestion (quer, solution) ex = trace ("genQuestion" ++ (show solution)) $ ex{eQuestion=[ FText $"Fill the missing values in the following table. "] ++ [quer]}
+
+genFeedback :: (Field, [String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+genFeedback (_, sol) mStrs resp = trace ("genFeedback" ++ (show mStrs) ++ (show sol) ++(show (catMaybes (compareSol mStrs sol)))) $ if length (catMaybes (compareSol mStrs sol)) > 0  
+  then markWrong $ resp{prFeedback=[FText "Solution is incorrect! Better Luck Next Time :("]} 
+  -- then error "Solution is incorrect! Better Luck Next Time :("
+  else markCorrect $ resp{prFeedback=[FText "Solution is correct!"]}
+
+------------------------------------- Exercise Generation Helpers ---------------------------------
+
 generateProb :: Field -> Int -> [(Field, [String])]
 generateProb (FTable xs) nblanks = [(getBlankTable (FTable xs) blanks 0, getBlankSol (FTable xs) blanks)| blanks <- orderedSubsets nblanks cells]
   where
     cells = [0..(length (concat xs)-1)]
 
 
-getBlankTable :: Field -> [Int] -> Int -> Field -- (FTable [[Cell]], [['T'], ['F']])
+-- Takes previously filled Truth Table and inserts empty cells at given indices
+getBlankTable :: Field -> [Int] -> Int -> Field
 getBlankTable (FTable xs) [] _ = FTable xs
 getBlankTable (FTable xs) (b:bs) enum = getBlankTable (FTable [[insertCell (snd ri) cj | cj <- zip (fst ri) cindices]| ri <- zip xs rindices]) bs (enum+1)
   where
@@ -60,6 +67,7 @@ getBlankTable (FTable xs) (b:bs) enum = getBlankTable (FTable [[insertCell (snd 
     insertCell i (Cell (FText x), j) = if i == brow && j == bcol then (Cell (FFieldMath (show enum))) else (Cell (FText x))
     insertCell i (c, _) = c
 
+-- Takes prev filled Truth Table and extracts the solutions from cells at given indices
 getBlankSol :: Field -> [Int] -> [String]
 getBlankSol (FTable xs) blanks = [sol b | b<-blanks]
   where
@@ -68,7 +76,7 @@ getBlankSol (FTable xs) blanks = [sol b | b<-blanks]
     getFTextStr (Cell (FText x)) = x
     getFTextStr (Header (FText x)) = x
 
-
+-- Returns all combinations of size n from list m
 orderedSubsets :: Int -> [Int] -> [[Int]]
 orderedSubsets 0 xs = [[]]
 orderedSubsets n xs
@@ -76,12 +84,11 @@ orderedSubsets n xs
   | otherwise   = orderedSubsets n t ++ map (h:) (orderedSubsets (n - 1) t)
   where (h:t) = xs
 
-genQuestion :: (Field, a) -> Exercise -> Exercise
-genQuestion (quer, _solution) ex = trace ("genQuestion" ++ (show quer)) $ ex{eQuestion=[ FText $"Fill the missing values in the following table. "] ++ [quer]}
+compareSol :: Map.Map String String -> [String] -> [Maybe String]
+compareSol mStrs sol = [case Map.lookup k mStrs of 
+                        Nothing -> error "server expected other input"
+                        Just a -> if a == v then Nothing else Just a | (k, v) <- zip (map show [0..((length sol)-1)]) sol]
 
-genFeedback :: (Field, a) -> Map.Map String String -> ProblemResponse -> ProblemResponse
-genFeedback _ mStrs resp = if mStrs == (Map.fromList [("blank1", ['F']), ("blank2", ['F'])]) -- Solution will be generated
-                            then markCorrect $ resp{prFeedback=[FText "Solution is correct!"]} else error "Solution is incorrect"
 --------------------------------------Data and Types-------------------------------------------
 
 type Parser = ParsecT Void String Identity -- parsing strings in this file
@@ -276,26 +283,3 @@ logicallyEqual e1 e2 = sameLiterals && (map (evalExpr e1) alm == map (evalExpr e
 -- Whether an expression is a pure literal
 isLiteral :: Expression -> Bool
 isLiteral x = elem x [LiteralP, LiteralQ, LiteralR, LiteralS]
-
---------------------------------------Debug Output--------------------------------------------------
-
--- This compiles and prints debugOut : "stack exec debug --package cs30:debug"
--- This prints the last compiled debugOut : "stack exec debug"
-debugOut :: String
-debugOut = (showExpr . parseExpr) " (S >~R)&   (P|Q)    "
--- debugOut = (fromTruthTable . getTruthTable) "(~PΛQ) ∨ (~P∨Q)"
--- debugOut = (showExpr . parseExpr) " (S \8594~R)\923   (P\8744Q)    "
--- debugOut = " (S \8594~R)\923   (P\8744Q)    "
-
--- Λ : '\923'
--- ∨ : '\8744'
--- → : '\8594'
-
-
-
--- genQuestion _ ex = ex{eQuestion=[FTable [[Header (FText ['P']), Header (FText ['Q']), Header (FText "~P"), Header (FText "~Q"), Header (FText "~PΛ~Q")],
---                                          [Cell (FText ['T']), Cell (FText ['T']), Cell (FFieldMath "blank1"), Cell (FText ['F']), Cell (FText ['F'])],
---                                          [Cell (FText ['T']), Cell (FText ['F']), Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['F'])],
---                                          [Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['T']), Cell (FFieldMath "blank2"), Cell (FText ['F'])],
---                                          [Cell (FText ['F']), Cell (FText ['F']), Cell (FText ['T']), Cell (FText ['T']), Cell (FText ['T'])]   
---                                         ]]}
