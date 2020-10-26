@@ -16,3 +16,5 @@ been given one, but might effect the license of future updates.
 - Joseph Hajjar
 - Donia Tung
 - Bennett Clark
+- Jiayin Hu
+- Mengdie Ge
