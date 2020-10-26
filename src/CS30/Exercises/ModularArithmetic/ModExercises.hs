@@ -22,6 +22,8 @@ unwrap (ModEx (questions, modulus, answer)) = (questions, modulus, answer)
 -- Generates range of values for easy problems
 easyGenInts :: [Int]
 easyGenInts = [10 .. 100]
+hardGenInts :: [Int]
+hardGenInts = [100 .. 1000]
 
 divisors :: Int -> [Int]
 divisors n = [x | x <- [2..(n - 1)], n `rem` x == 0]
@@ -30,119 +32,66 @@ divisors n = [x | x <- [2..(n - 1)], n `rem` x == 0]
 primes :: [Int]
 primes = [x | x <- [2 .. ], null (divisors x)]
 
-easySets :: [(Questions, Modulus, Answer)]
-easySets = [ ([FMath (show x ++ "\\equiv_{" ++ show y ++ "}")], show y, x `mod` y) | x <- easyGenInts, y <- take 15 primes, y < x]
+trivialSets1,trivialSets2,trivialSets3 :: [(Questions, Modulus, Answer)]
+trivialSets1 = [([FMath (show x ++ "\\equiv_{ 1 }")], "1", 0) | x <- easyGenInts]
+trivialSets2 = [([FMath (show x ++ "\\equiv_{ 10 }")], "10", x `mod` 10) | x <- easyGenInts]
+trivialSets3 = [([FMath (show (x*y) ++ "\\equiv_{" ++ show y ++ "}")], show y, 0) | x <- easyGenInts, y <- take 15 primes, y < x]
 
-easyExercises :: [ModEx]
-easyExercises = take 500 $ drop 500 $ map (ModEx) easySets
+trivialExercises1,trivialExercises2,trivialExercises3 ::  [ModEx]
+trivialExercises1 = take 500 $ drop 500 $ map (ModEx) trivialSets1
+trivialExercises2 = take 500 $ drop 500 $ map (ModEx) trivialSets2
+trivialExercises3 = take 500 $ drop 500 $ map (ModEx) trivialSets3
 
-mediumExercises :: [ModEx]
-mediumExercises = 
-    [
-        ModEx (
-            [FMath "3^{5} \\equiv_{13}"], "13", 9
-        ),
+easySets1,easySets2,easySets3,easySets4 :: [(Questions, Modulus, Answer)]
+easySets1 = [([FMath (show x ++ "\\equiv_{" ++ show y ++ "}")], show y, x `mod` y) | x <- easyGenInts, y <- take 15 primes, y < x]
+easySets2 = [([FMath (show (-x) ++ "\\equiv_{" ++ show y ++ "}")], show y, (-x) `mod` y) | x <- easyGenInts, y <- take 15 primes, y < x]
+easySets3 = [([FMath (show (x+z) ++ "\\equiv_{" ++ show y ++ "}")], show y, (x+z) `mod` y) | x <- easyGenInts, z <- easyGenInts, y <- take 15 primes, y < x]
+easySets4 = [([FMath (show ((-x)*z) ++ "\\equiv_{" ++ show y ++ "}")], show y, (-x*z) `mod` y) | x <- easyGenInts, z <- easyGenInts, y <- take 15 primes, y < x]
 
-        ModEx (
-            [FMath "4^{7} \\equiv_{7}"], "7", 4
-        ),
-        
-        ModEx (
-            [FMath "6^{2} \\equiv_{11}"], "11", 3
-        ),
-        
-        ModEx (
-            [FMath "2^{5} \\equiv_{5}"], "5", 2
-        ),
-        
-        ModEx (
-            [FMath "5^{3} \\equiv_{7}"], "7", 6
-        ),
+easyExercises1,easyExercises2,easyExercises3,easyExercises4 ::  [ModEx]
+easyExercises1 = take 500 $ drop 500 $ map (ModEx) easySets1
+easyExercises2 = take 500 $ drop 500 $ map (ModEx) easySets2
+easyExercises3 = take 500 $ drop 500 $ map (ModEx) easySets3
+easyExercises4 = take 500 $ drop 500 $ map (ModEx) easySets4
 
-        ModEx (
-            [FMath "(7^{5} - 3^{5}) \\equiv_{5}"], "5", 1
-        ),
+mediumSets1,mediumSets2,mediumSets3,mediumSets4 :: [(Questions, Modulus, Answer)]
+mediumSets1 = [([FMath (show x ++ "^{" ++ show z ++ "} \\equiv_{" ++ show y ++ "}")], show y, (x^z) `mod` y) | x <- hardGenInts, z <- easyGenInts, y <- take 15 primes, y < x]
+mediumSets2 = [([FMath ("(" ++ show x ++ "^{" ++  show z ++ "} - " ++ show w ++ "^{" ++  show z ++ "}) \\equiv_{" ++ show y ++ "}")], show y, (x^z - w^z) `mod` y) | x <- hardGenInts, z <- easyGenInts, w <- easyGenInts, y <- take 15 primes, y < x]
+mediumSets3 = [([FMath ("(" ++ show x ++ "+" ++  show w ++ ")^{" ++ show z ++ "} \\equiv_{" ++ show y ++ "}")], show y, (x+w)^z `mod` y) | x <- hardGenInts, z <- easyGenInts, w <- easyGenInts, y <- take 15 primes, y < x]
+mediumSets4 = [([FMath ("(" ++ show x ++ "-" ++  show w ++ ")^{" ++ show z ++ "} \\equiv_{" ++ show y ++ "}")], show y, (x-w)^z `mod` y) | x <- hardGenInts, z <- easyGenInts, w <- easyGenInts, y <- take 15 primes, y < x]
 
-        ModEx (
-            [FMath "(3^{4} - 2^{3}) \\equiv_{23}"], "23", 4
-        ),
+mediumExercises1,mediumExercises2,mediumExercises3,mediumExercises4 ::  [ModEx]
+mediumExercises1 = take 500 $ drop 500 $ map (ModEx) mediumSets1
+mediumExercises2 = take 500 $ drop 500 $ map (ModEx) mediumSets2
+mediumExercises3 = take 500 $ drop 500 $ map (ModEx) mediumSets3
+mediumExercises4 = take 500 $ drop 500 $ map (ModEx) mediumSets4
 
-        ModEx (
-            [FMath "(9^{3} - 5^{2}) \\equiv_{17}"], "17", 7
-        ),
+hardSets1,hardSets2,hardSets3,hardSets4 :: [(Questions, Modulus, Answer)]
+hardSets1 = [([FMath (show (-x) ++ "^{" ++ show z ++ "} \\equiv_{" ++ show y ++ "}")], show y, ((-x)^z) `mod` y) | x <- hardGenInts, z <- easyGenInts, y <- take 15 primes, y < x]
+hardSets2 = [([FMath (show x ++ "\\cdot" ++ show z ++ "^{-1} \\equiv_{" ++ show y ++ "}")], show y, (x*(z^(-1))) `mod` y) | x <- hardGenInts, z <- easyGenInts, y <- take 15 primes, y < x]
+hardSets3 = [([FMath ("(" ++ show x ++ "+" ++  show w ++ ")^{" ++ show z ++ "} \\cdot" ++ show l ++ "^{-1} \\equiv_{" ++ show y ++ "}")], show y, (((x+w)^z)*(l^(-1))) `mod` y) | x <- hardGenInts, z <- easyGenInts,w <- easyGenInts,l <- easyGenInts, y <- take 15 primes, y < x]
+hardSets4 = [([FMath ("(" ++ show x ++ "^{" ++  show z ++ "} - " ++ show w ++ "^{" ++  show z ++ "} \\cdot" ++ show l ++ "^{-1} \\equiv_{" ++ show y ++ "}")], show y, ((x^z - w^z)*(l^(-1))) `mod` y) | x <- hardGenInts, z <- easyGenInts,w <- easyGenInts,l <- easyGenInts, y <- take 15 primes, y < x]
 
-        ModEx (
-            [FMath"(8^{14} - 9^{12}) \\equiv_{13}"], "13", 11
-        ),
+hardExercises1,hardExercises2,hardExercises3,hardExercises4 ::  [ModEx]
+hardExercises1 = take 500 $ drop 500 $ map (ModEx) hardSets1
+hardExercises2 = take 500 $ drop 500 $ map (ModEx) hardSets2
+hardExercises3 = take 500 $ drop 500 $ map (ModEx) hardSets3
+hardExercises4 = take 500 $ drop 500 $ map (ModEx) hardSets4
 
-        ModEx (
-            [FMath "(2451 + 2)^{5} \\equiv_{3}"], "3", 2
-        ),
-
-        ModEx (
-            [FMath "(33 + 12)^{5} \\equiv_{7}"], "7", 5
-        ),
-
-        ModEx (
-            [FMath "(17 - 2)^{3} \\equiv_{11}"], "11", 9
-        ),
-
-        ModEx (
-            [FMath "(375 - 320)^{2} \\equiv_{2}"], "2", 1
-        )
-    ]
-
-hardExercises :: [ModEx]
-hardExercises = 
-    [
-        ModEx (
-            [FMath "-19^{5} \\equiv_{13}"], "13", 11
-        ),
-        
-        ModEx (
-            [FMath "-476^{5} - 9^{8} \\equiv_{7}"], "7", 3
-        ),
-        
-        ModEx (
-            [FMath "-43^{3} \\cdot 72^{4} \\equiv_{5}"], "5", 3
-        ),
-        
-        ModEx (
-            [FMath "(-28^{4} + 59^{6}) \\equiv_{17}"], "17", 8
-        ),
-
-        ModEx (
-            [FMath "16 \\cdot 37^{-1} \\equiv_{11}"], "11", 4
-        ),
-
-        ModEx (
-            [FMath "52 \\cdot 24^{-1} \\equiv_{5}"], "5", 1
-        ),
-
-        ModEx (
-            [FMath "33 \\cdot 35^{-1} \\equiv_{8}"], "8", 3
-        ),
-
-        ModEx (
-            [FMath "54 \\cdot 72^{-1} \\equiv_{23}"], "23", 2
-        ),
-
-        ModEx (
-            [FMath "(273 + 7)^{3} \\cdot 43^{-1} \\equiv_{4}"], "4", 1
-        ),
-
-        ModEx (
-            [FMath "-17^{2} \\cdot 67^{-1} \\equiv_{5}"], "5", 3
-        ),
-
-        ModEx (
-            [FMath "(3 - 18)^{3} \\cdot 32^{-1} \\equiv_{7}"], "7", 5
-        ),
-
-        ModEx (
-            [FMath "(3^{2} - 3^{5}) \\cdot 25^{-1} \\equiv_{11}"], "11", 2
-        )
-    ]
-
-mods :: [ChoiceTree ModEx]
-mods = [nodes easyExercises, nodes mediumExercises, nodes hardExercises]
+mods :: [ChoiceTree (ModEx)]
+mods = [ Branch [ nodes trivialExercises1
+                , nodes trivialExercises2
+                , nodes trivialExercises3]
+        ,Branch [Branch [ nodes easyExercises1],
+                 Branch [ nodes easyExercises2],
+                 Branch [ nodes easyExercises3],
+                 Branch [ nodes easyExercises4]]
+        ,Branch [Branch [ Branch [nodes mediumExercises1]],
+                 Branch [ Branch [nodes mediumExercises2]],
+                 Branch [ Branch [nodes mediumExercises3]],
+                 Branch [ Branch [nodes mediumExercises4]]]
+        ,Branch [Branch [ Branch [Branch [nodes hardExercises1]]],
+                 Branch [ Branch [Branch [nodes hardExercises2]]],
+                 Branch [ Branch [Branch [nodes hardExercises3]]],
+                 Branch [ Branch [Branch [nodes hardExercises4]]]]
+        ]
