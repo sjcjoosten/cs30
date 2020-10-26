@@ -15,8 +15,6 @@ condition) -}
 module CS30.Exercises.CombinatoricsIntegers where
 import           CS30.Data
 import           CS30.Exercises.Data
-import           Data.Aeson as JSON
-import           Data.Aeson.TH
 import qualified Data.Map as Map
 import Debug.Trace
 
