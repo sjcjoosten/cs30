@@ -14,5 +14,9 @@ been given one, but might effect the license of future updates.
 - Rachael Williams
 - Fei
 - Kyle Bensink
+- Paul Gralla
+- Joseph Hajjar
 - Donia Tung
 - Bennett Clark
+- Jiayin Hu
+- Mengdie Ge
