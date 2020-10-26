@@ -40,10 +40,6 @@ combinEx = exerciseType "Combinatorics" "L?.?" "Combinatorics: Integers"
                         
 {- summing digits -}
 
--- To Do
-solve :: String
-solve = "56"  -- This is ok if the sum of digits is equal to 51, not "at most 51".
-
 solveSum :: Int -> Int -> String
 solveSum n sum_upperbound = show $ length $ [num | num <- (generateNDigitIntegers n), computeSumOfDigits(num) <= sum_upperbound]
 
@@ -77,7 +73,7 @@ numXDivisibleByY :: Int -> Int -> Int
 numXDivisibleByY x y =
   let firstTerm = findFirstTerm x y
       lastTerm = 10 ^ x - 1
-  in floor $ fromIntegral $ ((lastTerm - firstTerm) `div` y) + 1
+  in floor $ (fromIntegral :: Int -> Double) $ ((lastTerm - firstTerm) `div` y) + 1
 
 -- Find the first x-digit number that is divisible by y
 findFirstTerm :: Int -> Int -> Int
@@ -104,7 +100,7 @@ allUnique lst = case lst of
 solveUnique :: Int -> Int
 solveUnique n = length ([lst | lst <- filter allUnique (map digits (generateNDigitIntegers n))])
 
--- breaks an integer into a list of its digits
+-- breaks an integer (greater than zero) into a list of its digits
 digits :: Int -> [Int]
 digits 0 = []
 digits n = mod n 10 : digits (div n 10)
@@ -116,7 +112,6 @@ genUnique n = nodes [([FText $ show n ++ " digit positive numbers are there such
 
 {- digit placement -}
 
--- todo
 -- returns true if a number contains the digit
 hasDigit :: Int -> Int -> Bool
 n `hasDigit` x = x `elem` digits n
@@ -129,6 +124,8 @@ numXHasDigit x = (9 * (10 ^ (x - 1))) - ((9 ^ (x - 1)) * 8)
 genHasDigit :: (Int, Int) -> ChoiceTree ([Field], String)
 genHasDigit (n, d) = nodes [([FText $ show n ++ " digit positive numbers are there such that " ++ show d ++ " is a digit?"]
                     , (show $ numXHasDigit n))]
+
+{- Combinations -}
 
 -- Generative functions for combinations of questions
 sumAndHasDigit :: (Int, Int, Int) -> ChoiceTree ([Field], String)
