@@ -11,8 +11,9 @@ choiceTreeList = [Branch [nodes [andExerciseEasy a b | a <- proba , b <- proba]]
                     , Branch [nodes [andThreeExerciseEasy a b c | a <- proba , b <- proba, c <- proba]]
                     , Branch [nodes [orExerciseEasy a b | a <- proba , b <- proba]]
                     , Branch [nodes [andExerciseHard a b | a <- proba , b <- proba]]
-                    , Branch [nodes [orExerciseHard a b | a <- proba , b <- proba]]]
-
+                    , Branch [nodes [orExerciseHard a b | a <- proba , b <- proba]]
+                    , Branch [nodes [deExerciseEasy a b | a <- proba , b <- proba]]]
+                    
 --generate questions based on two numbers
 andExerciseEasy :: Rational -> Rational -> ([Field], Rational)
 andExerciseEasy a b = ([FMath$ "Pr[A] =" ++ show(a), FText ", ", FMath$ "Pr[B] =" ++ show(b), 
@@ -34,6 +35,12 @@ andExerciseHard a b = ([FMath$ "Pr[A] =" ++ show(a), FText ", ", FMath$ "Pr[A \\
 orExerciseHard :: Rational -> Rational -> ([Field], Rational)
 orExerciseHard a b = ([FMath$ "Pr[A] =" ++ show(a), FText ", ", FMath$ "Pr[A \\vee B] =" ++ show(a + b - a * b), 
                         FText ", Events A and B are independent. What is Pr[B]?"], b)
+
+-- dependent case
+deExerciseEasy :: Rational -> Rational -> ([Field], Rational)
+deExerciseEasy a b = ([FMath$ "Pr[A | B] =" ++ show(a), FText ", ", FMath$ "Pr[B] =" ++ show(b), 
+                        FText ". What is ", FMath "Pr[A \\wedge B]?"], (a * b))
+
 
 proba :: [Ratio Integer]
 proba = [0.25, 0.5, 0.75, 0.2, 0.4, 0.6]
