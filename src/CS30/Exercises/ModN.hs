@@ -10,6 +10,7 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 import System.Random (randomRIO)
 import qualified Data.Map as Map
 
+dat ModNEntry = (Field,Bool) deriving Eq $(deriveJSON defaultOptions 'ModNEntry)
 
 modN :: ExerciseType
 modN = exerciseType "Modulo N" "Modulo N" "True or False" 
@@ -41,47 +42,50 @@ cartProduct (x:xs) = replace f (cartProduct xs)
     
 
 -- easyExercise = cartProduct [easyAddition 4, easyMultiplication 4]
-easyExercise :: ChoiceTree [(Field, Bool)]
-easyExercise = cartProduct [ [easyIntegerPowerSame modBase, easyAddition modBase, easyIntegerPowerSame modBase, easyIntegerPowerDiff modBase]| modBase <- [4,6..20]]
+easyExercise :: ChoiceTree [ModNEntry]
+easyExercise = replace cartProduct (Branch [Node [easyIntegerPowerSame modBase, easyAddition modBase, easyIntegerPowerSame modBase, easyIntegerPowerDiff modBase, easyFractionPower modBase]| modBase <- [4,6..20]])
+-- easyExercise =Branch [ cartProduct [easyIntegerPowerSame modBase, easyAddition modBase, easyIntegerPowerSame modBase, easyIntegerPowerDiff modBase]| modBase <- [4,6..20]]
+-- easyExercise = replace (map Branch) (cartProduct [ [easyIntegerPowerSame modBase, easyAddition modBase, easyIntegerPowerSame modBase, easyIntegerPowerDiff modBase]| modBase <- [4,6..20]])
+-- easyExercise = replace Branch (cartProduct [easyAddition 4, easyMultiplication 4])
 
 -- easyExercise = Branch [ replace (f modBase) (easyFractionPower modBase) | modBase <- [4,6..20] ]
 --     where
 --         f modBase exercise = replace (g exercise) (easyAddition modBase)
 --         g e1 e2 = Node (e1 ++ e2)
 
-easyIntegerPowerSame :: Integer -> ChoiceTree [(Field, Bool)]
+easyIntegerPowerSame :: Integer -> ChoiceTree ModNEntry
 easyIntegerPowerSame modBase = Branch [ Branch [g leftNum exponent modBase| exponent <- [modBase..modBase*2] ] | leftNum <- getLeftNums modBase]
     where
-        g leftNum exponent modBase = Node [(FMath (show leftNum ++ "^{" ++ show exponent ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent ++ "}"), True)]
+        g leftNum exponent modBase = Node (FMath (show leftNum ++ "^{" ++ show exponent ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent ++ "}"), True)
             where
                 rightNum = leftNum `mod` modBase
 
-easyIntegerPowerDiff :: Integer -> ChoiceTree [(Field, Bool)]
+easyIntegerPowerDiff :: Integer -> ChoiceTree ModNEntry
 easyIntegerPowerDiff modBase = Branch [ Branch [g leftNum exponent1 exponent2 modBase| (exponent1, exponent2) <- (zip [modBase, modBase + 2..modBase*2] (reverse [modBase - 1, modBase + 1..modBase*2])) ] | leftNum <- getLeftNums modBase]
     where
-        g leftNum exponent1 exponent2 modBase = Node [(FMath (show leftNum ++ "^{" ++ show exponent1 ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent2 ++ "}"), isCorrect)]
+        g leftNum exponent1 exponent2 modBase = Node (FMath (show leftNum ++ "^{" ++ show exponent1 ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent2 ++ "}"), isCorrect)
             where
                 rightNum = leftNum `mod` modBase
                 isCorrect = modExp leftNum exponent1 modBase == modExp rightNum exponent2 modBase
 
-easyFractionPower :: Integer -> ChoiceTree [(Field, Bool)]
+easyFractionPower :: Integer -> ChoiceTree ModNEntry
 easyFractionPower modBase = Branch [ Branch [ g leftNum rightNum modBase | leftNum <- (filter (\x -> (x `mod` modBase == rightNum `mod` modBase) && x /=rightNum ) squares)] | rightNum <- squares]
     where
-        g leftNum rightNum modBase = Node [(FMath ("\\sqrt{" ++ show leftNum ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ \\sqrt{" ++ show rightNum ++ "}"), isCorrect)]
+        g leftNum rightNum modBase = Node (FMath ("\\sqrt{" ++ show leftNum ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ \\sqrt{" ++ show rightNum ++ "}"), isCorrect)
             where
                 isCorrect = (rootOfPerfectSquare leftNum) `mod` modBase == (rootOfPerfectSquare rightNum) `mod` modBase  
 
-easyAddition :: Integer -> ChoiceTree [(Field, Bool)]
+easyAddition :: Integer -> ChoiceTree ModNEntry
 easyAddition modBase = Branch [ Branch [g leftNum summand modBase| summand <- [1..modBase*2] ] | leftNum <- getLeftNums modBase]
     where
-        g leftNum summand modBase = Node [(FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ " + " ++ show summand), True)]
+        g leftNum summand modBase = Node (FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ " + " ++ show summand), True)
             where
                 rightNum = leftNum `mod` modBase
 
-easyMultiplication :: Integer -> ChoiceTree [(Field, Bool)]
+easyMultiplication :: Integer -> ChoiceTree ModNEntry
 easyMultiplication modBase = Branch [ Branch [g leftNum factor modBase| factor <- [1..modBase*2] ] | leftNum <- getLeftNums modBase]
     where
-        g leftNum factor modBase = Node [(FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\  " ++ show rightNum ++ " \\cdot " ++ show factor), True)]
+        g leftNum factor modBase = Node (FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\  " ++ show rightNum ++ " \\cdot " ++ show factor), True)
             where
                 rightNum = leftNum `mod` modBase
 
@@ -109,7 +113,7 @@ gen_intPower = ""
 gen_fracPower :: String
 gen_fracPower = ""
 
-modNFeedback :: [(Field, Bool)] -> Map.Map String String -> ProblemResponse -> ProblemResponse
+modNFeedback :: [ModNEntry] -> Map.Map String String -> ProblemResponse -> ProblemResponse
 modNFeedback qa usr defaultRsp
     = reTime $ if (isCorrect) 
                then correct{prFeedback=[FText "correct, you beast"] }
@@ -125,7 +129,7 @@ modNFeedback qa usr defaultRsp
         qAndA = zip qa sols
 
         answers = [show b | (a,b) <- qa]
-        sols = [ solLookup i | i <- [1..2]]
+        sols = [ solLookup i | i <- [1..5]]
         allAnsWithSol = zip answers sols
         isCorrect = all (==True) [ givenAns == (charToBoolStr solu) | (givenAns,solu) <- allAnsWithSol]
 
