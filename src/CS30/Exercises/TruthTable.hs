@@ -22,11 +22,6 @@ import Control.Monad (void)
 import Debug.Trace
 
 
-
-data TruthEx = TruthEx (Field, [String])
-
-$(deriveJSON defaultOptions ''TruthEx)
-
 ----------------------------------------
 
 expressions = ["(~PΛQ) ∨ (~P∨Q)"] -- list of expressions
@@ -39,33 +34,42 @@ truthEx = exerciseType "URLTag" "L?????.??????"
           genQuestion -- present question as 'Exercise'
           genFeedback -- handle response as 'ProblemResponse'
 
-trtable :: [ChoiceTree ([Field], [String])]
-trtable = [ nodes (generateProb (fromTruthTable (getTruthTable "(~PΛQ)")) 2),
-            nodes (generateProb (fromTruthTable (getTruthTable "(~PΛQ) ∨ (~P∨Q)")) 3),
-            nodes (generateProb (fromTruthTable (getTruthTable "(~PΛQ) ∨ (~P∨Q) Λ (~P∨Q) Λ (PΛQ)")) 4)
+trtable :: [ChoiceTree (Field, [String])]
+trtable = [ nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q)"))) 2),
+            nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q) | (~P|Q)"))) 3),
+            nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q) | (~P|Q) & (~R|Q) > (S&Q)"))) 4)
           ]
 
 generateProb :: Field -> Int -> [(Field, [String])]
-generateProb (FTable xs) nblanks = [getBlankTableSol (FTable xs) blank | blanks <- orderedSubsets nblanks cells, blank <- zip blanks [1..nblanks]] -- blank = (1, 1) where snd is used to put as a key in FFieldMath
+generateProb (FTable xs) nblanks = [(getBlankTable (FTable xs) blanks 0, getBlankSol (FTable xs) blanks)| blanks <- orderedSubsets nblanks cells]
   where
     cells = [0..(length (concat xs)-1)]
 
-getBlankTableSol :: Field -> (Int, Int) -> (Field, [String])
-getBlankTableSol (FTable xs) blank = (FTable [insertCell (snd ri) cj | ri <- zip xs rindices, cj <- zip ri cindices],
-                                            [getCellString (fst cj) | ri <- zip xs rindices, cj <- zip ri cindices, (fst ri) == brow && (snd cj) == bcol])
+
+getBlankTable :: Field -> [Int] -> Int -> Field -- (FTable [[Cell]], [['T'], ['F']])
+getBlankTable (FTable xs) [] _ = FTable xs
+getBlankTable (FTable xs) (b:bs) enum = getBlankTable (FTable [[insertCell (snd ri) cj | cj <- zip (fst ri) cindices]| ri <- zip xs rindices]) bs (enum+1)
   where
     nrows = length xs
     ncols = length (xs !! 0)
     rindices = [0..(nrows-1)]
     cindices = [0..(ncols-1)]
-    brow = (fst blank) `div` ncols
-    bcol = (fst blank) `mod` ncols
-    insertCell i (Header (FText x), j) = if i == brow && j == bcol then (Header (FFieldMath (show (snd blank)))) else (Header (FText x))-- ?
-    insertCell i (Cell (FText x), j) = if i == brow && j == bcol then (Cell (FFieldMath (show (snd blank)))) else (Cell (FText x))
-    getCellString (Header (FText x)) = x
-    getCellString (Cell (FText x)) = x
+    brow = b `div` ncols
+    bcol = b `mod` ncols
+    insertCell i (Header (FText x), j) = if i == brow && j == bcol then (Header (FFieldMath (show enum))) else (Header (FText x))
+    insertCell i (Cell (FText x), j) = if i == brow && j == bcol then (Cell (FFieldMath (show enum))) else (Cell (FText x))
+    insertCell i (c, _) = c
 
-orderedSubsets :: Int -> [Integer] -> [[Integer]]
+getBlankSol :: Field -> [Int] -> [String]
+getBlankSol (FTable xs) blanks = [sol b | b<-blanks]
+  where
+    ncols = length (xs !! 0)
+    sol b = getFTextStr ((xs !! (b `div` ncols)) !! (b `mod` ncols))
+    getFTextStr (Cell (FText x)) = x
+    getFTextStr (Header (FText x)) = x
+
+
+orderedSubsets :: Int -> [Int] -> [[Int]]
 orderedSubsets 0 xs = [[]]
 orderedSubsets n xs
   | length xs < n = []
@@ -73,7 +77,7 @@ orderedSubsets n xs
   where (h:t) = xs
 
 genQuestion :: (Field, a) -> Exercise -> Exercise
-genQuestion (quer, _solution) ex = ex{eQuestion=[ FText $"Fill the missing values in the following table. "] ++ [quer]}
+genQuestion (quer, _solution) ex = trace ("genQuestion" ++ (show quer)) $ ex{eQuestion=[ FText $"Fill the missing values in the following table. "] ++ [quer]}
 
 genFeedback :: (Field, a) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 genFeedback _ mStrs resp = if mStrs == (Map.fromList [("blank1", ['F']), ("blank2", ['F'])]) -- Solution will be generated
@@ -89,6 +93,7 @@ data Expression
   | Disjunction Expression Expression
   | Implication Expression Expression
   | Negation Expression
+  | ExpressionError
   deriving (Show, Eq, Ord)
 
 type Literal = Expression
@@ -132,6 +137,7 @@ parseExpr' x = parse parserExpression "<myparse>" (filter (\c->c/=' ') x)
 
 getExpr :: Either ParseError Expression -> Expression -- TODO : Make exhaustive
 getExpr (Right x) = x
+getExpr (Left x) = ExpressionError
 
 -- Converts an expression object to a string
 showExpr :: Expression -> String
@@ -143,6 +149,7 @@ showExpr (Negation e) = charNeg : showExpr e
 showExpr (Conjunction e1 e2) = [charOpen] ++ showExpr e1 ++ " " ++ [charCon] ++ " " ++ showExpr e2 ++ [charClose]
 showExpr (Disjunction e1 e2) = [charOpen] ++ showExpr e1 ++ " " ++ [charDis] ++ " " ++ showExpr e2 ++ [charClose]
 showExpr (Implication e1 e2) = [charOpen] ++ showExpr e1 ++ " " ++ [charImp] ++ " " ++ showExpr e2 ++ [charClose]
+showExpr ExpressionError = "Parsing error"
 
 -- Instantiates literals and evaluates the boolean value of an expression
 evalExpr :: Expression -> Map.Map Literal Bool -> Bool
