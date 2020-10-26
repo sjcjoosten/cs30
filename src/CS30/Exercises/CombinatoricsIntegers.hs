@@ -65,6 +65,10 @@ computeSumOfDigitsHelper n curr_sum
   where
     (n', digit) = divMod n 10
 
+-- Generates a question about sum of digits of an n-digit number
+genSumDigits :: (Int, Int) -> ChoiceTree ([Field], String)
+genSumDigits (n, sum_upperbound) = nodes[([FText $ show n ++ " digit positive integers are there such that the sum of the digits is at most "
+  ++ show sum_upperbound ++ "?"], (solveSum n sum_upperbound))]
 
 {- divisibility -}
 
@@ -83,6 +87,7 @@ findFirstTerm x y
   where
     smallest = 10 ^ (x - 1)
 
+-- Generates a question about the divisibility of an n digit number
 genDivisibility :: (Int, Int) -> ChoiceTree ([Field], String)
 genDivisibility (numDigit, divisor) = nodes[([FText $ show numDigit ++ " digit positive integers are there such that it is divisible by "
   ++ show divisor ++ "?"], (show $ numXDivisibleByY numDigit divisor))]
@@ -109,11 +114,32 @@ genUnique :: Int -> ChoiceTree ([Field], String)
 genUnique n = nodes [([FText $ show n ++ " digit positive numbers are there such that all digits are different?"]
                     , (show $ solveUnique n))]
 
+{- digit placement -}
+
+-- todo
+-- returns true if a number contains the digit
+hasDigit :: Int -> Int -> Bool
+n `hasDigit` x = x `elem` digits n
+
+-- how many x-digit numbers contain a certain digit
+-- solution stays the same despite the digit
+numXHasDigit :: Int -> Int
+numXHasDigit x = (9 * (10 ^ (x - 1))) - ((9 ^ (x - 1)) * 8)
+
+genHasDigit :: (Int, Int) -> ChoiceTree ([Field], String)
+genHasDigit (n, d) = nodes [([FText $ show n ++ " digit positive numbers are there such that " ++ show d ++ " is a digit?"]
+                    , (show $ numXHasDigit n))]
+
+{- questions -}
+
 combins :: [ChoiceTree ([Field], String)]
-combins = (map genUnique [2..9]) ++
-         (map (genDivisibility) [(numDigit, divisor) | numDigit <- [1..10], divisor <- [2..1000]]) ++ 
-         [ nodes [ ([FText "6 digit positive integers are there such that the sum of the digits is at most 51?"], (solveSum 6 51))]
-         , nodes [ ([FText "3 digit positive integers are there such that the sum of the digits is at most 10?"], (solveSum 3 10))]]
+combins = 
+         (map genHasDigit [(n, d) | n <- [1..9], d <- [1..9]]) ++
+         (map genUnique [2..9]) ++
+         (map genSumDigits [(n,s) | n <- [2..9], s <- [1..100]]) ++
+         (map genDivisibility [(numDigit, divisor) | numDigit <- [1..10], divisor <- [2..1000]])
+        --  [ nodes [ ([FText "6 digit positive integers are there such that the sum of the digits is at most 51?"], (solveSum 6 51))]
+        --  , nodes [ ([FText "3 digit positive integers are there such that the sum of the digits is at most 10?"], (solveSum 3 10))]]
 
 
 genQuestion:: ([Field],a) -> Exercise -> Exercise
