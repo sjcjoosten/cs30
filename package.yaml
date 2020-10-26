@@ -22,7 +22,6 @@ dependencies:
     - th-lift-instances
     - parser-combinators
     - megaparsec
-    - parsec
 ghc-options:
     - -Wall
     - -fwarn-tabs
