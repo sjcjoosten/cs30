@@ -6,6 +6,7 @@ import CS30.Exercises.Graphs (graphStub)
 import CS30.Exercises.ModN (modN)
 import CS30.Exercises.ProbWord ( probBasicEx, probExpectEx )
 import CS30.Exercises.Table (tableStub)
+import CS30.Exercises.ComputeX (modsEx)
 import CS30.Exercises.IncExcCardinalities (incExcCards)
 import CS30.Exercises.Probability_compute_expression (probaEx)
 
@@ -18,6 +19,7 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , probBasicEx, probExpectEx 
         -- , graphStub -- does not pass tests, since it's not a valid exercise. It's also not yet implemented on the frontend.
         -- , tableStub -- does not pass tests, since it's not a valid exercise, but uncomment to see how tables are displayed.
+        , modsEx -- Modular Arithmetic exercises
         , probBasicEx -- Probability: Word Problems, basic probability and expected value exercises
         , cardEx -- from Cardinality
         , incExcCards -- from IncExcCardinalities
