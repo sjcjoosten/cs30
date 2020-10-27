@@ -12,3 +12,14 @@ been given one, but might effect the license of future updates.
 - Sebastiaan J.C. Joosten
 - Roberto Gabriel Brito
 - Maha Hasan Alshawi
+- Tyler Vergho
+- Rachael Williams
+- Fei
+- Kyle Bensink
+- Paul Gralla
+- Joseph Hajjar
+- Donia Tung
+- Bennett Clark
+- Jiayin Hu
+- Mengdie Ge
+
