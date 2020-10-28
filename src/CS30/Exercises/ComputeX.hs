@@ -13,7 +13,7 @@ genQuestion modEx ex = ex {eQuestion = [ FText "Compute " ] ++ques++
                               where (ques, modulus, _) = unwrap modEx
 
 modsEx :: ExerciseType
-modsEx = exerciseType "Numbers" "L?.?" "Modulo p, compute X"
+modsEx = exerciseType "NumbersModp" "L?.0" "Modulo p, compute X"
                mods
                genQuestion
                genFeedback

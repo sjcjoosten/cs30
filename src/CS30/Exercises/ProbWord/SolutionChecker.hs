@@ -2,13 +2,13 @@
 module CS30.Exercises.ProbWord.SolutionChecker (probFeedback, probExpectFeedback) where
 import           CS30.Data
 import           CS30.Exercises.Util
+import           Control.Monad.Combinators.Expr
 import qualified Data.Map as Map
 import           Data.Void
-import           Text.Megaparsec
-import           Text.Megaparsec.Char
-import Control.Monad.Combinators.Expr
-import GHC.Real -- for (%)
-import Numeric ( showFFloat ) 
+import           GHC.Real
+import           Numeric ( showFFloat )
+import           Text.Megaparsec -- for (%)
+import           Text.Megaparsec.Char 
 
 type Parser = Parsec Void String
 data RationalExpr

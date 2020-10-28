@@ -20,7 +20,7 @@ basicprob = [ Branch [ nodes [ ( [FText $ "there are " ++ show blue ++ " blue ma
                               | numDice <- [2..3], sumDice <- [numDice + 1..numDice*6 - 1]
                               ]
             , Branch [ nodes [([FText $ show numDice ++ " fair dice are rolled, find the probability that the sum of the results is less than " ++ show sumDice]
-                              , (toInteger $ nDiceLessThanK numDice sumDice) % (6 ^ numDice))                              
+                              , (toInteger $ nDiceLessThanK numDice sumDice) % (6 ^ numDice))
                               | numDice <- [2..3], sumDice <- [2*numDice..numDice*5]] -- to prevent degenerate question, only take [2*numDice, 5*numDice] as question domain -}
                         ]
               ]

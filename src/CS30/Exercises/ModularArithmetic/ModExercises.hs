@@ -14,6 +14,9 @@ type Questions = [Field]
 data ModEx = ModEx (Questions, Modulus, Answer) deriving Show
 $(deriveJSON defaultOptions ''ModEx)
 
+_unused :: [ChoiceTree ModEx]
+_unused = [hardExercises1, hardExercises2, hardExercises3, hardExercises4]
+
 --function to calculate inv modulo
 modInv :: Int -> Int ->  Int
 modInv a m
@@ -66,9 +69,9 @@ trivialSets3 = Branch [Branch [Node ([FMath (show (x*y) ++ "\\equiv_{" ++ show y
                       | y <- take 15 primes]
 
 trivialExercises1,trivialExercises2,trivialExercises3 :: ChoiceTree (ModEx)
-trivialExercises1 =  fmap (ModEx) trivialSets1
-trivialExercises2 =  fmap (ModEx) trivialSets2
-trivialExercises3 =  fmap (ModEx) trivialSets3
+trivialExercises1 =  fmap ModEx trivialSets1
+trivialExercises2 =  fmap ModEx trivialSets2
+trivialExercises3 =  fmap ModEx trivialSets3
 
 --easy level set
 easySets1,easySets2,easySets3,easySets4 :: ChoiceTree (Questions, Modulus, Answer)
@@ -123,10 +126,10 @@ mediumSets4 = Branch [Branch [Branch[ Branch[ Node([FMath ("(" ++ show x ++ "-" 
                      | y <- take 15 primes]
 
 mediumExercises1,mediumExercises2,mediumExercises3,mediumExercises4 :: ChoiceTree (ModEx)
-mediumExercises1 =  fmap (ModEx) mediumSets1
-mediumExercises2 =  fmap (ModEx) mediumSets2
-mediumExercises3 =  fmap (ModEx) mediumSets3
-mediumExercises4 =  fmap (ModEx) mediumSets4
+mediumExercises1 =  fmap ModEx mediumSets1
+mediumExercises2 =  fmap ModEx mediumSets2
+mediumExercises3 =  fmap ModEx mediumSets3
+mediumExercises4 =  fmap ModEx mediumSets4
 
 --hard level set
 hardSets1,hardSets2,hardSets3,hardSets4 :: ChoiceTree (Questions, Modulus, Answer)
@@ -156,12 +159,12 @@ hardSets4 = Branch [ Branch [ Branch [ Branch [ Branch[ Branch [Node ([FMath ("(
                    |y <- take 90 primes]
 
 hardExercises1,hardExercises2,hardExercises3,hardExercises4 :: ChoiceTree (ModEx)
-hardExercises1 = fmap (ModEx) hardSets1
-hardExercises2 = fmap (ModEx) hardSets2
-hardExercises3 = fmap (ModEx) hardSets3
-hardExercises4 = fmap (ModEx) hardSets4
+hardExercises1 = fmap ModEx hardSets1
+hardExercises2 = fmap ModEx hardSets2
+hardExercises3 = fmap ModEx hardSets3
+hardExercises4 = fmap ModEx hardSets4
 
-mods :: [ChoiceTree (ModEx)]
+mods :: [ChoiceTree ModEx]
 mods =  [Branch [trivialExercises1              
                 ,trivialExercises2
                 ,trivialExercises3]
@@ -173,8 +176,9 @@ mods =  [Branch [trivialExercises1
                 ,mediumExercises2
                 ,mediumExercises3
                 ,mediumExercises4]
-        ,Branch [hardExercises1
-                ,hardExercises2
-                ,hardExercises3
-                ,hardExercises4]
+        -- ,Branch [hardExercises1
+        --         ,hardExercises2
+        --         ,hardExercises3
+        --         ,hardExercises4
+        --         ]
         ]

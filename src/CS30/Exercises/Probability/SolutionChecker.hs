@@ -1,18 +1,13 @@
 {-# LANGUAGE BlockArguments #-}
-module CS30.Exercises.ProblemsBasics.SolutionChecker where
-import CS30.Data
-import CS30.Exercises.ProblemsBasics.Problems
-import CS30.Exercises.Util
-import CS30.Exercises.Data
+module CS30.Exercises.Probability.SolutionChecker where
+import           CS30.Data
+import           CS30.Exercises.Util
+import           Control.Monad.Combinators.Expr
 import qualified Data.Map as Map
-import           Data.Aeson.TH -- for deriveJSON
--- import Data.Char (isNumber)
-import Text.Megaparsec.Char
-import Text.Megaparsec
-import Data.Void
-import Data.Ratio
-import Control.Monad.Combinators.Expr
-import Numeric ( showFFloat )
+import           Data.Ratio
+import           Data.Void
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 type Parser = Parsec Void String
 
@@ -117,12 +112,14 @@ genFeedback :: ([Field], Rational)
               -> Map.Map String String
               -> ProblemResponse
               -> ProblemResponse
-genFeedback (question, solution)  mStrs rsp = reTime $
+genFeedback (_, solution)  mStrs rsp = reTime $
                   case Map.lookup "answer" mStrs of
                       Nothing -> error "Answer field expected"
                       Just v -> case runParser numeric_value_parser "" v of
                                   Left e -> markWrong $ rsp{prFeedback = [FText "You entered " , FMath $ show v, FText (", parse error" ++ errorBundlePretty e)]}
                                   Right userAnswer -> case evalRational userAnswer of
+                                                        Nothing -> markWrong $
+                                                                                    rsp{prFeedback = [FText "Sorry! You entered ", FMath $ show userAnswer, FText ", which we couldn't evaluate (division by zero?)"]}
                                                         Just userSolution -> if userSolution == solution then
                                                                                 markCorrect $
                                                                                     rsp{prFeedback = [FText "Congratulations! You entered ", FMath $ show userAnswer, FText ", the right answer is ", FMath$ show solution]}

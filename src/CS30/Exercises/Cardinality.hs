@@ -20,10 +20,6 @@ import           Text.Megaparsec.Char -- readFile
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Control.Monad.Combinators.Expr
 
-data CardExp = CardExp deriving Show
--- type CardExp a = ([Field],a)
--- $(deriveJSON defaultOptions ''CardExp)
-
 -- datatype that we try to parse all user responses into 
 data MathExpr = Const Integer 
               | Fact MathExpr            -- factorial
@@ -146,7 +142,7 @@ cardFeedback (quer, sol) mStrs defaultRsp
                     -- | if the evaluated answer has some error (divide by zero, or some fraction does not evaluate to an integer), then mark wrong
                     Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText ". We couldn't understand your answer."]}
                 else -- if they didn't have the right numbers in their answer, ask them to explain it better, where did they get those answers from?
-                  markWrong $ defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from?")]} 
+                  defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from? (Replace by an expression that computes the answer!)")]}
                 where numInAns    = getNums v 
                       allowedNums = tail sol
                       notInSol    = filter (\x -> notElem x allowedNums) numInAns              
