@@ -118,8 +118,7 @@ genFeedback (_, solution)  mStrs rsp = reTime $
                       Just v -> case runParser numeric_value_parser "" v of
                                   Left e -> markWrong $ rsp{prFeedback = [FText "You entered " , FMath $ show v, FText (", parse error" ++ errorBundlePretty e)]}
                                   Right userAnswer -> case evalRational userAnswer of
-                                                        Nothing -> markWrong $
-                                                                                    rsp{prFeedback = [FText "Sorry! You entered ", FMath $ show userAnswer, FText ", which we couldn't evaluate (division by zero?)"]}
+                                                        Nothing -> markWrong $ rsp{prFeedback = [FText "Sorry! You entered ", FMath $ show userAnswer, FText ", which we couldn't evaluate (division by zero?)"]}
                                                         Just userSolution -> if userSolution == solution then
                                                                                 markCorrect $
                                                                                     rsp{prFeedback = [FText "Congratulations! You entered ", FMath $ show userAnswer, FText ", the right answer is ", FMath$ show solution]}

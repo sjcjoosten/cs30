@@ -17,8 +17,6 @@ import CS30.Exercises.Table (tableStub)
 
 pages :: [ExerciseType]
 pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
-        , combinEx
-pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , probBasicEx, probExpectEx  -- Probability: Word Problems, basic probability and expected value exercises
         -- , graphStub -- does not pass tests, since it's not a valid exercise. It's also not yet implemented on the frontend.
         -- , tableStub -- does not pass tests, since it's not a valid exercise, but uncomment to see how tables are displayed.
@@ -27,6 +25,7 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , incExcCards -- from IncExcCardinalities
         , probaEx
         , modN
+        -- , combinEx -- too slow, see TODO
         ]
 
 -- the definition below is to prevent warnings about unused imports

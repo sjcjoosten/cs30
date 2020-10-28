@@ -9,17 +9,24 @@ digit? (divisibility, digit placement)
 ● How many 6 digit positive integers are there such that the sum of the digits is at most
 51? (summing the digits)
 ● How many 4 digit positive integers are there such that all digits are different? (custom
-condition) -}
+condition)
+
+  
+  TODO:
+    1. find symbolic answers for all questions and use those
+    2. write the symbolic answer as an expression and reuse the MathExpr evaluator
+       from the `Cardinality' exercise
+    3. require user input as expression?
+-}
 
 {-# LANGUAGE TemplateHaskell #-}
 module CS30.Exercises.CombinatoricsIntegers where
 import           CS30.Data
 import           CS30.Exercises.Data
 import qualified Data.Map as Map
-import Debug.Trace
 
 combinEx :: ExerciseType
-combinEx = exerciseType "Combinatorics" "L?.?" "Combinatorics: Integers" 
+combinEx = exerciseType "CombinatoricsI" "L?.?" "Combinatorics: Integers" 
                         combins
                         genQuestion
                         genFeedback
@@ -27,7 +34,8 @@ combinEx = exerciseType "Combinatorics" "L?.?" "Combinatorics: Integers"
 {- summing digits -}
 
 solveSum :: Int -> Int -> String
-solveSum n sum_upperbound = show $ length $ [num | num <- (generateNDigitIntegers n), computeSumOfDigits(num) <= sum_upperbound]
+solveSum n sum_upperbound
+  = show $ length $ [num | num <- (generateNDigitIntegers n), computeSumOfDigits(num) <= sum_upperbound]
 
 -- Generate N-digit positive integers
 generateNDigitIntegers :: Int -> [Int]
@@ -84,7 +92,11 @@ allUnique lst = case lst of
 
 -- num digits -> num that have unique digits
 solveUnique :: Int -> Int
-solveUnique n = length ([lst | lst <- filter allUnique (map digits (generateNDigitIntegers n))])
+solveUnique 0 = 1
+solveUnique n
+  = 9 * (solveRemainder 9 (n-1))
+  where solveRemainder _ 0 = 1
+        solveRemainder s r = s * solveRemainder (s-1) (r-1)
 
 -- breaks an integer (greater than zero) into a list of its digits
 digits :: Int -> [Int]
@@ -93,8 +105,8 @@ digits n = mod n 10 : digits (div n 10)
 
 -- generates a question about the uniqueness of an n digit integer
 genUnique :: Int -> ChoiceTree ([Field], String)
-genUnique n = nodes [([FText $ show n ++ " digit positive numbers are there such that all digits are different?"]
-                    , (show $ solveUnique n))]
+genUnique n = Node ( [FText $ show n ++ " digit positive numbers are there such that all digits are different?"]
+                   , (show $ solveUnique n))
 
 {- digit placement -}
 
@@ -108,21 +120,24 @@ numXHasDigit :: Int -> Int
 numXHasDigit x = (9 * (10 ^ (x - 1))) - ((9 ^ (x - 1)) * 8)
 
 genHasDigit :: (Int, Int) -> ChoiceTree ([Field], String)
-genHasDigit (n, d) = nodes [([FText $ show n ++ " digit positive numbers are there such that " ++ show d ++ " is a digit?"]
-                    , (show $ numXHasDigit n))]
+genHasDigit (n, d) = Node ( [FText $ show n ++ " digit positive numbers are there such that " ++ show d ++ " is a digit?"]
+                          , (show $ numXHasDigit n))
 
 {- Combinations -}
 
 -- Generative functions for combinations of questions
 sumAndHasDigit :: (Int, Int, Int) -> ChoiceTree ([Field], String)
-sumAndHasDigit (n, s, d) = nodes [([FText $ show n ++ " digit positive numbers are there such that the sum of the digits is at most "
+sumAndHasDigit (n, s, d)
+  = Node ( [FText $ show n ++ " digit positive numbers are there such that the sum of the digits is at most "
                     ++ show s ++ ", and that " ++ show d ++ " is a digit?"]
-                    , (show $ length $ [num | num <- (generateNDigitIntegers n), computeSumOfDigits(num) <= s, num `hasDigit` d]))]
+         , (show $ length $ [num | num <- (generateNDigitIntegers n), computeSumOfDigits(num) <= s, num `hasDigit` d]))
 
 divisibilityAndHasDigit :: (Int, Int, Int) -> ChoiceTree ([Field], String)
-divisibilityAndHasDigit (n, divisor, digit) = nodes [([FText $ show n ++ " digit positive numbers are there such that it is divisible by "
+divisibilityAndHasDigit (n, divisor, digit)
+ = Node ([FText $ show n ++ " digit positive numbers are there such that it is divisible by "
                     ++ show divisor ++ ", and that " ++ show digit ++ " is a digit?"]
-                    , (show $ length $ [num | num <- (generateNDigitIntegers n), num `mod` divisor == 0, num `hasDigit` digit]))]
+        , (show $ length $ [num | num <- (generateNDigitIntegers n), num `mod` divisor == 0, num `hasDigit` digit])
+        )
 
 sumAndDivisibility :: (Int, Int, Int) -> ChoiceTree ([Field], String)
 sumAndDivisibility (n, s, divisor) = nodes [([FText $ show n ++ " digit positive numbers are there such that it is  divisible by "
@@ -133,14 +148,18 @@ sumAndDivisibility (n, s, divisor) = nodes [([FText $ show n ++ " digit positive
 {- questions -}
 
 combins :: [ChoiceTree ([Field], String)]
-combins = (map divisibilityAndHasDigit [(n, divisor, digit) | n <- [1..10], divisor <- [2..1000], digit <- [1..9]]) ++
-         (map sumAndDivisibility [(n, s, d) | n <- [1..10], s <- [2..90], d <- [2..1000]]) ++
-         (map sumAndHasDigit [(n, s, d) | n <- [1..10], s <- [2..90], d <- [1..9]]) ++
-         (map genHasDigit [(n, d) | n <- [1..9], d <- [1..9]]) ++
-         (map genUnique [2..9]) ++
-         (map genSumDigits [(n,s) | n <- [2..9], s <- [1..90]]) ++
-         (map genDivisibility [(numDigit, divisor) | numDigit <- [2..10], divisor <- [2..1000]])
-
+combins = [ Branch [ mapN genHasDigit [(n, d) | n <- [1..9], d <- [1..9]]
+                   , mapN genUnique [2..9]
+                   ]
+          , Branch [ mapN genSumDigits [(n,s) | n <- [2..9], s <- [1..90]]
+                   , mapN genDivisibility [(numDigit, divisor) | numDigit <- [2..10], divisor <- [2..100]]
+                   ]
+          , Branch [ mapN divisibilityAndHasDigit [(n, divisor, digit) | n <- [1..10], divisor <- [2..100], digit <- [1..9]]
+                   , mapN sumAndDivisibility [(n, s, d) | n <- [1..10], s <- [2..90], d <- [2..100]]
+                   , mapN sumAndHasDigit [(n, s, d) | n <- [1..10], s <- [2..90], d <- [1..9]]
+                   ]
+          ]
+  where mapN f = Branch . map f
 
 genQuestion:: ([Field],a) -> Exercise -> Exercise
 genQuestion (quer, _solution) ex 
@@ -149,8 +168,7 @@ genQuestion (quer, _solution) ex
 
 genFeedback :: ([Field],String) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 genFeedback (_q, sol) mStrs rsp
-  = trace ("genFeedback " ++ show mStrs) $
-    case Map.lookup "answer" mStrs of 
+  = case Map.lookup "answer" mStrs of 
       Just v -> if v == sol then markCorrect $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
                 else markWrong $ rsp{prFeedback= [FText ("You entered " ++ show v)], prTimeToRead=60}
       Nothing -> error "Answer field expected."
