@@ -10,6 +10,9 @@ Changing a license does not invalidate the license of those who have
 been given one, but might effect the license of future updates.
 
 - Sebastiaan J.C. Joosten
+- Mikio Obuchi
+- Lucas Boebel
+- Chibuzo Chiwike
 - Roberto Gabriel Brito
 - Maha Hasan Alshawi
 - Tyler Vergho
@@ -22,4 +25,3 @@ been given one, but might effect the license of future updates.
 - Bennett Clark
 - Jiayin Hu
 - Mengdie Ge
-
