@@ -10,7 +10,7 @@ type ModNEntry = (Field, Bool)
 
 -- | Constant function, returns the generated exercise
 modN :: ExerciseType
-modN = exerciseType "Modulo N" "Modulo N" "True or False" 
+modN = exerciseType "ModNTF" "Modulo N" "True or False" 
               [exercise] genTable modNFeedback
 
 -- | Generates the table of problems
@@ -71,9 +71,11 @@ integerPowerDiff modBase = Branch [ Branch [g leftNum exponent1 exponent2 modBas
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a ChoiceTree containing problems of this type with the given modBase
 fractionPower :: Integer -> ChoiceTree ModNEntry
-fractionPower modBase = Branch [ Branch [ g leftNum rightNum modBase 
-                                        | leftNum <- (filter (\x -> (x `mod` modBase == rightNum `mod` modBase) && x /=rightNum ) squares)] -- Pick left and right number out of list of squares such that they have that they are congruent before the sqrt operation
-                                                     | rightNum <- squares]
+fractionPower modBase = Branch [ g leftNum rightNum modBase
+                               | rightNum <- squares
+                               , leftNum <- (filter (\x -> (x `mod` modBase == rightNum `mod` modBase) && x /=rightNum ) squares)
+                               -- Pick left and right number out of list of squares such that they have that they are congruent before the sqrt operation
+                               ]
     where
         g leftNum rightNum modBase' = Node (FMath ("\\sqrt{" ++ show leftNum ++ "}" ++  "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\ \\sqrt{" ++ show rightNum ++ "}"), isCorrect)
             where
@@ -86,7 +88,7 @@ fractionPower modBase = Branch [ Branch [ g leftNum rightNum modBase
 addition :: Integer -> ChoiceTree ModNEntry 
 addition modBase = Branch [ Branch [g leftNum summand modBase 
                                     | summand <- [1..modBase*2] ] 
-                                                 | leftNum <- getLeftNums modBase]
+                                    | leftNum <- getLeftNums modBase]
     where
         g leftNum summand modBase' = Node (FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\ " ++ show rightNum ++ " + " ++ show summand), True)
             where
@@ -99,7 +101,7 @@ addition modBase = Branch [ Branch [g leftNum summand modBase
 multiplication :: Integer -> ChoiceTree ModNEntry
 multiplication modBase = Branch [ Branch [g leftNum factor modBase
                                          | factor <- [1..modBase*2] ] 
-                                                     | leftNum <- getLeftNums modBase]
+                                | leftNum <- getLeftNums modBase]
     where
         g leftNum factor modBase' = Node (FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\  " ++ show rightNum ++ " \\cdot " ++ show factor), True)
             where
@@ -122,13 +124,13 @@ rootOfPerfectSquare sq =
 
 -- taken from https://gist.github.com/trevordixon/6788535
 modExp :: Integer -> Integer -> Integer -> Integer
-modExp  x y n = mod (x^(mod y (n-1))) (n)
+modExp x y n = mod (x^(mod y (n-1))) n
 
 -- | Generates a list of numbers which are not multiples of the modBase (used in most exercise generating functions)
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a list of numbers which are not multiples of the modBase
 getLeftNums :: Integer -> [Integer]
-getLeftNums modBase = (filter (\x -> x `mod` modBase /= 0)[modBase..modBase*5])
+getLeftNums modBase = (filter (\x -> x `mod` modBase /= 0)[(modBase+1)..modBase*5])
 
 -- | Feedback function
 -- | Generates a table with (given solutions) | (correct solutions) if anything is found incorrect
