@@ -38,7 +38,7 @@ exerciseType tg mn rn ct exGen fbGen
              Success a' -> fbGen a'
              Error e -> error$ "Decoding error of the exercise ("++e++")"
 
--- | Data-structure to take (perhaps randomly) 
+-- | Data-structure to take (perhaps randomly)
 data ChoiceTree a = Node a | Branch [ChoiceTree a] deriving Functor
 
 boolTree :: ChoiceTree Bool -- | True or False
