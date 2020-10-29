@@ -138,7 +138,7 @@ cardFeedback (quer, sol) mStrs defaultRsp
                                  markCorrect $ defaultRsp{prFeedback = [FText"Correct! "] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)]} 
                                else -- otherwise, show them how their math is wrong
                                  markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath(show $ head sol)] ++ 
-                                                                     [FText(". You wrote ")] ++ [FMath$ (mStrs Map.! "answer") ]}
+                                                                     [FText(". You wrote "), FMath (mStrs Map.! "answer"), FMath " = ", FMath (show st) ]}
                     -- | if the evaluated answer has some error (divide by zero, or some fraction does not evaluate to an integer), then mark wrong
                     Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText ". We couldn't understand your answer."]}
                 else -- if they didn't have the right numbers in their answer, ask them to explain it better, where did they get those answers from?
@@ -154,7 +154,7 @@ cardFeedback (quer, sol) mStrs defaultRsp
           pr :: Maybe MathExpr
           pr = case usr of
                  Nothing -> Nothing
-                 Just v -> case parse parseExpr "" v of
+                 Just v -> case parse (parseExpr <* eof) "" v of
                              Left _ -> Nothing 
                              Right st -> Just st
           ans :: Maybe Integer
