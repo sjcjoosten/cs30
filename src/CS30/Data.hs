@@ -84,14 +84,15 @@ data ProblemResponse
 
 defaultProblemResponse :: ProblemResponse
 defaultProblemResponse = ProblemResponse{prOutcome = POCorrect, prFeedback = [], prTimeToRead = 0}
-markWrong,markCorrect :: ProblemResponse -> ProblemResponse
+markWrong,markCorrect,tryAgain :: ProblemResponse -> ProblemResponse
 markWrong pr = pr{prOutcome = POIncorrect}
 markCorrect pr = pr{prOutcome = POCorrect}
+tryAgain pr = pr{prOutcome = POTryAgain}
 
 data ProblemOutcome
       = POCorrect -- ^ Full points, user answered correct
       | POIncorrect -- ^ No points, user answered incorrect
-      | POSkip -- ^ No points, reduce penalty? user chose to report and skip this problem
+      | POTryAgain -- ^ Not a valid answer, user needs to fix it
   deriving (Show, Lift, Eq)
 
 -- | Exercises as sent to the client (via Json). Documentation describes the client's interpretation
