@@ -91,7 +91,6 @@ addition modBase = Branch [ Branch [g leftNum summand modBase
             where
                 rightNum = leftNum `mod` modBase
 
-
 -- | Generates a problem where the same number is multiplied to two numbers which are congruent under modulo (always True)
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a ChoiceTree containing problems of this type with the given modBase
