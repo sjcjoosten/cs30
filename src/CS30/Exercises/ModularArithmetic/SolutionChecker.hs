@@ -30,6 +30,5 @@ genFeedback modEx mStrs rsp = case Map.lookup "answer" mStrs of
                                     where notSpace = not . isSpace
                                           notSpaceReps = (/= '\\')
                                           val = filter (notSpace) $ filter(notSpaceReps) v
-                                          (_, modulus, storedAnswer) = unwrap modEx   
-                                          currentMod = read modulus :: Int 
+                                          (_, _, storedAnswer) = unwrap modEx   
                                 Nothing -> error "Error: Server failed"

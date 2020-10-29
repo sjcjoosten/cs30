@@ -437,6 +437,8 @@ th {
   height: 34px;
 }
 
+.inmargin {position: absolute;right:20px}
+
 .switch input {display:none;}
 
 .slider {

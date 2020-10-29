@@ -58,9 +58,8 @@ exerciseResponse et eid usrData handleCur handleStale'
                                                     ld{ ldStreakPerLevel = udNth (const 0) (lpLevel lp) (ldStreakPerLevel ld)
                                                       , ldWrongPerLevel = udNth ((+) 1) (lpLevel lp) (ldWrongPerLevel ld)
                                                       }
-                                                  POSkip -> ld
-                                                ){ ldOpenProblem = Nothing
-                                                 , ldPastProblems = reslv{lrUserAnswer = usrData}:ldPastProblems ld}
+                                                  POTryAgain -> ld
+                                                ){ldPastProblems = reslv{lrUserAnswer = usrData}:ldPastProblems ld}
                                      put ses{sdLevelData=Map.insert nm newD lDat}
                                      return rsp
                                 else handleStale (ldPastProblems ld)
@@ -75,8 +74,9 @@ exerciseResponse et eid usrData handleCur handleStale'
               nl = nextUp (drop' $ ldStreakPerLevel ld)
                           (drop' $ ldWrongPerLevel ld)
                           (drop' $ ldRightPerLevel ld)
-          in ld{ldCurrentLevel = cl + nl}
-       resetLevel ld = ld{ldCurrentLevel = nextUpStrk (ldStreakPerLevel ld)}
+          in updateLevel ld{ldCurrentLevel = cl + nl}
+       resetLevel ld = updateLevel ld{ldCurrentLevel = nextUpStrk (ldStreakPerLevel ld)}
+       updateLevel ld = ld{ ldOpenProblem = Nothing }
        nextUp strk wrongs rights
         = if head0 rights > 3 * head0 wrongs then 1 + nextUpStrk (drop 1 strk) else nextUpStrk strk
        nextUpStrk (c:lst) | c >= 10 = 1 + nextUpStrk lst
