@@ -10,39 +10,36 @@ import Data.List (sort)
 import Data.Maybe
 
 import qualified Data.Map as Map
-import qualified Data.Text as Text
 
 import Text.Megaparsec hiding (ParseError)
 import Text.Megaparsec.Char
 
 import Control.Monad.Combinators.Expr
-import Control.Monad (void)
 
-import Debug.Trace
 
 -------------------------------------- Exercise Generation ------------------------------------
 
 truthEx :: ExerciseType
-truthEx = exerciseType "URLTag" "L???.???"
+truthEx = exerciseType "TruthTable" "L???.???"
           "Logic: Complete a TruthTable"
           trtable -- List of problems
           genQuestion -- present question as 'Exercise'
           genFeedback -- handle response as 'ProblemResponse'
 
 trtable :: [ChoiceTree (Field, [String])]
-trtable = [ nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q)"))) 2),
-            nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q) | (~P|Q)"))) 3),
-            nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q) | (~P|Q) & (~R|Q) > (S&Q)"))) 4)
+trtable = [ nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q)"))) 2)
+          , nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q) | (~P|Q)"))) 3)
+          -- too slow: , nodes (generateProb (fromTruthTable (getTruthTable (parseExpr "(~P&Q) | (~P|Q) & (~R|Q) > (S&Q)"))) 4)
           ]
 
 genQuestion :: (Field, [String]) -> Exercise -> Exercise
-genQuestion (quer, solution) ex = trace ("genQuestion" ++ (show solution)) $ ex{eQuestion=[ FText $"Fill the missing values in the following table. "] ++ [quer]}
+genQuestion (quer, _solution) ex = ex{eQuestion=[ FText $"Fill the missing values in the following table. "] ++ [quer]}
 
 genFeedback :: (Field, [String]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
-genFeedback (_, sol) mStrs resp = trace ("genFeedback" ++ (show mStrs) ++ (show sol) ++(show (catMaybes (compareSol mStrs sol)))) $ if length (catMaybes (compareSol mStrs sol)) > 0  
-  then markWrong $ resp{prFeedback=[FText "Solution is incorrect! Better Luck Next Time :("]} 
+genFeedback (_, sol) mStrs resp = case (catMaybes (compareSol mStrs sol)) of
+  [] -> markCorrect $ resp{prFeedback=[FText "Solution is correct!"]}
   -- then error "Solution is incorrect! Better Luck Next Time :("
-  else markCorrect $ resp{prFeedback=[FText "Solution is correct!"]}
+  lst -> markWrong $ resp{prFeedback=[FText$ "You have "++show (length lst)++" incorrect responses"]} 
 
 ------------------------------------- Exercise Generation Helpers ---------------------------------
 
@@ -50,7 +47,7 @@ generateProb :: Field -> Int -> [(Field, [String])]
 generateProb (FTable xs) nblanks = [(getBlankTable (FTable xs) blanks 0, getBlankSol (FTable xs) blanks)| blanks <- orderedSubsets nblanks cells]
   where
     cells = [0..(length (concat xs)-1)]
-
+generateProb _ _ = error "expecting FTable"
 
 -- Takes previously filled Truth Table and inserts empty cells at given indices
 getBlankTable :: Field -> [Int] -> Int -> Field
@@ -65,7 +62,8 @@ getBlankTable (FTable xs) (b:bs) enum = getBlankTable (FTable [[insertCell (snd 
     bcol = b `mod` ncols
     insertCell i (Header (FText x), j) = if i == brow && j == bcol then (Header (FFieldMath (show enum))) else (Header (FText x))
     insertCell i (Cell (FText x), j) = if i == brow && j == bcol then (Cell (FFieldMath (show enum))) else (Cell (FText x))
-    insertCell i (c, _) = c
+    insertCell _i (c, _) = c
+getBlankTable _ _ _ = error "unexpected non-table"
 
 -- Takes prev filled Truth Table and extracts the solutions from cells at given indices
 getBlankSol :: Field -> [Int] -> [String]
@@ -75,14 +73,16 @@ getBlankSol (FTable xs) blanks = [sol b | b<-blanks]
     sol b = getFTextStr ((xs !! (b `div` ncols)) !! (b `mod` ncols))
     getFTextStr (Cell (FText x)) = x
     getFTextStr (Header (FText x)) = x
+    getFTextStr _ = error "unexpected non-table data"
+getBlankSol _ _ = error "unexpected non-table field"
 
 -- Returns all combinations of size n from list m
 orderedSubsets :: Int -> [Int] -> [[Int]]
-orderedSubsets 0 xs = [[]]
-orderedSubsets n xs
+orderedSubsets 0 _xs = [[]]
+orderedSubsets n xs@(h:t)
   | length xs < n = []
   | otherwise   = orderedSubsets n t ++ map (h:) (orderedSubsets (n - 1) t)
-  where (h:t) = xs
+orderedSubsets _ [] = []
 
 compareSol :: Map.Map String String -> [String] -> [Maybe String]
 compareSol mStrs sol = [case Map.lookup k mStrs of 
@@ -140,11 +140,11 @@ parseExpr :: String -> Expression
 parseExpr = getExpr . parseExpr'
 
 parseExpr' :: String -> Either ParseError Expression -- Helper
-parseExpr' x = parse parserExpression "<myparse>" (filter (\c->c/=' ') x)
+parseExpr' x = parse parserExpression "" (filter (\c->c/=' ') x)
 
-getExpr :: Either ParseError Expression -> Expression -- TODO : Make exhaustive
+getExpr :: Either ParseError Expression -> Expression
 getExpr (Right x) = x
-getExpr (Left x) = ExpressionError
+getExpr (Left _x) = ExpressionError
 
 -- Converts an expression object to a string
 showExpr :: Expression -> String
@@ -208,9 +208,8 @@ isValidTruthTable (TruthTable ttHeader ttBody)
 -- This returns the truth table body given a header and a literal to boolean mapping for every row
 getTruthTableBody :: [Expression] -> [Map.Map Literal Bool] -> [[Bool]]
 getTruthTableBody header literalMappings = 
-  map (\literalMapping -> map (\headerExp -> 
-      evalExpr headerExp literalMapping 
-  ) header) literalMappings
+  map (\literalMapping -> map (\headerExp -> evalExpr headerExp literalMapping 
+                              ) header) literalMappings
 
 -- Converts truth table to field FTable
 fromTruthTable :: TruthTable -> Field
@@ -225,9 +224,12 @@ fromTruthTable (TruthTable ttHeader ttBody)
 toTruthTable :: Field -> TruthTable
 toTruthTable (FTable fTable) = TruthTable ttHeader ttBody
                                where headerToExpr (Header (FText x)) = parseExpr x
+                                     headerToExpr _ = error "Expecting header with text"
                                      cellToBool (Cell (FText x)) = x == [charTrue]
+                                     cellToBool _ = error "Expecting cell with text"
                                      ttHeader = map headerToExpr (head fTable)
                                      ttBody = map (\ftBodyRow -> map cellToBool ftBodyRow) (take 1 fTable)
+toTruthTable _ = error "Expecting a truth-table"
 
 --------------------------------------Truth Table Helpers-------------------------------------------
 
@@ -269,7 +271,7 @@ dedup (x:xs) = if elem x xs then dedup xs else [x] ++ dedup xs
 semanticallyEqual :: Expression -> Expression -> Bool
 semanticallyEqual (Conjunction e1 e2) (Conjunction e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
 semanticallyEqual (Disjunction e1 e2) (Disjunction e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
-semanticallyEqual (Implication e1 e2) (Implication e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
+semanticallyEqual (Implication e1 e2) (Implication e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4)
 semanticallyEqual (Negation e1) (Negation e2) = semanticallyEqual e1 e2
 semanticallyEqual e1 e2 | isLiteral e1 && isLiteral e2 = e1 == e2
                         | otherwise = False
