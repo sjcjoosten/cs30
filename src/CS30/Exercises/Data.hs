@@ -65,3 +65,10 @@ randomSelect (Branch lst)
        (is,a) <- randomSelect (lst!!nr)
        return (nr:is,a)
 randomSelect (Node a) = return ([], a)
+
+instance Monad ChoiceTree where
+  return = Node
+  (>>=) = flip replace
+instance Applicative ChoiceTree where
+  pure = return
+  f <*> v = f >>= (\f' -> v >>= (\ v' -> return (f' v')))
