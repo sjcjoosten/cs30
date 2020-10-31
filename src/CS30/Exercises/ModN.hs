@@ -10,7 +10,7 @@ type ModNEntry = (Field, Bool)
 
 -- | Constant function, returns the generated exercise
 modN :: ExerciseType
-modN = exerciseType "Modulo N" "Modulo N" "True or False" 
+modN = exerciseType "ModNTF" "Modulo N" "True or False" 
               [exercise] genTable modNFeedback
 
 -- | Generates the table of problems
@@ -52,33 +52,32 @@ integerPowerSame modBase = Branch [ Branch [g leftNum expo modBase
             where
                 rightNum = leftNum `mod` modBase
 
-
 -- | Generates a problem with two numbers (congruent under modulo) raised to different powers (rarely True)
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a ChoiceTree containing problems of this type with the given modBase
 integerPowerDiff :: Integer -> ChoiceTree ModNEntry
 integerPowerDiff modBase = Branch [ Branch [g leftNum exponent1 exponent2 modBase
-                                            | (exponent1, exponent2) <- (zip [modBase, modBase + 2..modBase*2] (reverse [modBase - 1, modBase + 1..modBase*2])) ]  -- pick to different powers, by picking the same index from a list of even and a reversed list of odd numbers
-                                                                        | leftNum <- getLeftNums modBase]
+                                           | (exponent1, exponent2) <- (zip [modBase, modBase + 2..modBase*2] (reverse [modBase - 1, modBase + 1..modBase*2])) ]  -- pick to different powers, by picking the same index from a list of even and a reversed list of odd numbers
+                                  | leftNum <- getLeftNums modBase]
     where
         g leftNum exponent1 exponent2 modBase' = Node (FMath (show leftNum ++ "^{" ++ show exponent1 ++ "}" ++  "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent2 ++ "}"), isCorrect)
             where
                 rightNum = leftNum `mod` modBase
                 isCorrect = modExp leftNum exponent1 modBase == modExp rightNum exponent2 modBase
 
-
 -- | Generates a problem with two numbers (congruent under modulo) square rooted (rarely True)
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a ChoiceTree containing problems of this type with the given modBase
 fractionPower :: Integer -> ChoiceTree ModNEntry
-fractionPower modBase = Branch [ Branch [ g leftNum rightNum modBase 
-                                        | leftNum <- (filter (\x -> (x `mod` modBase == rightNum `mod` modBase) && x /=rightNum ) squares)] -- Pick left and right number out of list of squares such that they have that they are congruent before the sqrt operation
-                                                     | rightNum <- squares]
+fractionPower modBase = Branch [ g leftNum rightNum modBase
+                               | rightNum <- squares
+                               , leftNum <- (filter (\x -> (x `mod` modBase == rightNum `mod` modBase) && x /=rightNum ) squares)
+                               -- Pick left and right number out of list of squares such that they have that they are congruent before the sqrt operation
+                               ]
     where
         g leftNum rightNum modBase' = Node (FMath ("\\sqrt{" ++ show leftNum ++ "}" ++  "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\ \\sqrt{" ++ show rightNum ++ "}"), isCorrect)
             where
                 isCorrect = (rootOfPerfectSquare leftNum) `mod` modBase == (rootOfPerfectSquare rightNum) `mod` modBase  
-
 
 -- | Generates a problem where the same number is added to two numbers which are congruent under modulo (always True)
 -- | Input: modBase - the modular base of the equivalence
@@ -86,12 +85,11 @@ fractionPower modBase = Branch [ Branch [ g leftNum rightNum modBase
 addition :: Integer -> ChoiceTree ModNEntry 
 addition modBase = Branch [ Branch [g leftNum summand modBase 
                                     | summand <- [1..modBase*2] ] 
-                                                 | leftNum <- getLeftNums modBase]
+                                    | leftNum <- getLeftNums modBase]
     where
         g leftNum summand modBase' = Node (FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\ " ++ show rightNum ++ " + " ++ show summand), True)
             where
                 rightNum = leftNum `mod` modBase
-
 
 -- | Generates a problem where the same number is multiplied to two numbers which are congruent under modulo (always True)
 -- | Input: modBase - the modular base of the equivalence
@@ -99,7 +97,7 @@ addition modBase = Branch [ Branch [g leftNum summand modBase
 multiplication :: Integer -> ChoiceTree ModNEntry
 multiplication modBase = Branch [ Branch [g leftNum factor modBase
                                          | factor <- [1..modBase*2] ] 
-                                                     | leftNum <- getLeftNums modBase]
+                                | leftNum <- getLeftNums modBase]
     where
         g leftNum factor modBase' = Node (FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\  " ++ show rightNum ++ " \\cdot " ++ show factor), True)
             where
@@ -122,13 +120,13 @@ rootOfPerfectSquare sq =
 
 -- taken from https://gist.github.com/trevordixon/6788535
 modExp :: Integer -> Integer -> Integer -> Integer
-modExp  x y n = mod (x^(mod y (n-1))) (n)
+modExp x y n = mod (x^(mod y (n-1))) n
 
 -- | Generates a list of numbers which are not multiples of the modBase (used in most exercise generating functions)
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a list of numbers which are not multiples of the modBase
 getLeftNums :: Integer -> [Integer]
-getLeftNums modBase = (filter (\x -> x `mod` modBase /= 0)[modBase..modBase*5])
+getLeftNums modBase = (filter (\x -> x `mod` modBase /= 0)[(modBase+1)..modBase*5])
 
 -- | Feedback function
 -- | Generates a table with (given solutions) | (correct solutions) if anything is found incorrect
@@ -137,7 +135,7 @@ modNFeedback :: [ModNEntry] -> Map.Map String String -> ProblemResponse -> Probl
 modNFeedback qAndSol usr defaultRsp
     = reTime $ if (isCorrect) 
                then correct{prFeedback=[FText "Correct, champ!"] }
-               else wrong{prFeedback=[FText ("Wrong."),table]}
+               else wrong{prFeedback=[FText "Wrong.",table]}
     where
         table = FTable ( -- feedback table, displays the question, the given answer and the correct solution
                         [[Header (FText "Equation"),Header (FText "Your Answer"), Header (FText "Solution") ]] ++ 

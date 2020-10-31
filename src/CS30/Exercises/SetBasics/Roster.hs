@@ -6,6 +6,7 @@ import           Data.List
 
 allDigits :: [Int]
 allDigits = [0..9]
+
 -- | first two levels are without duplicates, then three levels with duplicates
 roster :: [ChoiceTree ([Field], [String])] -- question and solution pairs
 roster = fmap (fmap (\(str,ans) -> ([FText str], ans)))

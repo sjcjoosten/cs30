@@ -29,7 +29,7 @@ function pre(txt){
   p.appendChild(document.createTextNode(txt));
   return p;
 }
-function card(title,content,level=3){
+function card(appendToElm,title,content,level=3,txt=null){
   var div = document.createElement('div');
   if (level < 5){ /* move to half cards */
     div.className = "card columns six";
@@ -43,6 +43,13 @@ function card(title,content,level=3){
     div.appendChild(hr);
   }
   $(div).append(content);
+  if(txt!==null){
+    var p = document.createElement('div');
+    p.appendChild(document.createTextNode(txt));
+    p.className="note inmargin";
+    $(p).appendTo(div);
+  }
+  appendToElm.append(div);
   return div;
 }
 
@@ -75,6 +82,32 @@ function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_, submitAction
           elmt.appendChild(document.createTextNode(q.contents));
           // elmt.className="u-full-width";
           MQ.StaticMath(elmt);
+          appendHandler(elmt);
+    break; case "FIndented":
+          var elmt = document.createElement('div');
+          elmt.className="u-full-width";
+          elmt.style = "padding-left: "+(q.fIndentation*20)+'px;';
+          for (var i=0; i<q.fContent.length; i++){
+            handleField(q.fContent[i], pushHandler, function(v){elmt.appendChild(v);}, submitAction);
+          }
+          appendHandler(elmt);
+    break; case "FReorder":
+          var elmt = document.createElement('ul');
+          for (var i=0; i<q.fClusters.length; i++){
+            var li = document.createElement('li');
+            li.setAttribute('data-id',i);
+            var cluster = q.fClusters[i];
+            for (var j=0; j<cluster.length; j++){
+              handleField(cluster[j], pushHandler, function(v){li.appendChild(v);}, submitAction);
+            }
+            elmt.appendChild(li);
+          }
+          var srtbl = new Sortable(elmt,{
+            group:q.fvName,
+            fallbackOnBody: true,
+            swapThreshold: 0.65
+          }); 
+          pushHandler({name:q.fvName,q:q, getVal:function(){return srtbl.toArray().join('_');}});
           appendHandler(elmt);
     break; case "FValueS":
           pushHandler({name:q.fvName, q:q, getVal:function(){return q.fvValS;}});
@@ -242,7 +275,7 @@ window.onload = function (){
         }
         if (exrs.length == 0) {
           // repeat the pages as a main selection thingy if there are no exercises
-          cards.append(card("Exercises",el.clone(true).removeClass('dropdown-content'),2));
+          card(cards,"Exercises",el.clone(true).removeClass('dropdown-content'),2);
         }
       }
 
@@ -292,8 +325,17 @@ window.onload = function (){
               handleField(qs[j], function(p){values.push(p);}, function(a){d.appendChild(a);}, submitAction);
             }
             d.appendChild(buttonRow);
-            var theCard = card(exr.eTopic, d,exrs.length>2?4:3);
-            cards.append(theCard);
+            var bb = exr.eBroughtBy;
+            var txt;
+            if(bb && bb.length>0){
+              txt = 'This exercise was brought to you by '+bb[0];
+              for(var j = 1; j < bb.length - 1; j++){
+                txt += ', ' + bb[j];
+              }
+              if(bb.length>1) txt += ' and '+bb[bb.length-1];
+              txt += '.';
+            }
+            var theCard = card(cards,exr.eTopic, d, exrs.length>2?4:3, txt);
           })(exrs[i]);
       }
     };
@@ -328,6 +370,10 @@ window.onload = function (){
                 hNr = 'h1';
                 txt = "Correct !";
             break;
+            case "POTryAgain":
+                hNr = 'h1';
+                txt = "Try again ..";
+            break;
         }
         var h = document.createElement('div');
         // h.className = "row";
@@ -345,8 +391,10 @@ window.onload = function (){
         cards.fadeOut(200, function() {
           cards.empty();
         });
-        var animation = progress($('.progressBar'), {duration:1000*splash.prTimeToRead,easing:"linear",complete:function(){ next(); }});
-        $('#splash .popup div').on('mouseenter',function(){animation.stop();$('.progressBar').animate({opacity:0},200);});
+        if (splash.prTimeToRead>0){
+          var animation = progress($('.progressBar'), {duration:1000*splash.prTimeToRead,easing:"linear",complete:function(){ next(); }});
+          $('#splash .popup div').on('mouseenter',function(){animation.stop();$('.progressBar').animate({opacity:0},200);});
+        }
         $('#OK').on('click',next);
         $(document).keydown( function(event) {
           if (event.which === 13) {
