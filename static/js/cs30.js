@@ -83,6 +83,32 @@ function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_, submitAction
           // elmt.className="u-full-width";
           MQ.StaticMath(elmt);
           appendHandler(elmt);
+    break; case "FIndented":
+          var elmt = document.createElement('div');
+          elmt.className="u-full-width";
+          elmt.style = "padding-left: "+(q.fIndentation*20)+'px;';
+          for (var i=0; i<q.fContent.length; i++){
+            handleField(q.fContent[i], pushHandler, function(v){elmt.appendChild(v);}, submitAction);
+          }
+          appendHandler(elmt);
+    break; case "FReorder":
+          var elmt = document.createElement('ul');
+          for (var i=0; i<q.fClusters.length; i++){
+            var li = document.createElement('li');
+            li.setAttribute('data-id',i);
+            var cluster = q.fClusters[i];
+            for (var j=0; j<cluster.length; j++){
+              handleField(cluster[j], pushHandler, function(v){li.appendChild(v);}, submitAction);
+            }
+            elmt.appendChild(li);
+          }
+          var srtbl = new Sortable(elmt,{
+            group:q.fvName,
+            fallbackOnBody: true,
+            swapThreshold: 0.65
+          }); 
+          pushHandler({name:q.fvName,q:q, getVal:function(){return srtbl.toArray().join('_');}});
+          appendHandler(elmt);
     break; case "FValueS":
           pushHandler({name:q.fvName, q:q, getVal:function(){return q.fvValS;}});
     break; case "FValue":
