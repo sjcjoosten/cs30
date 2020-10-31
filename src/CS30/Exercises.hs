@@ -11,6 +11,7 @@ import CS30.Exercises.Probability (probaEx)
 import CS30.Exercises.SetBasics (rosterEx, powsetEx, setOpsEx)
 import CS30.Exercises.Table (tableStub)
 import CS30.Exercises.TruthTable (truthEx)
+import CS30.Exercises.ProofStub (proofStub)
 
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
 -- http://math.chapman.edu/~jipsen/mathquill/test/MathQuillsymbolsMathJax.html
@@ -21,6 +22,7 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , probBasicEx, probExpectEx  -- Probability: Word Problems, basic probability and expected value exercises
         -- , graphStub -- does not pass tests, since it's not a valid exercise. It's also not yet implemented on the frontend.
         -- , tableStub -- does not pass tests, since it's not a valid exercise, but uncomment to see how tables are displayed.
+        , proofStub -- does not pass tests, since it's not a valid exercise, but uncomment to see how re-sortable proofs can be displayed.
         , truthEx
         , modsEx -- Modular Arithmetic exercises
         , cardEx -- from Cardinality

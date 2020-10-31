@@ -37,6 +37,8 @@ data Field = FText String -- ^ text to be displayed
            | FMath String -- ^ text to display as math
            | FFieldMath String -- ^ fieldname to attach the response to
            | FFieldBool{ffOpt1::Field,ffOpt2::Field,ffDefault::(Maybe Bool),ffResponse::String} -- ^ Ask the user to choose between two options (first two arguments). Last argument is a name to attach the response to
+           | FIndented {fIndentation::Int,fContent::[Field]} -- ^ An indented block of fields that sits on its own line(s)
+           | FReorder {fvName :: String,fClusters::[[Field]]} -- ^ A list of elements that can be reordered. Response will be a list of Integers that 'read' can parse.
            | FValue{fvName::String,fvVal::Int} -- ^ numeric value to be returned verbatim
            | FValueS{fvName::String,fvValS::String} -- ^ like FValue, but a string
            | FTable [[Cell]] -- ^ Table, should be a rectangular, nonempty matrix

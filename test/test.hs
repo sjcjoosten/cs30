@@ -36,6 +36,11 @@ pagesStandardTests
 checkField :: Field -> Property
 checkField = property . validField
 
+resultAll = foldr preferFail QCP.succeeded
+ where preferFail r1 r2
+        = case QCP.ok r1 of
+            Just False -> r1
+            _ -> r2
 validField :: Field -> QCP.Result
 validField (FGraph _ _) = QCP.succeeded -- TODO: think about sanity checks some more
 validField (FFieldBool _ _ _ _) = QCP.succeeded -- TODO: think about sanity checks some more
@@ -44,6 +49,10 @@ validField (FTable []) = QCP.failed{QCP.reason = "The table is empty, empty tabl
 validField (FFieldMath str) = validHTMLName "The Field with constructor FFieldMath" str
 validField (FText str) = seq str QCP.succeeded
 validField (FNote str) = seq str QCP.succeeded
+validField (FIndented n lst) | n >= 0 = resultAll (map validField lst)
+validField (FIndented n lst) = QCP.failed{QCP.reason = "Indentation cannot be negative."}
+validField (FReorder nm lst)
+ = resultAll (validHTMLName "The Field with constructor FValue" nm:concatMap (map validField) lst)
 validField (FValue a b)
  = seq b (validHTMLName "The Field with constructor FValue" a)
 validField (FValueS a b)
