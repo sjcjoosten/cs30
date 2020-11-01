@@ -1,0 +1,142 @@
+{-# LANGUAGE TemplateHaskell #-}
+
+{-
+authors: Donia Tung
+COSC 69.14, 20F
+Group Assignment 2
+-}
+
+module CS30.Exercises.SetConversionProofs.SetExprParser (parseExpr, parseUntil, exprParens, SetExpr) where
+import           Data.Functor.Identity
+import           Data.Void
+import           Text.Megaparsec
+import           Text.Megaparsec.Char -- readFile
+import qualified Text.Megaparsec.Char.Lexer as L
+import           Control.Monad.Combinators.Expr
+import Debug.Trace
+
+
+-- datatype that we try to parse all user responses into 
+data SetExpr = Var String
+              | Power SetExpr   -- set first SetExpr to the second SetExpr power
+              | Cap SetExpr SetExpr           -- factorial
+              | Cup SetExpr SetExpr  -- division
+              | SetMinus  SetExpr SetExpr  -- multiply two SetExpr's 
+              | Wedge SetExpr SetExpr -- first SetExpr `choose` second SetExpr
+              | Vee SetExpr SetExpr
+              | In SetExpr
+              | NotIn SetExpr
+              | Subset SetExpr
+              deriving Show
+
+type Parser = ParsecT Void String Identity
+
+-- \left\{e | e \in A \wedge e\notin B\right\} 
+-- --> Wedge (In (Var A)) (NotIn (Var B))
+
+-- \left\{e | e \subseteq A\right\}
+-- --> Subset(A)
+
+-- fxn for extracting the variables in a set expression 
+getVars :: SetExpr -> String
+getVars (Var x)    = x
+getVars (Cap e1 e2)     = getVars e1  ++ getVars e2
+getVars (Cup e1 e2) = getVars e1++getVars e2
+getVars (SetMinus e1 e2) = getVars e1++getVars e2
+getVars (Power e1) = getVars e1
+getVars (Wedge e1 e2) = getVars e1++getVars e2
+
+-- parse spaces (used w/ symbol and lexeme)
+spaceConsumer :: Parser ()
+spaceConsumer = L.space spaces empty empty 
+
+-- based on Drill 6.2 scaffold
+spaces :: Parser ()
+spaces = some spc >> return ()
+ where spc = string " " <|> string "\t" <|> string "\n" <|> string "\r"
+             <|> string "\\ " <|> string "~"
+
+-- parse a given specific string, accounting for spaces 
+symbol :: String -> Parser String
+symbol = L.symbol spaceConsumer
+
+-- parse some lexeme, accounting for spaces
+lexeme :: Parser a -> Parser a
+lexeme   = L.lexeme spaceConsumer
+
+-- parse something between {...}
+brackets :: Parser a -> Parser a
+brackets = between (symbol "\\left\\{") (symbol "\\right\\}")
+
+-- parse something between (...) 
+parens :: Parser a -> Parser a          
+parens = between (symbol "\\left(") (symbol "\\right)")
+
+-- parse something between (...) 
+exprParens :: Parser a -> Parser a          
+exprParens = between (symbol "(") (symbol ")")
+
+-- parse something of the form e | e \subseteq A
+suchThat :: Parser a -> Parser a 
+suchThat = between (symbol "e|e") (symbol "")
+
+withE :: Parser a -> Parser a 
+withE = between (symbol "e") (symbol "")
+
+-- parses some variable alone into SetExpr
+parseConstant :: Parser SetExpr
+parseConstant = do
+  n <- lexeme L.charLiteral
+  return (Var [n])
+
+-- operator table for use with makeExprParser 
+operatorTable :: [[Operator Parser SetExpr]]
+operatorTable =
+  [ [binary "\\cap" Cap], 
+    [binary "\\cup" Cup], 
+    [binary "\\setminus" SetMinus],
+    [binary "\\wedge" Wedge],  
+    [binary "\\vee" Vee], 
+    [prefix "\\mathbb{P}" Power], 
+    [prefix "\\P" Power], 
+    [prefix "\\in" In], 
+    [prefix "\\notin" NotIn], 
+    [prefix "\\subseteq" Subset]
+  ]
+
+-- helper function for generating an binary infix operator
+-- based on documentation for Control.Monad.Combinators.Expr
+binary :: String -> (a -> a -> a) -> Operator Parser a
+binary name f = InfixL (f <$ symbol name)
+
+-- helper function for generating a prefix operator
+-- based on documentation for Control.Monad.Combinators.Expr
+prefix :: String -> (a -> a) -> Operator (ParsecT Void String Identity) a
+prefix  name f = Prefix (f <$ symbol name)
+
+parseUntil :: Char -> Parser String -- something wrong here
+parseUntil c
+  = (do _ <- satisfy (== c)
+        return []) <|> 
+    (do accum <- satisfy (const True) 
+        rmd <- parseUntil c 
+        return (accum:rmd) 
+        )
+
+-- parse a fraction, like \frac{4}{2}
+parseSetBuilder :: Parser SetExpr
+parseSetBuilder 
+  = do
+    _ <- parseUntil '|'
+    _ <- string "|"
+    remander <-  parseExpr
+    return remander
+
+
+-- parses a term (some expression in brackets/parens, a constant alone, or an expression in set builder notation)
+parseTerm :: Parser SetExpr
+parseTerm = parens parseExpr <|> exprParens parseExpr <|> brackets parseExpr <|> suchThat parseExpr  <|> withE parseExpr <|> parseConstant -- <|> parseSetBuilder
+
+-- parse a set expression (using makeExprParser)
+parseExpr :: Parser SetExpr
+parseExpr =  makeExprParser parseTerm operatorTable
