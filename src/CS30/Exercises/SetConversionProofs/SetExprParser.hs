@@ -16,36 +16,31 @@ import           Control.Monad.Combinators.Expr
 import Debug.Trace
 
 
--- datatype that we try to parse all user responses into 
-data SetExpr = Var String
-              | SetBuilder SetExpr
-              | Power SetExpr   -- set first SetExpr to the second SetExpr power
-              | Cap SetExpr SetExpr           -- factorial
-              | Cup SetExpr SetExpr  -- division
-              | SetMinus  SetExpr SetExpr  -- multiply two SetExpr's 
-              | Wedge SetExpr SetExpr -- first SetExpr `choose` second SetExpr
-              | Vee SetExpr SetExpr
-              | In SetExpr
-              | NotIn SetExpr
-              | Subset SetExpr
+-- datatype that we parse all expressions into 
+data SetExpr = Var String -- single variable
+              | SetBuilder SetExpr -- set builder expression
+              | Power SetExpr   -- powerset
+              | Cap SetExpr SetExpr     -- cap operation, intersection
+              | Cup SetExpr SetExpr     -- cup operation, union
+              | SetMinus  SetExpr SetExpr  -- set difference
+              | Wedge SetExpr SetExpr   -- and, intersection
+              | Vee SetExpr SetExpr     -- or, union
+              | In SetExpr      -- element of 
+              | NotIn SetExpr   -- not an element of
+              | Subset SetExpr -- subset of
               deriving Show
 
 type Parser = ParsecT Void String Identity
 
--- \left\{e | e \in A \wedge e\notin B\right\} 
--- --> Wedge (In (Var A)) (NotIn (Var B))
 
--- \left\{e | e \subseteq A\right\}
--- --> Subset(A)
-
--- fxn for extracting the variables in a set expression 
-getVars :: SetExpr -> String
-getVars (Var x)    = x
-getVars (Cap e1 e2)     = getVars e1  ++ getVars e2
-getVars (Cup e1 e2) = getVars e1++getVars e2
-getVars (SetMinus e1 e2) = getVars e1++getVars e2
-getVars (Power e1) = getVars e1
-getVars (Wedge e1 e2) = getVars e1++getVars e2
+-- fxn for extracting the variables in a set expression (not in use rn)
+-- getVars :: SetExpr -> String
+-- getVars (Var x)    = x
+-- getVars (Cap e1 e2)     = getVars e1  ++ getVars e2
+-- getVars (Cup e1 e2) = getVars e1++getVars e2
+-- getVars (SetMinus e1 e2) = getVars e1++getVars e2
+-- getVars (Power e1) = getVars e1
+-- getVars (Wedge e1 e2) = getVars e1++getVars e2
 
 -- parse spaces (used w/ symbol and lexeme)
 spaceConsumer :: Parser ()
@@ -76,13 +71,6 @@ parens = between (symbol "\\left(") (symbol "\\right)")
 -- parse something between (...) 
 exprParens :: Parser a -> Parser a          
 exprParens = between (symbol "(") (symbol ")")
-
--- parse something of the form e | e \subseteq A
-suchThat :: Parser a -> Parser a 
-suchThat = between (symbol "e|e") (symbol "")
-
-withE :: Parser a -> Parser a 
-withE = between (symbol "e") (symbol "")
 
 -- parses some variable alone into SetExpr
 parseConstant :: Parser SetExpr
@@ -120,8 +108,6 @@ parseUntil c
         return (accum:rmd) 
         )
 
--- brackets = between (symbol "\\left\\{") (symbol "\\right\\}")
-
 -- parse an expression in set builder notation 
 parseSetBuilder :: Parser SetExpr
 parseSetBuilder 
@@ -131,9 +117,9 @@ parseSetBuilder
                return (SetBuilder remander))
 
 
--- parses a term (some expression in brackets/parens, a constant alone, or an expression in set builder notation)
+-- parses a term (some expression in parens, a constant alone, or an expression in set builder notation)
 parseTerm :: Parser SetExpr
-parseTerm = parens parseExpr <|> exprParens parseExpr  <|> parseSetBuilder  <|> parseConstant --  parseSetBuiilder  <|> suchThat parseExpr  <|> withE parseExpr <|>
+parseTerm = parens parseExpr <|> exprParens parseExpr  <|> parseSetBuilder  <|> parseConstant 
 
 -- parse a set expression (using makeExprParser)
 parseExpr :: Parser SetExpr
