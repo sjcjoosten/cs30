@@ -6,7 +6,7 @@ COSC 69.14, 20F
 Group Assignment 2
 -}
 
-module CS30.Exercises.SetConversionProofs.SetExprParser (parseExpr, parseUntil, exprParens, SetExpr) where
+module CS30.Exercises.SetConversionProofs.SetExprParser (parseExpr, parseUntil, exprParens, symbol, SetExpr) where
 import           Data.Functor.Identity
 import           Data.Void
 import           Text.Megaparsec
@@ -18,6 +18,7 @@ import Debug.Trace
 
 -- datatype that we try to parse all user responses into 
 data SetExpr = Var String
+              | SetBuilder SetExpr
               | Power SetExpr   -- set first SetExpr to the second SetExpr power
               | Cap SetExpr SetExpr           -- factorial
               | Cup SetExpr SetExpr  -- division
@@ -90,20 +91,15 @@ parseConstant = do
   return (Var [n])
 
 -- operator table for use with makeExprParser 
-operatorTable :: [[Operator Parser SetExpr]]
+operatorTable :: [[Operator Parser SetExpr]] -- order matters! 
 operatorTable =
-  [ [binary "\\cap" Cap], 
-    [binary "\\cup" Cup], 
-    [binary "\\setminus" SetMinus],
-    [binary "\\wedge" Wedge],  
-    [binary "\\vee" Vee], 
-    [prefix "\\mathbb{P}" Power], 
+  [ [prefix "e\\in" In, prefix "e\\notin" NotIn], 
     [prefix "\\P" Power], 
-    [prefix "\\in" In], 
-    [prefix "\\notin" NotIn], 
-    [prefix "\\subseteq" Subset]
+    [prefix "e\\subseteq" Subset],
+    [binary "\\cap" Cap, binary "\\cup" Cup], 
+    [binary "\\setminus" SetMinus],
+    [binary "\\wedge" Wedge, binary "\\vee" Vee] 
   ]
-
 -- helper function for generating an binary infix operator
 -- based on documentation for Control.Monad.Combinators.Expr
 binary :: String -> (a -> a -> a) -> Operator Parser a
@@ -114,7 +110,8 @@ binary name f = InfixL (f <$ symbol name)
 prefix :: String -> (a -> a) -> Operator (ParsecT Void String Identity) a
 prefix  name f = Prefix (f <$ symbol name)
 
-parseUntil :: Char -> Parser String -- something wrong here
+-- helper function to parse until a certain character
+parseUntil :: Char -> Parser String 
 parseUntil c
   = (do _ <- satisfy (== c)
         return []) <|> 
@@ -123,19 +120,20 @@ parseUntil c
         return (accum:rmd) 
         )
 
--- parse a fraction, like \frac{4}{2}
+-- brackets = between (symbol "\\left\\{") (symbol "\\right\\}")
+
+-- parse an expression in set builder notation 
 parseSetBuilder :: Parser SetExpr
 parseSetBuilder 
-  = do
-    _ <- parseUntil '|'
-    _ <- string "|"
-    remander <-  parseExpr
-    return remander
+  = brackets (do
+               _ <- symbol "e|"
+               remander <-  parseExpr
+               return (SetBuilder remander))
 
 
 -- parses a term (some expression in brackets/parens, a constant alone, or an expression in set builder notation)
 parseTerm :: Parser SetExpr
-parseTerm = parens parseExpr <|> exprParens parseExpr <|> brackets parseExpr <|> suchThat parseExpr  <|> withE parseExpr <|> parseConstant -- <|> parseSetBuilder
+parseTerm = parens parseExpr <|> exprParens parseExpr  <|> parseSetBuilder  <|> parseConstant --  parseSetBuiilder  <|> suchThat parseExpr  <|> withE parseExpr <|>
 
 -- parse a set expression (using makeExprParser)
 parseExpr :: Parser SetExpr
