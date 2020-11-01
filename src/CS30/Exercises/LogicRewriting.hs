@@ -12,7 +12,7 @@ data Law = Law LawName Equation
 type LawName = String
 type Equation = (Expr,Expr)
 
-data Expr = Var Char        -- variable like 'p' or 'q' 
+data Expr = Var Char          -- variable like 'p' or 'q' 
           | Const Bool        -- either true or false
           | And Expr Expr     -- <expr> \wedge <expr> 
           | Or Expr Expr      -- <expr> \vee <expr>
@@ -22,12 +22,34 @@ data Expr = Var Char        -- variable like 'p' or 'q'
 
 type Parser = ParsecT Void String Identity
 
+lawStrings :: [String]
+lawStrings = [
+        "Double Negation Law: \\neg (\\neg p) \\equiv p",
+        "Identity Law: p \\vee false \\equiv p",
+        "Identity Law: p \\wedge true \\equiv q",
+        "Domination Law: p \\wedge false \\equiv false",
+        "Domination Law: p \\vee true \\equiv true",
+        "Idempotent Law: p \\vee p \\equiv p",
+        "Idempotent Law: p \\wedge p \\equiv p",
+        "Implication Law: p \\Rightarrow q \\equiv \\neg p \\vee q",
+        "De Morgan's Law: \\neg (p \\wedge q) \\equiv \\neg p \\vee \\neg q",
+        "De Morgan's Law: \\neg (p \\vee q) \\equiv \\neg p \\wedge \\neg q",
+        "Negation Law: p \\vee \\neg p \\equiv true",
+        "Negation Law: p \\wedge \\neg p \\equiv false"
+    ]
+
+laws :: [Law]
+laws = map prsLaw lawStrings
+       where prsLaw x = case parse parseLaw "" x of
+                           Left _  -> error ""
+                           Right l -> l
+
 -- parses laws in a format like:
 --   "double negation: \\neg (\\neg p) = p"
 parseLaw :: Parser Law
-parseLaw = do name  <- someTill anySingle (string ":") <* spaceConsumer
+parseLaw = do name  <- someTill anySingle (symbol ":")
               expr1 <- parseExpr
-              _     <- symbol "=" 
+              _     <- symbol "\\equiv" 
               expr2 <- parseExpr
               return (Law name (expr1,expr2))
 
