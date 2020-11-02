@@ -1,26 +1,26 @@
 module CS30.Exercises.SetConversionProofs.GenerateProof  where
 import CS30.Data
 import CS30.Exercises.Data
--- import CS30.Exercises.SetConversionProofs.SetExprParser
+import CS30.Exercises.SetConversionProofs.SetExprParser
 import CS30.Exercises.SetConversionProofs.LawParser
 
 
 type LawName = String
 
 -- difining types here for testing purpose
-newtype SetExpr = Compose [Atom] deriving Eq
-data Atom    = Var String -- single variable
-              | SetBuilder SetExpr -- set builder expression
-              | Power SetExpr   -- powerset
-              | Cap SetExpr SetExpr     -- cap operation, intersection
-              | Cup SetExpr SetExpr     -- cup operation, union
-              | SetMinus  SetExpr SetExpr  -- set difference
-              | Wedge SetExpr SetExpr   -- and, intersection
-              | Vee SetExpr SetExpr     -- or, union
-              | In SetExpr      -- element of 
-              | NotIn SetExpr   -- not an element of
-              | Subset SetExpr -- subset of
-              deriving (Show, Eq)
+-- newtype SetExpr = Compose [Atom] deriving Eq
+-- data Atom    = Var String -- single variable
+--               | SetBuilder SetExpr -- set builder expression
+--               | Power SetExpr   -- powerset
+--               | Cap SetExpr SetExpr     -- cap operation, intersection
+--               | Cup SetExpr SetExpr     -- cup operation, union
+--               | SetMinus  SetExpr SetExpr  -- set difference
+--               | Wedge SetExpr SetExpr   -- and, intersection
+--               | Vee SetExpr SetExpr     -- or, union
+--               | In SetExpr      -- element of 
+--               | NotIn SetExpr   -- not an element of
+--               | Subset SetExpr -- subset of
+--               deriving (Show, Eq)
 
 
 
@@ -47,7 +47,7 @@ rewrites eqn (Compose as) = map Compose (
 rewritesSeg :: Equation -> [SetExpr] -> [[SetExpr]]
 rewritesSeg (e1, e2) as
   = [as1 ++ deCompose (apply subst e2) ++ as3
-    | (as1, as2, as3) <- splits3 as
+    | (as1, as2, as3) <- (splitsN 3 as)
     , subst <- match (e1, Compose as2) ]
 
 rewritesA eqn (Var v) = []
@@ -83,9 +83,8 @@ match = concatMap (combine . map matchA) . alignments
 
 matchA :: (Atom, SetExpr) -> [Subst]
 matchA (Var v, e) = [unitSub v e]
-matchA (Con k1 es1, Compose [Con k2 es2]) | k1 ==k2
+matchA (Con k1 es1, Compose [Con k2 es2]) | k1 == k2
   = combine (map match (zip es1 es2))
-
 
 type VarName = String
 type Subst = [(VarName, SetExpr)]
@@ -137,11 +136,15 @@ deCompose (Compose as) = as
 ----------------------------------------------
 data Proof = Proof SetExpr [(String, SetExpr)]
 
--- need to implement fnc
 getProofLengthN :: Int -> [Law] -> (SetExpr -> Equation -> [SetExpr])
                 -> SetExpr -> [Proof]
+-- helped by Le
+-- getProofLengthN n ((Law lwnm eqn):xs) fnc e = case fnc e eqn of 
+--   Nothing -> getProofLengthN n xs fnc e
+--   Just sth -> let Proof _ steps = getProofLengthN (n-1) ((Law lwnm eqn):xs) fnc sth in Proof e ((lwnm, sth):steps
 getProofLengthN 0 _ _ e = [Proof e []]
-getProofLengthN n lws fnc e
-  = [Proof e ((lwnm,e'): stps)
-    | (Law lwnm eqn) <- lws, e' <- fnc e eqn
-    , (Proof _ stps) <- getProofLengthN (n-1) lws fnc e']
+getProofLengthN n lows fnc e = 
+  [Proof e ((lwnm, (fnc e eqn)):steps) | (Law lwnm eqn) <- lws, (Proof _ steps) <- getProofLengthN (n-1) lws fnc (fnc e eqn)]
+
+fnc:: SetExpr -> Equation -> Maybe SetExpr
+fnc e (lh,rh) = if e == lh then Just (rewrites e rh) else Nothing
