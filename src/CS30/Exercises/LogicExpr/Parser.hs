@@ -38,9 +38,8 @@ logicExpr = space *> makeExprParser term ops <* space
         ops = [
             [ Prefix (return Neg <* string negStr <* space)]
             , [ infixL andStr And
-                , infixL orStr Or
-                , infixL implyStr Imply
-                ]
+                , infixL orStr Or]
+            , [infixL implyStr Imply]
             ]            
         space = ((string " " <|> string "\\t" <|> string "\\ ") *> space)
                 <|> return ()            
