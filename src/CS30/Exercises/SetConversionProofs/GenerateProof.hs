@@ -131,3 +131,17 @@ cp (xs:xss) = [x:ys | x <- xs, ys <- cp xss]
 
 deCompose :: SetExpr -> [Atom]
 deCompose (Compose as) = as
+
+----------------------------------------------
+-- from DEMO
+----------------------------------------------
+data Proof = Proof SetExpr [(String, SetExpr)]
+
+-- need to implement fnc
+getProofLengthN :: Int -> [Law] -> (SetExpr -> Equation -> [SetExpr])
+                -> SetExpr -> [Proof]
+getProofLengthN 0 _ _ e = [Proof e []]
+getProofLengthN n lws fnc e
+  = [Proof e ((lwnm,e'): stps)
+    | (Law lwnm eqn) <- lws, e' <- fnc e eqn
+    , (Proof _ stps) <- getProofLengthN (n-1) lws fnc e']
