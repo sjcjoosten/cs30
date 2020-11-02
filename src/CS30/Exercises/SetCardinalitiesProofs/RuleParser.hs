@@ -28,22 +28,19 @@ type Equation = (Expr, Expr)  -- (left,right)
 
 pLaw :: Parser Expr -> Parser Law
 pLaw pExpr = 
-   do lawName  <- parseUntil ':'
-      _ <- string ":"
+   do lawName <- parseUntil ':'
       lhs <- pExpr
       _ <- string "="
       rhs <- pExpr
       return (Law lawName (lhs, rhs))
 
+parseUntil :: MonadParsec e s f => Token s -> f [Token s]
 parseUntil c 
-   =  (do 
-         _ <- satisfy (== c) 
-         return [])
-      <|>
-      (do 
-         c <- satisfy (const True) 
-         rmd <- parseUntil c 
-         return (c:rmd))
+   =  (do _ <- satisfy (== c) 
+          return []) <|>
+      (do c <- satisfy (const True) 
+          rmd <- parseUntil c 
+          return (c:rmd))
 
 -- operator table for use with makeExprParser 
 operatorTable :: [[Operator Parser Expr]]
