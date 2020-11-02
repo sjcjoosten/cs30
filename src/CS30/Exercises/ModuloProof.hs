@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 
-module ModuloProof (debugOut) where
+module CS30.Exercises.ModuloProof (debugOut) where
 
 import Data.List
 import Data.Void
@@ -17,13 +17,17 @@ import Control.Monad.Combinators.Expr
 type Parser = ParsecT Void String Identity -- parsing strings in this file
 type ParseError = ParseErrorBundle String Void -- corresponding error type
 
-data Expression = Var Int |
+data Expression = Con Int |
                   Inv Expression |
                   Pow Expression Expression |
                   Mul Expression Expression |
                   Add Expression Expression |
                   ExpressionError
                   deriving (Show, Eq, Ord)
+
+data Proof = Proof [Law]
+data Law = Law LawType Expression Expression | LawError deriving Show
+data LawType = Law1 | Law2 | Law 3 -- TODO : TBD
 
 ---------------------------------Character Definitions-------------------------------------------
 
@@ -52,7 +56,7 @@ getExpr _ = ExpressionError
 
 showExpr :: Expression -> String -- TODO : Remove redundant parenthesis?
 showExpr ExpressionError = "Parse Error !"
-showExpr (Var i) = show i
+showExpr (Con i) = show i
 showExpr (Inv e) = [charInv] ++ [charOpen] ++ showExpr e ++ [charClose]
 showExpr (Add e1 e2) = [charOpen] ++ showExpr e1 ++ [charAdd] ++ showExpr e2 ++ [charClose]
 showExpr (Mul e1 e2) = [charOpen] ++ showExpr e1 ++ [charMul] ++ showExpr e2 ++ [charClose]
@@ -64,7 +68,7 @@ parserExpression :: Parser Expression
 parserExpression = makeExprParser parserTerm operatorTable
 
 parserTerm :: Parser Expression
-parserTerm = Var <$> L.lexeme space L.decimal <|>
+parserTerm = Con <$> L.lexeme space L.decimal <|>
              parserParenthesis parserExpression
 
 parserParenthesis :: Parser a -> Parser a
@@ -80,6 +84,14 @@ operatorTable =
   ]
 
 -------------------------------------Modulo Evaluator----------------------------------------
+
+evalExpr :: Expression -> Int -> Maybe Int
+evalExpr (Con i) m = modulo (Just i) m
+evalExpr (Inv e) m = moduloInverse (evalExpr e m) m
+evalExpr (Add e1 e2) m = modulo (evalExpr e1 m `fnAdd` evalExpr e2 m) m
+evalExpr (Mul e1 e2) m = modulo (evalExpr e1 m `fnMul` evalExpr e2 m) m
+evalExpr (Pow e1 (Con i)) m = modulo (evalExpr e1 m `fnPow` i) m
+evalExpr _ _ = Nothing
 
 modulo :: Maybe Int -> Int -> Maybe Int
 modulo Nothing _ = Nothing
@@ -102,14 +114,6 @@ fnMul (Just i1) (Just i2) = Just (i1 * i2)
 fnPow :: Maybe Int -> Int -> Maybe Int
 fnPow Nothing _ = Nothing
 fnPow (Just i1) i2 = Just (i1 ^ i2)
-
-evalExpr :: Expression -> Int -> Maybe Int
-evalExpr (Var i) m = modulo (Just i) m
-evalExpr (Inv e) m = moduloInverse (evalExpr e m) m
-evalExpr (Add e1 e2) m = modulo (evalExpr e1 m `fnAdd` evalExpr e2 m) m
-evalExpr (Mul e1 e2) m = modulo (evalExpr e1 m `fnMul` evalExpr e2 m) m
-evalExpr (Pow e1 (Var i)) m = modulo (evalExpr e1 m `fnPow` i) m
-evalExpr _ _ = Nothing
 
 -------------------------------------Tests----------------------------------------
 
