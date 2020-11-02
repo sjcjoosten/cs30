@@ -25,9 +25,9 @@ data Expression = Con Int |
                   ExpressionError
                   deriving (Show, Eq, Ord)
 
-data Proof = Proof [Law]
-data Law = Law LawType Expression Expression | LawError deriving Show
-data LawType = Law1 | Law2 | Law 3 -- TODO : TBD
+data Proof = Proof [Law] deriving (Show, Eq)
+data Law = Law LawType Expression Expression | LawError deriving (Show, Eq)
+data LawType = Law1 | Law2 | Law3 deriving (Show, Eq, Ord) -- TODO : TBD
 
 ---------------------------------Character Definitions-------------------------------------------
 
