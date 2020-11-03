@@ -127,7 +127,7 @@ operatorTable =
   [ [postfix "!" Fact],
     [prefix "-" Neg],
     [binary "^" Expon] ,
-    [binary "\\cdot" Mult, binary "*" Mult, binary "" Mult, binary "/" Divide] , 
+    [binary "\\cdot" Mult, binary "*" Mult, binary "/" Divide] ,
     [binary "+" Add, binary "-" Sub]
   ]
 
@@ -172,7 +172,6 @@ mathToExpr (Neg a) = Op Negate [mathToExpr a]
 -- will add those once we get this working for =
 parseLaw :: Parser Law
 parseLaw = do lawName <- parseUntil ':'
-              -- _ <- string ":"
               lhs <- parseExpr
               _ <- string "="
               rhs <- parseExpr
