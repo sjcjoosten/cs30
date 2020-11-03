@@ -43,6 +43,24 @@ instance Show Law where
       showString " = " . 
       shows e2
 
+-- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
+lawList :: [String]
+lawList = [ "Commutative of Addition: a + b = b + a"
+          , "Additive Identity: a + 0 = a"
+          , "Additive Identity: 0 + a = a"
+          , "Additive Inverse: a - a = 0"
+          , "Additive Association: a + (b + c) = (a + b) + c"
+          , "Multiplicative Identity: a * 1 = a"
+          , "Multiplicative Identity: 1 * a = a"
+          , "Multiplicative Association: a * (b * c) = (a * b) * c"
+          , "Multiplication Times 0: 0 * a = 0"
+          , "Multiplication Times 0: a * 0 = 0"
+          
+          --these last ones could use better names
+          , "Zero in the numerator: 0 / a = 0"
+          , "Division with common numerator/denominator: a / a = 1"
+          , "idk: a - (b + c) = a - b - c"
+          , "idk2: a - (b - c) = a - b + c" ]
 
 getProofLengthN :: Int -> [Law] -> (Expr -> Law -> [Expr] ) -> Expr -> [Proof]
 getProofLengthN 0 _ _ e = [Proof e []]
@@ -61,7 +79,6 @@ digit = do c <- satisfy inRange
    where charToInteger c = fromEnum c - fromEnum '0'
          inRange c = let r = charToInteger c
                      in r >= 0 && r < 10
-
 
 -- maybe add support for uppercase letter later
 var :: Parser Char
@@ -139,7 +156,6 @@ parseMathExpr = spaces *> makeExprParser parseTerm operatorTable <* spaces
 parseExpr :: Parser Expr
 parseExpr = do mex <- parseMathExpr
                return (mathToExpr mex)
-
 
 mathToExpr :: MathExpr -> Expr
 mathToExpr (MathVar s) = Var s
