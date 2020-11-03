@@ -56,11 +56,11 @@ lawList = [ "Commutative of Addition: a + b = b + a"
           , "Multiplication Times 0: 0 * a = 0"
           , "Multiplication Times 0: a * 0 = 0"
           
-          --these last ones could use better names
-          , "Zero in the numerator: 0 / a = 0"
-          , "Division with common numerator/denominator: a / a = 1"
-          , "idk: a - (b + c) = a - b - c"
-          , "idk2: a - (b - c) = a - b + c" ]
+          --let's hope we never divide by zero lol
+          , "Dividing Zero: 0 / a = 0"
+          , "Multiplicative Inverse: a / a = 1"
+          , "Distributive Law: a - (b + c) = a - b - c"
+          , "Distributive Law: a - (b - c) = a - b + c" ]
 
 getProofLengthN :: Int -> [Law] -> (Expr -> Law -> [Expr] ) -> Expr -> [Proof]
 getProofLengthN 0 _ _ e = [Proof e []]
