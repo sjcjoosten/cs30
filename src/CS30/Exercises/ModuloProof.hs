@@ -14,61 +14,104 @@ import Control.Monad.Combinators.Expr
 
 --------------------------------------Data and Types-------------------------------------------
 
-type Parser = ParsecT Void String Identity -- parsing strings in this file
-type ParseError = ParseErrorBundle String Void -- corresponding error type
+type Parser = ParsecT Void String Identity
+type ParseError = ParseErrorBundle String Void
 
 data Expression = Con Int |
+                  Var Char |
                   Inv Expression |
                   Pow Expression Expression |
                   Mul Expression Expression |
                   Add Expression Expression |
+                  Sub Expression Expression |
+                  Mod Expression Expression |
                   ExpressionError
                   deriving (Show, Eq, Ord)
 
-data Proof = Proof [Law] deriving (Show, Eq)
-data Law = Law LawType Expression Expression | LawError deriving (Show, Eq)
-data LawType = Law1 | Law2 | Law3 deriving (Show, Eq, Ord) -- TODO : TBD
+data Proof = Proof [ExplicitLaw] deriving (Show, Eq)
+data ImplicitLaw = ImplicitLaw String Equation Equation | ImplicitLawError deriving (Show, Eq)
+data ExplicitLaw = ExplicitLaw String Equation | ExplicitLawError deriving (Show, Eq)
+type Equation = (Expression, Expression)
+
+implicit_law1, implicit_law2, implicit_law3, implicit_law4, implicit_law5 :: String
+implicit_law1 = "Law1 : a = b (mod p) implies a + c = b + c (mod p)"
+implicit_law2 = "Law2 : a = b (mod p) implies c + a = c + b (mod p)"
+implicit_law3 = "Law3 : a = b (mod p) implies a * c = b * c (mod p)"
+implicit_law4 = "Law4 : a = b (mod p) implies c * a = c * b (mod p)"
+implicit_law5 = "Law5 : a = b (mod p) implies a ^ c = b ^ c (mod p)"
+
+explicit_law1, explicit_law2 :: String
+explicit_law1 = "Law1 : x ^ (p-1) = 1 (mod p)"
+explicit_law2 = "Law2 : a + p*b = a (mod p)"
 
 ---------------------------------Character Definitions-------------------------------------------
 
 -- Operations -- TODO : Replace with special characters
-charInv, charAdd, charMul, charPow :: Char
+charInv, charAdd, charSub, charMul, charPow :: Char
 charInv = '~'
 charAdd = '+'
+charSub = '-'
 charMul = '*'
 charPow = '^'
 
--- Parenthesis
-charOpen, charClose :: Char
+charOpen, charClose, charEquals, charColon :: Char
 charOpen = '('
 charClose = ')'
+charEquals = '='
+charColon = ':'
+
+stringMod, stringImplies :: String
+stringMod = "mod"
+stringImplies = "implies"
 
 --------------------------------------Parser Functions-------------------------------------------
 
--- THE MOST IMPORTANT ONE :)
--- Converts string to an expression
-parseExpr :: String -> Expression
-parseExpr x = getExpr (parse parserExpression "<myparse>" (filter (\c->c/=' ') x))
+parseImplicitLaw :: String -> ImplicitLaw
+parseImplicitLaw x = getImplicitLaw (parse parserImplicitLaw "<myparse>" (filter (\y->y/=' ') x))
+                     where getImplicitLaw (Right law) = law
+                           getImplicitLaw _ = ImplicitLawError
 
-getExpr :: Either ParseError Expression -> Expression
-getExpr (Right e) = e
-getExpr _ = ExpressionError
+parserImplicitLaw :: Parser ImplicitLaw
+parserImplicitLaw = do name  <- someTill anySingle (char charColon)
+                       expr1 <- parserExpression
+                       _     <- char charEquals
+                       expr2 <- parserExpression
+                       _     <- char charOpen
+                       _     <- string stringMod
+                       expr3 <- parserExpression
+                       _     <- char charClose
+                       _     <- string stringImplies
+                       expr4 <- parserExpression
+                       _     <- char charEquals
+                       expr5 <- parserExpression
+                       _     <- char charOpen
+                       _     <- string stringMod
+                       expr6 <- parserExpression
+                       _     <- char charClose
+                       return (ImplicitLaw name (expr1, Mod expr2 expr3) (expr4, Mod expr5 expr6))
 
-showExpr :: Expression -> String -- TODO : Remove redundant parenthesis?
-showExpr ExpressionError = "Parse Error !"
-showExpr (Con i) = show i
-showExpr (Inv e) = [charInv] ++ [charOpen] ++ showExpr e ++ [charClose]
-showExpr (Add e1 e2) = [charOpen] ++ showExpr e1 ++ [charAdd] ++ showExpr e2 ++ [charClose]
-showExpr (Mul e1 e2) = [charOpen] ++ showExpr e1 ++ [charMul] ++ showExpr e2 ++ [charClose]
-showExpr (Pow e1 e2) = showExpr e1 ++ [charPow] ++ showExpr e2
+parseExplicitLaw :: String -> ExplicitLaw
+parseExplicitLaw x = getExplicitLaw (parse parserExplicitLaw "<myparse>" (filter (\y->y/=' ') x))
+                     where getExplicitLaw (Right law) = law
+                           getExplicitLaw _ = ExplicitLawError
 
--------------------------------------Megaparsec stuff----------------------------------------
+parserExplicitLaw :: Parser ExplicitLaw
+parserExplicitLaw = do name  <- someTill anySingle (char charColon)
+                       expr1 <- parserExpression
+                       _     <- char charEquals
+                       expr2 <- parserExpression
+                       _     <- char charOpen
+                       _     <- string stringMod
+                       expr3 <- parserExpression
+                       _     <- char charClose
+                       return (ExplicitLaw name (expr1, Mod expr2 expr3))
 
 parserExpression :: Parser Expression
 parserExpression = makeExprParser parserTerm operatorTable
 
 parserTerm :: Parser Expression
 parserTerm = Con <$> L.lexeme space L.decimal <|>
+             Var <$> L.lexeme space lowerChar <|>
              parserParenthesis parserExpression
 
 parserParenthesis :: Parser a -> Parser a
@@ -80,6 +123,7 @@ operatorTable =
     [InfixL (Pow <$ char charPow)],
     [Prefix (Inv <$ char charInv)],
     [InfixL (Mul <$ char charMul)],
+    [InfixL (Sub <$ char charSub)],
     [InfixL (Add <$ char charAdd)]
   ]
 
@@ -117,24 +161,6 @@ fnPow (Just i1) i2 = Just (i1 ^ i2)
 
 -------------------------------------Tests----------------------------------------
 
-_input :: String
-_input = "12+~16^4*37*(534*12+23)"
-
-_parsed :: Expression
-_parsed = parseExpr _input
-
-_shown :: String
-_shown = showExpr _parsed
-
-_modnum :: Int
-_modnum = 11
-
-_eval :: Maybe Int
-_eval = evalExpr _parsed _modnum
-
--- Print this to validate all functions
 debugOut :: String
-debugOut = "Input \t\t: " ++ _input ++ 
-           "\nParsed \t\t: " ++ show _parsed ++
-           "\nShown \t\t: " ++ _shown ++
-           "\nEval mod "++ show _modnum ++"\t: " ++ show _eval
+debugOut = intercalate "\n" (map (show . parseImplicitLaw) [implicit_law1, implicit_law2, implicit_law3, implicit_law4, implicit_law5]) ++ "\n" ++
+           intercalate "\n" (map (show . parseExplicitLaw) [explicit_law1, explicit_law2])
