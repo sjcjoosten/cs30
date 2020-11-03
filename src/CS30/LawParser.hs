@@ -1,3 +1,4 @@
+module CS30.LawParser where
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Data.Void
@@ -76,22 +77,22 @@ parseVar = do s <- some var
               return (MathVar s)
 
 -- parse spaces (used w/ symbol and lexeme)
-spaceConsumer :: Parser ()
-spaceConsumer = L.space spaces empty empty 
+-- spaceConsumer :: Parser ()
+-- spaceConsumer = L.space spaces empty empty 
 
 -- based on Drill 6.2 scaffold
 spaces :: Parser ()
-spaces = some spc >> return ()
+spaces = many spc >> return ()
  where spc = string " " <|> string "\t" <|> string "\n" <|> string "\r"
              <|> string "\\ " <|> string "~"
 
 -- parse a given specific string, accounting for spaces 
 symbol :: String -> Parser String
-symbol = L.symbol spaceConsumer
+symbol = lexeme . string
 
 -- parse some lexeme, accounting for spaces
 lexeme :: Parser a -> Parser a
-lexeme   = L.lexeme spaceConsumer
+lexeme x = spaces *> x <* spaces
 
 -- parse something between (...) 
 parens :: Parser a -> Parser a          
@@ -129,11 +130,11 @@ prefix  name f = Prefix (f <$ symbol name)
 
 -- parses a term (some expression in brackets/parens, a constant alone, or a binom/frac)
 parseTerm :: Parser MathExpr
-parseTerm = parens parseMathExpr <|> parseConstant <|> parseVar
+parseTerm = (parens parseMathExpr <|> parseConstant <|> parseVar) <* spaces
 
 -- parse a full expression (using makeExprParser)
 parseMathExpr :: Parser MathExpr
-parseMathExpr =  makeExprParser parseTerm operatorTable
+parseMathExpr = spaces *> makeExprParser parseTerm operatorTable <* spaces
 
 parseExpr :: Parser Expr
 parseExpr = do mex <- parseMathExpr
@@ -155,8 +156,8 @@ mathToExpr (Neg a) = Op Negate [mathToExpr a]
 -- will add those once we get this working for =
 parseLaw :: Parser Law
 parseLaw = do lawName <- parseUntil ':'
-              _ <- string ":"
-              lhs <- parseUntil '=' *> parseExpr
+              -- _ <- string ":"
+              lhs <- parseExpr
               _ <- string "="
               rhs <- parseExpr
               return (Law lawName (lhs,rhs))
@@ -165,6 +166,6 @@ parseUntil :: Char -> Parser String
 parseUntil c = (do _ <- satisfy (== c)
                    return  []) <|>
                (do c1 <- satisfy (const True)
-                   rmd <- parseUntil c1
+                   rmd <- parseUntil c
                    return (c1:rmd)
                )
