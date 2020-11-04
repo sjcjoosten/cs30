@@ -2,6 +2,9 @@
 
 module CS30.Exercises.ModuloProof (debugOut) where
 
+import           CS30.Data
+import           CS30.Exercises.Data
+
 import Data.List
 import Data.Void
 import Data.Functor.Identity
@@ -70,6 +73,25 @@ charColon = ':'
 stringMod, stringImplies :: String
 stringMod = "mod"
 stringImplies = "implies"
+
+--------------------------------------Random Expression Generation-------------------------------
+
+-- Takes a list of operations and fit them in between a,b,c,d
+-- Example gen_expressions ['*', '+']
+-- a + b + c + d
+-- a + b + c * d
+-- a + b * c + d
+-- a + b * c * d
+gen_expressions :: String -> [String]
+gen_expressions [] = []
+gen_expressions oper = [sbst op |op <- op_list]
+    where
+        op_list = [[i,j,k] | i <- oper, j <- oper, k <- oper]
+        sbst x = (concat [[fst a, snd a] | a <- zip "abc" x]) ++ ['d']
+
+-- Randomly get an expression from a choice Tree
+get_expression :: String -> ChoiceTree String
+get_expression oper = nodes (gen_expressions [charAdd, charMul])
 
 --------------------------------------Parser Functions-------------------------------------------
 
