@@ -1,20 +1,74 @@
+{-# LANGUAGE OverloadedStrings #-}
 module CS30.Exercises.LogicExpr.Parser where
-
-import CS30.Exercises.LogicExpr.Datatypes
-
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import Control.Monad.Combinators.Expr
+import           Data.Void
 
-negStr = "¬"
--- negStr = "-"
-andStr = "∧"
--- andStr = "^"
-orStr = "∨"
--- orStr = "v"
-implyStr = "⇒"
--- implyStr = "=>"
-equalStr= "≡"
+
+type Parser = Parsec Void String
+data LogicExpr 
+    = Con Bool
+    | Var Char
+    | Bin LogicOp LogicExpr LogicExpr
+    | Neg LogicExpr
+    deriving (Eq)
+    -- deriving (Eq, Show)
+
+data LogicOp
+    = And
+    | Or
+    | Imply
+    deriving (Eq)
+    -- deriving (Eq, Show)
+
+prec :: LogicOp -> Int
+prec And = 2
+prec Or =  2
+prec Imply = 1  
+
+showSpace :: ShowS
+showSpace = showChar ' '
+showOp :: LogicOp -> ShowS
+showOp = showString . symb
+
+symb :: LogicOp -> String
+symb And = andStr
+symb Or = orStr
+symb Imply = implyStr
+
+instance Show LogicExpr where
+    showsPrec _ (Con b) = showString (show b)
+    showsPrec _ (Var v) = showString (show v)    
+    showsPrec p (Neg e) = showParen (p > 3) (showString negStr . showsPrec (4) e)
+    showsPrec p (Bin op e1 e2)
+        = showParen (p >= q) (showsPrec q e1 . showSpace . showOp op . showSpace . showsPrec (q+1) e2) 
+        where q = prec op    
+
+instance Show LogicOp where
+    show And = andStr
+    show Or = orStr
+    show Imply = implyStr
+
+data Law = Law {lawName :: LawName, lawEq :: Equation} deriving (Show)
+type LawName = String
+type Equation = (LogicExpr,LogicExpr)
+
+parseLaw :: String -> Law
+parseLaw s =
+    case parse law "" s of
+    Left m -> error $ show m
+    Right law' -> law'   
+
+parseExpr :: String -> LogicExpr
+parseExpr s =
+    case parse logicExpr "" s of
+    Left m -> error $ show m
+    Right e' -> e'
+
+(negStr, andStr, orStr, implyStr, equalStr) = ("¬", "∧", "∨", "⇒", "≡")
+-- negStr = "-"; andStr = "^"; orStr = "v"; implyStr = "=>"
+-- (negStr, andStr, orStr, implyStr, equalStr) = ("\\neg", "\\wedge", "\\vee", "\\Rightarrow", "\\equiv")
 
 logicExpr :: Parser LogicExpr
 logicExpr = space *> makeExprParser term ops <* space
