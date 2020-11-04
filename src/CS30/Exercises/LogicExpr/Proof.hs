@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 
-module CS30.Exercises.LogicExpr.Logic where
-import CS30.Exercises.LogicExpr.Parser
+module CS30.Exercises.LogicExpr.Proof where
+import CS30.Exercises.LogicExpr.Parser hiding (law)
 import Data.Maybe ( fromJust )
 
 type Substitution = [(VarName,LogicExpr)]
@@ -29,11 +29,13 @@ input_laws = [
     , "Redundancy law: p∨(¬p∧q)≡p∨q"
     , "true/false: ¬true≡false"
     , "true/false: ¬false≡true"
+    , "Assoc: (p∨q)∨r≡p∨q∨r"
+    , "Assoc: p∨(q∨r)≡p∨q∨r"    
+    , "Assoc: (p∧q)∧r≡p∧q∧r"
+    , "Assoc: p∧(q∧r)≡p∧q∧r"
     -- Commutative laws give potentially verbose proof
     -- , "Commute: p∧q≡q∧p"
     -- , "Commute: p∨q≡q∨p"
-    , "Assoc: (p∨q)∨r≡p∨q∨r"
-    , "Assoc: p∨(q∨r)≡p∨q∨r"    
     ]
 
 
@@ -45,7 +47,7 @@ simplify strings str = getDerivation laws e
 
 getDerivation :: [Law] -> LogicExpr -> Proof
 getDerivation laws e
- = Proof e (multiSteps e []) -- Give multiSteps an accumulater param, so we can use commutative law
+ = Proof e (multiSteps e []) -- Give multiSteps an accumulater param, for the use of commutative law;
  where multiSteps e' acc
         = case [ (lawName law, res)
                | law <- laws
@@ -85,11 +87,9 @@ matchE (Con _) _ = Nothing
 --     _ -> Nothing
 
 matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2 
- = do 
-      let res = tryMatch e1 e2 e3 e4 in
-        case res of -- And and Or operators are commutative, so check for reversed match
+ = case tryMatch e1 e2 e3 e4 of -- And and Or operators are commutative, so check for reversed match
           Nothing -> if op1 == And || op1 == Or then tryMatch e1 e2 e4 e3 else Nothing
-          _ -> res
+          res -> res
    where 
      tryMatch e1' e2' e3' e4'= do
           s1 <- matchE e1' e3'
