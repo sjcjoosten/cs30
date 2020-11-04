@@ -1,4 +1,4 @@
-module CS30.LawParser where
+module CS30.IneqProofs where
 import CS30.Data
 import CS30.Exercises.Data
 import Text.Megaparsec
