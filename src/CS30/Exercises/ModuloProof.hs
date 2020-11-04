@@ -19,35 +19,26 @@ type ParseError = ParseErrorBundle String Void
 
 data Expression = Con Int |
                   Var Char |
-                  Neg Expression |
-                  Pow Expression Expression |
-                  Mul Expression Expression |
-                  Add Expression Expression |
-                  Sub Expression Expression |
+                  UnOp Op Expression |
+                  BinOp Op Expression Expression |
                   ExpressionError
                   deriving (Show, Eq, Ord)
 
-data Proof = Proof Expression [ExplicitLaw] | ProofError deriving (Show, Eq)
+data Op = Neg | Pow | Mul | Sub | Add deriving (Show, Eq, Ord)
+
+data PreCondition = PreCondition (Expression, Expression) | NoPreCondition deriving (Show, Eq)
+
+data Law = Law { 
+                 lawName :: String, 
+                 lawCond :: PreCondition,
+                 lawLhs  :: Expression, 
+                 lawRhs  :: Expression, 
+                 lawMod  :: Expression
+               } | LawError deriving (Show, Eq)
+
+data Proof = Proof Expression [ProofStep] | ProofError deriving (Show, Eq)
 type ProofStep = (String, Expression)
-
-data PreCondition = PreCondition (Expression, Expression) | PreConditionError deriving (Show, Eq)
-
-data ImplicitLaw = ImplicitLaw 
- { 
-   iName :: String, 
-   iCond :: PreCondition, 
-   iLhs  :: Expression, 
-   iRhs  :: Expression, 
-   iMod  :: Expression
- } | ImplicitLawError deriving (Show, Eq)
-
-data ExplicitLaw = ExplicitLaw
- { 
-   eName :: String,
-   eLhs  :: Expression,
-   eRhs  :: Expression,
-   eMod  :: Expression
- } | ExplicitLawError deriving (Show, Eq)
+type Substitution = [(String, Expression)]
 
 implicit_law1, implicit_law2, implicit_law3, implicit_law4, implicit_law5 :: String
 implicit_law1 = "Law1 : a = b (mod p) implies a + c = b + c (mod p)"
@@ -82,12 +73,13 @@ stringImplies = "implies"
 
 --------------------------------------Parser Functions-------------------------------------------
 
-parseImplicitLaw :: String -> ImplicitLaw
-parseImplicitLaw x = getImplicitLaw (parse parserImplicitLaw "<myparse>" (filter (\y->y/=' ') x))
-                     where getImplicitLaw (Right law) = law
-                           getImplicitLaw _ = ImplicitLawError
+parseLaw :: Bool -> String -> Law
+parseLaw isImplicit str = getLaw (parse parserLaw "<myparse>" (filter (\y->y/=' ') str))
+                          where parserLaw = if isImplicit then parserImplicitLaw else parserExplicitLaw
+                                getLaw (Right law) = law
+                                getLaw _ = LawError
 
-parserImplicitLaw :: Parser ImplicitLaw
+parserImplicitLaw :: Parser Law
 parserImplicitLaw = do _name <- someTill anySingle (char charColon)
                        _ex1  <- parserExpression
                        _     <- char charEquals
@@ -104,14 +96,9 @@ parserImplicitLaw = do _name <- someTill anySingle (char charColon)
                        _     <- string stringMod
                        _mod  <- parserExpression
                        _     <- char charClose
-                       return ImplicitLaw { iName = _name, iCond = PreCondition (_ex1, _ex2), iLhs = _lhs, iRhs = _rhs, iMod = _mod }
+                       return Law { lawName = _name, lawCond = PreCondition (_ex1, _ex2), lawLhs = _lhs, lawRhs = _rhs, lawMod = _mod }
 
-parseExplicitLaw :: String -> ExplicitLaw
-parseExplicitLaw x = getExplicitLaw (parse parserExplicitLaw "<myparse>" (filter (\y->y/=' ') x))
-                     where getExplicitLaw (Right law) = law
-                           getExplicitLaw _ = ExplicitLawError
-
-parserExplicitLaw :: Parser ExplicitLaw
+parserExplicitLaw :: Parser Law
 parserExplicitLaw = do _name <- someTill anySingle (char charColon)
                        _lhs  <- parserExpression
                        _     <- char charEquals
@@ -120,7 +107,7 @@ parserExplicitLaw = do _name <- someTill anySingle (char charColon)
                        _     <- string stringMod
                        _mod  <- parserExpression
                        _     <- char charClose
-                       return ExplicitLaw { eName = _name, eLhs = _lhs, eRhs = _rhs, eMod = _mod }
+                       return Law { lawName = _name, lawCond = NoPreCondition, lawLhs = _lhs, lawRhs = _rhs, lawMod = _mod }
 
 parseExpression :: String -> Expression
 parseExpression x = getExpression (parse parserExpression "<myparse>" (filter (\y->y/=' ') x))
@@ -141,49 +128,57 @@ parserParenthesis = between (char charOpen) (char charClose)
 operatorTable :: [[Operator Parser Expression]]
 operatorTable =
   [ 
-    [Prefix (Neg <$ char charNeg)],
-    [InfixL (Pow <$ char charPow)],
-    [InfixL (Mul <$ char charMul)],
-    [InfixL (Sub <$ char charSub)],
-    [InfixL (Add <$ char charAdd)]
+    [Prefix (UnOp Neg <$ char charNeg)],
+    [InfixL (BinOp Pow <$ char charPow)],
+    [InfixL (BinOp Mul <$ char charMul)],
+    [InfixL (BinOp Sub <$ char charSub)],
+    [InfixL (BinOp Add <$ char charAdd)]
   ]
 
 -------------------------------------Modulo Evaluator----------------------------------------
 
-evalExpr :: Expression -> Int -> Maybe Int
-evalExpr (Con i) m = modulo (Just i) m
-evalExpr (Neg e) m = modulo (fnNeg (evalExpr e m)) m
-evalExpr (Add e1 e2) m = modulo (fnAdd (evalExpr e1 m) (evalExpr e2 m)) m
-evalExpr (Mul e1 e2) m = modulo (fnMul (evalExpr e1 m) (evalExpr e2 m)) m
-evalExpr (Pow e1 (Con i)) m = modulo (evalExpr e1 m `fnPow` i) m
-evalExpr _ _ = Nothing
+evalExpression :: Expression -> Int -> Maybe Int
+evalExpression (Con i) m = modulo (Just i) m
+evalExpression (UnOp op e) m = modulo (fnOp op (evalExpression e m) Nothing) m
+evalExpression (BinOp op e1 e2) m = modulo (fnOp op (evalExpression e1 m) (evalExpression e2 m)) m
+evalExpression _ _ = Nothing
 
 modulo :: Maybe Int -> Int -> Maybe Int
 modulo (Just i) m = Just (i `mod` m)
 modulo _ _ = Nothing
 
-moduloInverse :: Maybe Int -> Int -> Maybe Int
-moduloInverse (Just i) m = elemIndex 1 [(i * d) `mod` m  | d <- [0 .. m-1] ]
-moduloInverse _ _ = Nothing
-
-fnAdd :: Maybe Int -> Maybe Int -> Maybe Int
-fnAdd (Just i1) (Just i2) = Just (i1 + i2)
-fnAdd _ _ = Nothing
-
-fnMul :: Maybe Int -> Maybe Int -> Maybe Int
-fnMul (Just i1) (Just i2) = Just (i1 * i2)
-fnMul _ _ = Nothing
-
-fnNeg :: Maybe Int -> Maybe Int
-fnNeg (Just x) = Just (-x)
-fnNeg _ = Nothing
-
-fnPow :: Maybe Int -> Int -> Maybe Int
-fnPow (Just i1) i2 = Just (i1 ^ i2)
-fnPow _ _ = Nothing
+fnOp :: Op -> Maybe Int -> Maybe Int -> Maybe Int
+fnOp Neg (Just x) _ = Just (-x)
+fnOp op (Just i1) (Just i2) 
+  = Just (opVal i1 i2)
+    where opVal = case op of
+                  Pow -> (^)
+                  Mul -> (*)
+                  Sub -> (-)
+                  Add -> (+)
+fnOp _ _ _ = Nothing
 
 -------------------------------------Tests----------------------------------------
 
+_e :: String
+_e = "12-13 * 32 ^4"
+
 debugOut :: String
-debugOut = intercalate "\n" (map (show . parseImplicitLaw) [implicit_law1, implicit_law2, implicit_law3, implicit_law4, implicit_law5]) ++ "\n" ++
-           intercalate "\n" (map (show . parseExplicitLaw) [explicit_law1, explicit_law2])
+debugOut = intercalate "\n" (map (show . (parseLaw True)) [implicit_law1, implicit_law2, implicit_law3, implicit_law4, implicit_law5]) ++ "\n" ++ 
+           intercalate "\n" (map (show . (parseLaw False)) [explicit_law1, explicit_law2]) ++ "\n" ++ 
+           show (parseExpression _e) ++ "\n" ++ 
+           show (evalExpression (parseExpression _e) 11)
+
+-------------------------------------Proofs----------------------------------------
+
+-- getDerivation :: [Law] -> ProbExpr -> Proof
+-- getDerivation laws e
+--  = Proof e (multiSteps e)
+--  where multiSteps e'
+--         = case [ (lawName law, res)
+--                | law <- laws
+--                , res <- getStep (lawEq law) e'
+--                ] of
+--            [] -> []
+--            ((nm,e''):_) -> (nm,e'') : multiSteps e''
+
