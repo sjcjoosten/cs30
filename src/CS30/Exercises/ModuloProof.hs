@@ -19,19 +19,35 @@ type ParseError = ParseErrorBundle String Void
 
 data Expression = Con Int |
                   Var Char |
-                  Inv Expression |
+                  Neg Expression |
                   Pow Expression Expression |
                   Mul Expression Expression |
                   Add Expression Expression |
                   Sub Expression Expression |
-                  Mod Expression Expression |
                   ExpressionError
                   deriving (Show, Eq, Ord)
 
-data Proof = Proof [ExplicitLaw] deriving (Show, Eq)
-data ImplicitLaw = ImplicitLaw String Equation Equation | ImplicitLawError deriving (Show, Eq)
-data ExplicitLaw = ExplicitLaw String Equation | ExplicitLawError deriving (Show, Eq)
-type Equation = (Expression, Expression)
+data Proof = Proof Expression [ExplicitLaw] | ProofError deriving (Show, Eq)
+type ProofStep = (String, Expression)
+
+data PreCondition = PreCondition (Expression, Expression) | PreConditionError deriving (Show, Eq)
+
+data ImplicitLaw = ImplicitLaw 
+ { 
+   iName :: String, 
+   iCond :: PreCondition, 
+   iLhs  :: Expression, 
+   iRhs  :: Expression, 
+   iMod  :: Expression
+ } | ImplicitLawError deriving (Show, Eq)
+
+data ExplicitLaw = ExplicitLaw
+ { 
+   eName :: String,
+   eLhs  :: Expression,
+   eRhs  :: Expression,
+   eMod  :: Expression
+ } | ExplicitLawError deriving (Show, Eq)
 
 implicit_law1, implicit_law2, implicit_law3, implicit_law4, implicit_law5 :: String
 implicit_law1 = "Law1 : a = b (mod p) implies a + c = b + c (mod p)"
@@ -47,8 +63,8 @@ explicit_law2 = "Law2 : a + p*b = a (mod p)"
 ---------------------------------Character Definitions-------------------------------------------
 
 -- Operations -- TODO : Replace with special characters
-charInv, charAdd, charSub, charMul, charPow :: Char
-charInv = '~'
+charNeg, charAdd, charSub, charMul, charPow :: Char
+charNeg = '-'
 charAdd = '+'
 charSub = '-'
 charMul = '*'
@@ -72,23 +88,23 @@ parseImplicitLaw x = getImplicitLaw (parse parserImplicitLaw "<myparse>" (filter
                            getImplicitLaw _ = ImplicitLawError
 
 parserImplicitLaw :: Parser ImplicitLaw
-parserImplicitLaw = do name  <- someTill anySingle (char charColon)
-                       expr1 <- parserExpression
+parserImplicitLaw = do _name <- someTill anySingle (char charColon)
+                       _ex1  <- parserExpression
                        _     <- char charEquals
-                       expr2 <- parserExpression
+                       _ex2  <- parserExpression
                        _     <- char charOpen
                        _     <- string stringMod
-                       expr3 <- parserExpression
+                       _     <- parserExpression
                        _     <- char charClose
                        _     <- string stringImplies
-                       expr4 <- parserExpression
+                       _lhs  <- parserExpression
                        _     <- char charEquals
-                       expr5 <- parserExpression
+                       _rhs  <- parserExpression
                        _     <- char charOpen
                        _     <- string stringMod
-                       expr6 <- parserExpression
+                       _mod  <- parserExpression
                        _     <- char charClose
-                       return (ImplicitLaw name (expr1, Mod expr2 expr3) (expr4, Mod expr5 expr6))
+                       return ImplicitLaw { iName = _name, iCond = PreCondition (_ex1, _ex2), iLhs = _lhs, iRhs = _rhs, iMod = _mod }
 
 parseExplicitLaw :: String -> ExplicitLaw
 parseExplicitLaw x = getExplicitLaw (parse parserExplicitLaw "<myparse>" (filter (\y->y/=' ') x))
@@ -96,15 +112,20 @@ parseExplicitLaw x = getExplicitLaw (parse parserExplicitLaw "<myparse>" (filter
                            getExplicitLaw _ = ExplicitLawError
 
 parserExplicitLaw :: Parser ExplicitLaw
-parserExplicitLaw = do name  <- someTill anySingle (char charColon)
-                       expr1 <- parserExpression
+parserExplicitLaw = do _name <- someTill anySingle (char charColon)
+                       _lhs  <- parserExpression
                        _     <- char charEquals
-                       expr2 <- parserExpression
+                       _rhs  <- parserExpression
                        _     <- char charOpen
                        _     <- string stringMod
-                       expr3 <- parserExpression
+                       _mod  <- parserExpression
                        _     <- char charClose
-                       return (ExplicitLaw name (expr1, Mod expr2 expr3))
+                       return ExplicitLaw { eName = _name, eLhs = _lhs, eRhs = _rhs, eMod = _mod }
+
+parseExpression :: String -> Expression
+parseExpression x = getExpression (parse parserExpression "<myparse>" (filter (\y->y/=' ') x))
+                    where getExpression (Right law) = law
+                          getExpression _ = ExpressionError
 
 parserExpression :: Parser Expression
 parserExpression = makeExprParser parserTerm operatorTable
@@ -120,8 +141,8 @@ parserParenthesis = between (char charOpen) (char charClose)
 operatorTable :: [[Operator Parser Expression]]
 operatorTable =
   [ 
+    [Prefix (Neg <$ char charNeg)],
     [InfixL (Pow <$ char charPow)],
-    [Prefix (Inv <$ char charInv)],
     [InfixL (Mul <$ char charMul)],
     [InfixL (Sub <$ char charSub)],
     [InfixL (Add <$ char charAdd)]
@@ -131,33 +152,35 @@ operatorTable =
 
 evalExpr :: Expression -> Int -> Maybe Int
 evalExpr (Con i) m = modulo (Just i) m
-evalExpr (Inv e) m = moduloInverse (evalExpr e m) m
-evalExpr (Add e1 e2) m = modulo (evalExpr e1 m `fnAdd` evalExpr e2 m) m
-evalExpr (Mul e1 e2) m = modulo (evalExpr e1 m `fnMul` evalExpr e2 m) m
+evalExpr (Neg e) m = modulo (fnNeg (evalExpr e m)) m
+evalExpr (Add e1 e2) m = modulo (fnAdd (evalExpr e1 m) (evalExpr e2 m)) m
+evalExpr (Mul e1 e2) m = modulo (fnMul (evalExpr e1 m) (evalExpr e2 m)) m
 evalExpr (Pow e1 (Con i)) m = modulo (evalExpr e1 m `fnPow` i) m
 evalExpr _ _ = Nothing
 
 modulo :: Maybe Int -> Int -> Maybe Int
-modulo Nothing _ = Nothing
 modulo (Just i) m = Just (i `mod` m)
+modulo _ _ = Nothing
 
 moduloInverse :: Maybe Int -> Int -> Maybe Int
-moduloInverse Nothing _ = Nothing
 moduloInverse (Just i) m = elemIndex 1 [(i * d) `mod` m  | d <- [0 .. m-1] ]
+moduloInverse _ _ = Nothing
 
 fnAdd :: Maybe Int -> Maybe Int -> Maybe Int
-fnAdd Nothing _ = Nothing
-fnAdd _ Nothing = Nothing
 fnAdd (Just i1) (Just i2) = Just (i1 + i2)
+fnAdd _ _ = Nothing
 
 fnMul :: Maybe Int -> Maybe Int -> Maybe Int
-fnMul Nothing _ = Nothing
-fnMul _ Nothing = Nothing
 fnMul (Just i1) (Just i2) = Just (i1 * i2)
+fnMul _ _ = Nothing
+
+fnNeg :: Maybe Int -> Maybe Int
+fnNeg (Just x) = Just (-x)
+fnNeg _ = Nothing
 
 fnPow :: Maybe Int -> Int -> Maybe Int
-fnPow Nothing _ = Nothing
 fnPow (Just i1) i2 = Just (i1 ^ i2)
+fnPow _ _ = Nothing
 
 -------------------------------------Tests----------------------------------------
 
