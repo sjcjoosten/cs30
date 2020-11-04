@@ -1,15 +1,17 @@
---  then we can get rid of a lot of 'string'
-{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wall #-}
 
 module CS30.Exercises.LogicExpr.Logic where
-
-import Control.Monad.Combinators.Expr
-import CS30.Exercises.LogicExpr.Datatypes
 import CS30.Exercises.LogicExpr.Parser
-import Text.Megaparsec
-import Text.Megaparsec.Char
+import Data.Maybe ( fromJust )
 
+type Substitution = [(VarName,LogicExpr)]
+type VarName = Char
+
+data Proof = Proof LogicExpr [Step] deriving (Show)
+
+type Step = (LawName, LogicExpr)
+
+input_laws :: [String]
 input_laws = [
     "Law1:¬(¬p)≡p"
     , "Law2:p∧p≡p"
@@ -23,129 +25,89 @@ input_laws = [
     , "Law10:¬(p∧q)≡¬p∨¬q"
     , "Law11:p∧¬p≡false"
     , "Law12:p∨¬p≡true"
-    , "Law3':true∧p≡p"
-    , "Law4':true∨p≡true"
-    , "Law7':false∨p≡p"
-    , "Law8':false∧p≡false"
+    , "Redundancy law: (p∨q)∧(p∨¬q)≡p"
+    , "Redundancy law: p∨(¬p∧q)≡p∨q"
+    , "true/false: ¬true≡false"
+    , "true/false: ¬false≡true"
+    -- Commutative laws give potentially verbose proof
+    -- , "Commute: p∧q≡q∧p"
+    -- , "Commute: p∨q≡q∨p"
+    , "Assoc: (p∨q)∨r≡p∨q∨r"
+    , "Assoc: p∨(q∨r)≡p∨q∨r"    
     ]
 
--- res = simplify input_laws "¬(p∨q)∨¬(p∨q)∧true∧false"
--- Buggy now
 
-simplify :: [String] -> String -> Calculation
-simplify strings str = calculate laws e
+simplify :: [String] -> String -> Proof
+simplify strings str = getDerivation laws e
   where
-    parseLaw s =
-        case parse law "" s of
-        Left m -> error $ show m
-        Right law' -> law'        
-    parseExpr s =
-        case parse logicExpr "" s of
-        Left m -> error $ show m
-        Right e' -> e'
     laws = map parseLaw strings
     e = parseExpr str
 
-
-calculate :: [Law] -> LogicExpr -> Calculation
-calculate laws e = Calc e (manyStep rws e)
-  where
-    rws ex =
-      [ (name, e')
-        | Law name eqn <- sortLaws laws,
-          e' <- rewrites eqn ex,
-          e' /= ex
-      ]
-
-manyStep :: (LogicExpr -> [Step]) -> LogicExpr -> [Step]
-manyStep rws e =
-  if null steps
-    then []
-    else step : manyStep rws (snd step)    
-  where
-    steps = rws e
-    step = head steps
-
-sortLaws = id
-
-rewrites :: Equation -> LogicExpr -> [LogicExpr]
-
-rewrites eqn@(eq1, eq2) e = [apply (unify $ concat $ matchA eq1 e) eqn e]
-
-apply []  _ expr = expr
-apply sub (eqn1, eqn2) expr = replace expr eqn1' eqn2'
-  where 
-    eqn1' = foldl (\acc subst -> applyA acc subst) eqn1 sub
-    eqn2' = foldl (\acc subst -> applyA acc subst) eqn2 sub
-    replace e e1 e2
-      | e == e1 = e2
-      | otherwise = case e of 
-          (Bin op exp1 exp2) -> (Bin op (replace exp1 e1 e2) (replace exp2 e1 e2))
-          (Neg exp) -> (Neg (replace exp e1 e2))
-          e -> e    
+getDerivation :: [Law] -> LogicExpr -> Proof
+getDerivation laws e
+ = Proof e (multiSteps e []) -- Give multiSteps an accumulater param, so we can use commutative law
+ where multiSteps e' acc
+        = case [ (lawName law, res)
+               | law <- laws
+               , res <- getStep (lawEq law) e'               
+               ] of
+            [] -> []
+            xs ->  case chooseNew xs acc of
+              Nothing -> []
+              Just (nm, e'') -> (nm, e''): multiSteps e'' (e'':acc)
+              where                 
+                chooseNew [] _ = Nothing
+                chooseNew ((name, x):xs') acc' = if x `elem` acc then chooseNew xs' acc' else Just (name, x)        
 
 
-applyA :: LogicExpr -> (VarName, LogicExpr) -> LogicExpr
-applyA e sub = case e of    
-    (Var v) -> if v == fst sub then snd sub else (Var v)
-    (Neg e1) -> Neg (applyA e1 sub)
-    (Bin op e1 e2) -> Bin op (applyA e1 sub) (applyA e2 sub)
-    _ -> e
-
-unify xs = if and (map (allSame xs) xs) then unique xs else []
-allSame (x:xs) y = if fst x == fst y 
-                    then 
-                        if snd x == snd y 
-                        then allSame xs y
-                        else False
-                    else
-                        allSame xs y
-allSame [] _ = True                        
-
-unique xs = reverse $ unique' xs []
-unique' (x:xs) acc = if x `elem` acc then unique' xs acc else unique' xs (x:acc)
-unique' [] acc = acc
-
-matchA :: LogicExpr -> LogicExpr -> [Substitution]
-matchA (Var v) e = [unitSub v e]
-matchA eqn@(Bin op e1 e2) (Bin op' e1' e2')
-  | op == op' =   if (not $ null m1) && (not $ null m2) 
-                  then m1 ++ m2 
-                  else if (not $ null m1') && (not $ null m2') 
-                       then m1' ++ m2'                      
-                       else if null e1_match then e2_match else e1_match
-  | otherwise = if null e1_match then e2_match else e1_match
-    where
-    m1 = (matchA e1 e1')
-    m2 = (matchA e2 e2')
-    m1' = (matchA e1 e2')
-    m2' = (matchA e2 e1')    
-    e1_match = matchA eqn e1'
-    e2_match = matchA eqn e2'
-matchA (Neg e1) (Neg e2) = matchA e1 e2
-matchA (Con True) (Con True) = [[]]
-matchA (Con True) _ = []
-matchA (Con False) (Con False) = [[]]
-matchA (Con False) _ = []
-matchA _ _ = []
+getStep :: Equation -> LogicExpr -> [LogicExpr]
+getStep (lhs, rhs) expr
+  = case matchE lhs expr of
+      Nothing -> recurse expr
+      Just subst -> [apply subst rhs]
+  where recurse (Var _) = []
+        recurse (Con _) = []
+        recurse (Bin op e1 e2)
+          = [Bin op e1' e2 | e1' <- getStep (lhs,rhs) e1] ++
+            [Bin op e1 e2' | e2' <- getStep (lhs,rhs) e2]
+        recurse (Neg e1)
+          = [Neg e1' | e1' <- getStep (lhs,rhs) e1]
 
 
+matchE :: LogicExpr -> LogicExpr -> Maybe Substitution
+matchE (Var nm) expr = Just [(nm,expr)]
+matchE (Con i) (Con j) | i == j = Just []
+matchE (Con _) _ = Nothing
 
--- neglaw = parse law "" "neg law:¬(¬p) ≡ p"
+-- matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2 
+--  = case (matchE e1 e3, matchE e2 e4) of
+--     (Just s1, Just s2) -> combineTwoSubsts s1 s2
+--     _ -> Nothing
 
--- law2 =  parseLaw "onelaw: p∨p≡p"
--- exp2 = parseExpr "(p∨p)"
--- Law name eqn2 = law2
+matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2 
+ = do 
+      let res = tryMatch e1 e2 e3 e4 in
+        case res of -- And and Or operators are commutative, so check for reversed match
+          Nothing -> if op1 == And || op1 == Or then tryMatch e1 e2 e4 e3 else Nothing
+          _ -> res
+   where 
+     tryMatch e1' e2' e3' e4'= do
+          s1 <- matchE e1' e3'
+          s2 <- matchE e2' e4'
+          combineTwoSubsts s1 s2 
 
--- law3 = parseLaw "Law3: p⇒q≡¬p∨q"
--- exp3 = parseExpr "p⇒r"
--- Law name3 eqn3 = law3
--- (eqn31, eqn32) = eqn3
+matchE (Bin _ _ _) _ = Nothing
+matchE (Neg e1) (Neg e2) = matchE e1 e2
+matchE (Neg _) _ = Nothing
 
--- law4 = parseLaw "Law3:p∧false≡false"
--- -- exp4 = parseExpr "false∧q∧true∧p"
--- exp4 = parseExpr "¬(p ⇒ q) ⇒ (p ∧ ¬q)"
+combineTwoSubsts :: Substitution -> Substitution -> Maybe Substitution
+combineTwoSubsts s1 s2
+  = case and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2] of
+     True -> Just (s1 ++ s2)
+     False -> Nothing
 
--- -- exp4 = parseExpr "false∧q"
--- Law name4 eqn4 = law4
--- (eqn41, eqn42) = eqn4
+apply :: Substitution -> LogicExpr -> LogicExpr
+apply subst (Var nm) = fromJust $ lookup nm subst
+apply _ (Con i) = Con i
+apply subst (Neg e) = Neg (apply subst e)
+apply subst (Bin op e1 e2) = Bin op (apply subst e1) (apply subst e2)
