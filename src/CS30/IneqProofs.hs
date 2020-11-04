@@ -1,4 +1,6 @@
 module CS30.LawParser where
+import CS30.Data
+import CS30.Exercises.Data
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Data.Void
@@ -6,42 +8,49 @@ import Control.Monad.Combinators.Expr
 import qualified Text.Megaparsec.Char.Lexer as L
 -- import           Data.Functor.Identity
 
-type Parser   = Parsec Void String
-data Law      = Law LawName Equation
-type LawName  = String
-type Equation = (Expr,Expr)
-data MathExpr = MathConst Integer 
-              | MathVar String
-              | Fact MathExpr            -- factorial
-              | Divide MathExpr MathExpr  -- division
-              | Mult  MathExpr MathExpr  -- multiply two MathExpr's 
-              | Expon MathExpr MathExpr  -- set first MathExpr to the second MathExpr power
-              | Add MathExpr MathExpr
-              | Sub MathExpr MathExpr
-              | Neg MathExpr
-              deriving Show
-data Expr     = Var String | Const Integer | Op Opr [Expr] deriving (Eq,Show)
-data Opr      = Multiplication | Division | Addition | Subtraction
-              | Exponentiation | Factorial | Negate deriving (Eq,Show)
-data Proof    = Proof Expr [(String, Expr)]
+type Parser     = Parsec Void String
+data Law        = Law {lawName :: String, lawEq :: Equation}
+type LawName    = String
+type Equation   = (Expr,Expr)
 
--- law :: Parser Law
--- law = do {name <- upto ':';
---           eqn <- equation; return (Law name eqn)}
+data MathExpr  = MathConst Integer 
+               | MathVar String
+               | Fact MathExpr            -- factorial
+               | Divide MathExpr MathExpr  -- division
+               | Mult  MathExpr MathExpr  -- multiply two MathExpr's 
+               | Expon MathExpr MathExpr  -- set first MathExpr to the second MathExpr power
+               | Add MathExpr MathExpr
+               | Sub MathExpr MathExpr
+               | Neg MathExpr
+               deriving Show
+data Expr      = Var String | Const Integer | Op Opr [Expr] deriving (Eq,Show)
+data Opr       = Multiplication | Division | Addition | Subtraction
+               | Exponentiation | Factorial | Negate deriving (Eq,Show)
+data Proof     = Proof Expr [ProofStep] deriving Show
+type ProofStep = (String, Expr)
 
--- upto :: Char -> Parser String upto c
--- = Parser (\s ->
--- let (xs,ys) = break (==c) s in
---                         if null ys then []
---                         else [(xs,tail ys)])
+type Inequality = (Expr,Ineq,Expr)
+data Ineq       = GThan | GEq deriving (Eq,Show)
+type Implies    = (Ineq,Ineq)
+data IneqLaw    = IneqLaw {lawName :: String, lawEq :: Implies}
 
 instance Show Law where 
   showsPrec _ (Law name (e1,e2))
     = showString name . 
       showString ": " . 
-      shows e1 . 
+      shows e1 .
       showString " = " . 
       shows e2
+instance Show IneqLaw where 
+  showsPrec _ (IneqLaw name ((e11,i1,e12),(e21,i2,e22)))
+    = showString name . 
+      showString ": " . 
+      shows e11 . shows i1 . shows e12 .
+      showString " \\Rightarrow " . 
+      shows e21 . shows i2 . shows e22
+instance Show Ineq where
+  showsPrec GThan = " > "
+  showsPrec GEq = " ≥ "
 
 -- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
 lawList :: [String]
@@ -61,6 +70,13 @@ lawList = [ "Commutative of Addition: a + b = b + a"
           , "Multiplicative Inverse: a / a = 1"
           , "Distributive Law: a - (b + c) = a - b - c"
           , "Distributive Law: a - (b - c) = a - b + c" ]
+ineqLawList :: [String]
+ineqLawList = [ "Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"
+              , "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"
+              , "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"
+              , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"
+              , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"
+              , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x" ]
 
 getProofLengthN :: Int -> [Law] -> (Expr -> Law -> [Expr] ) -> Expr -> [Proof]
 getProofLengthN 0 _ _ e = [Proof e []]
@@ -184,3 +200,73 @@ parseUntil c = (do _ <- satisfy (== c)
                    rmd <- parseUntil c
                    return (c1:rmd)
                )
+
+law1 = Law "Assoc" (Op Addition [Op Addition [Var "X",Var "Y"],Var "Z"], Op Addition [Var "X", Op Addition [Var "Y", Var "Z"]])
+
+-- generateRandEx :: Int -> ChoiceTree Expr
+-- generateRandEx = undefined
+
+-- data Law = Law String Equation
+-- lawName (Law nm _) = nm
+-- lawEq (Law _ eq) = eq
+-- data Law = Law {lawName :: String, lawEq :: Equation}
+
+getDerivation :: [Law] -> Expr -> Proof
+getDerivation laws e
+ = Proof e (multiSteps e)
+ where multiSteps e'
+        = case [ (lawName law, res)
+               | law <- laws
+               , res <- getStep (lawEq law) e'
+               ] of
+           [] -> []
+           ((nm,e''):_) -> (nm,e'') : multiSteps e''
+
+-- as example of getStep:
+-- (5 - 3) - 1
+-- x - y = x + (negate y)
+-- lhs: x - y, rhs: x + (negate y)
+-- expr: E[(5 - 3) - 1]
+-- subst to get: x = 5 - 3, y = 1
+
+getStep :: Equation -> Expr -> [Expr]
+getStep (lhs, rhs) expr
+  = case matchE lhs expr of
+      Nothing -> recurse expr
+      Just subst -> [apply subst rhs]
+  where recurse (Var _) = []
+        recurse (Const _) = []
+        recurse (Op o [e1,e2])
+          = [Op o [e1', e2] | e1' <- getStep (lhs,rhs) e1] ++
+            [Op o [e1, e2'] | e2' <- getStep (lhs,rhs) e2]
+        recurse (Op o [e1])
+          = [Op o [e1'] | e1' <- getStep (lhs,rhs) e1]
+-- 0 + x = x
+type Substitution = [(String, Expr)]
+matchE :: Expr -> Expr -> Maybe Substitution
+matchE (Var nm) expr = Just [(nm,expr)]
+matchE (Const i) (Const j) | i == j = Just []
+matchE (Const _) _ = Nothing
+matchE (Op o1 [e1,e2]) (Op o2 [e3,e4]) | o1 == o2
+ = case (matchE e1 e3, matchE e2 e4) of
+    (Just s1, Just s2) -> combineTwoSubsts s1 s2
+    _ -> Nothing
+matchE (Op o1 [e1]) (Op o2 [e2]) | o1 == o2
+ = matchE e1 e2
+matchE (Op _ _) _ = Nothing
+combineTwoSubsts :: Substitution -> Substitution -> Maybe Substitution
+combineTwoSubsts s1 s2
+  = case and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2] of
+     True -> Just (s1 ++ s2)
+     False -> Nothing
+apply :: Substitution -> Expr -> Expr
+apply subst (Var nm) = lookupInSubst nm subst
+apply subst (Const i) = Const i
+apply subst (Op o [e]) = Op o [apply subst e]
+apply subst (Op o [e1,e2]) = Op o [(apply subst e1),(apply subst e2)]
+
+lookupInSubst :: String -> [(String, p)] -> p
+lookupInSubst nm ((nm',v):rm)
+ | nm == nm' = v
+ | otherwise = lookupInSubst nm rm
+lookupInSubst _ [] = error "Substitution was not complete, or free variables existed in the rhs of some equality"
