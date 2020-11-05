@@ -334,8 +334,6 @@ ol, ul {
   padding-left: 0;
   margin-top: 0; }
 
-li {
-  margin-bottom: 1rem; }
 
 
 /* Code
@@ -505,6 +503,10 @@ ul.dropdown-content>li{
   list-style:none;
   border-radius: 4px;
   cursor: pointer;
+  margin-bottom: 1rem;
+}
+ul.dropdown-content>li:hover{
+  border: 1px solid #c4dd88;
 }
 /* js ui elements */
 
