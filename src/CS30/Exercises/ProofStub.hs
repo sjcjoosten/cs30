@@ -28,12 +28,6 @@ proofStub = exerciseType "proofStub" "(testing)" "Displaying sortable proofs"
                         else markWrong pr{prFeedback=[ FText "You answered: ",FText strOrder
                                                      , FText " as the order and selected step ",FText strChoice]}
                    _ -> error "Client response is missing 'proof' field"
-               = case Map.lookup "proof" rsp of
-                   Just str
-                     -> if map ((sol !!) . read) (breakUnderscore str) == [0..4]
-                        then markCorrect pr
-                        else markWrong pr{prFeedback=[FText "You answered: ",FText str]}
-                   Nothing -> error "Client response is missing 'proof' field"
 genProof :: [Int] -> Exercise -> Exercise
 genProof order def 
  = def{ eQuestion = [ FText $"Here is an example proof, can you put it in the right order?"
