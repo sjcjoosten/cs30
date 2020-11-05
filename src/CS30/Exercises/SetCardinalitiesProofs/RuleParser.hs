@@ -16,21 +16,21 @@ data Symb = Add
          | Cardinality
          | Cartesian
          | Expon
-         | Setminus
+         | Setminus 
+         deriving (Show, Eq)
 
-type Const = Char
-data Expr = Var Const | Op Symb [Expr]
+data Expr = Var Char | Op Symb [Expr] deriving (Show, Eq)
 
-data Law = Law String Equation
+data Law = Law String Equation deriving (Show)
 type Equation = (Expr, Expr)  -- (left,right)
 
 
 
 pLaw :: Parser Expr -> Parser Law
 pLaw pExpr = 
-   do lawName <- parseUntil ':'
+   do lawName <- parseUntil ':' <*spaces
       lhs <- pExpr
-      _ <- string "="
+      _ <- string "=" <*spaces
       rhs <- pExpr
       return (Law lawName (lhs, rhs))
 
@@ -38,25 +38,24 @@ parseUntil :: MonadParsec e s f => Token s -> f [Token s]
 parseUntil c 
    =  (do _ <- satisfy (== c) 
           return []) <|>
-      (do c <- satisfy (const True) 
+      (do ch <- satisfy (const True) 
           rmd <- parseUntil c 
-          return (c:rmd))
+          return (ch:rmd))
 
 -- operator table for use with makeExprParser 
 operatorTable :: [[Operator Parser Expr]]
 operatorTable =
   [ 
      -- Number operations
-     [binary "\\cdot" Mult],
-     [binary "+" Add],
-     [binary "-" Sub],
      [binary "^" Expon],
+     [binary "\\cdot" Mult],
+     [binary "+" Add, binary "-" Sub],
 
    --   -- Set operations
+     [binary "\\times" Cartesian],
      [binary "\\cup" Union],
      [binary "\\cap" Intersection],
-     [binary "\\times" Cartesian ],
-     [binary "\\setminuts" Setminus]
+     [binary "\\setminus" Setminus]
   ]
 
 binary name symb = InfixL ((\lhs rhs -> Op symb [lhs,rhs]) <$ symbol name)
@@ -76,13 +75,16 @@ spaceConsumer = L.space spaces empty empty
 
 -- based on Drill 6.2 scaffold
 spaces :: Parser ()
-spaces = some spc >> return ()
+spaces = many spc >> return ()
  where spc = string " " <|> string "\t" <|> string "\n" <|> string "\r"
              <|> string "\\ " <|> string "~"
 
 -- parse a given specific string, accounting for spaces 
 symbol :: String -> Parser String
-symbol = L.symbol spaceConsumer
+symbol = unspace . string
+
+unspace :: Parser a -> Parser a
+unspace p = spaces *> p <* spaces
 
 -- parse something between {...}
 brackets :: Parser a -> Parser a
@@ -99,9 +101,13 @@ parseCardinality = do
    return (Op Cardinality [x])
 -- cardinality = between (symbol "|") (symbol "|")
 
+parseVar :: Parser Expr
+parseVar = Var <$> satisfy isLetter <* spaces
+   where
+      isLetter c = elem c ['A'..'Z']
 
 parseTerm :: Parser Expr
-parseTerm =  brackets parseExpr <|> parseCardinality-- <|> parseConstant -- <|> parseBinom <|> parseFrac <|> parens parseExpr <|>
+parseTerm =  brackets parseExpr <|> parseCardinality <|> parseVar -- <|> parseBinom <|> parseFrac <|> parens parseExpr <|>
 
 
 parseExpr :: Parser Expr
