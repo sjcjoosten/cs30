@@ -51,6 +51,7 @@ validField (FText str) = seq str QCP.succeeded
 validField (FNote str) = seq str QCP.succeeded
 validField (FIndented n lst) | n >= 0 = resultAll (map validField lst)
 validField (FIndented n lst) = QCP.failed{QCP.reason = "Indentation cannot be negative."}
+validField (FChoice{}) = QCP.succeeded
 validField (FReorder nm lst)
  = resultAll (validHTMLName "The Field with constructor FValue" nm:concatMap (map validField) lst)
 validField (FValue a b)
