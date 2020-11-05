@@ -1,10 +1,11 @@
 {-# OPTIONS_GHC -Wall #-}
 
-module CS30.Exercises.ModuloProof (debugOut) where
+module CS30.Exercises.ModuloProof where
 
 import Data.List
 import Data.Void
 import Data.Functor.Identity
+-- import Data.Nubmers.Prime (isPrime)
 
 import Text.Megaparsec hiding (ParseError)
 import Text.Megaparsec.Char
@@ -17,8 +18,19 @@ import Control.Monad.Combinators.Expr
 type Parser = ParsecT Void String Identity
 type ParseError = ParseErrorBundle String Void
 
+data Proof = Proof Expression [ProofStep] | ProofError deriving (Show, Eq)
+type ProofStep = (String, Expression)
+type Substitution = [(String, Expression)]
+
+data Law = Law {lawName :: String, lawEq :: Equation, eqType :: EqualityType} | LawError deriving (Show, Eq)
+-- TODO : See where the distinction for primes comes into picture 
+-- data EqualityType = Regular | ModPrime | ModNonPrime deriving (Show, Eq) 
+data EqualityType = Equals | Congruent deriving (Show, Eq)
+type Equation = (Expression, Expression)
+
 data Expression = Con Int |
-                  Var Char |
+                  Var Char | -- For problem specific variables
+                  Fixed Char | -- For variables comming from a law
                   UnOp Op Expression |
                   BinOp Op Expression Expression |
                   ExpressionError
@@ -26,34 +38,35 @@ data Expression = Con Int |
 
 data Op = Neg | Pow | Mul | Sub | Add deriving (Show, Eq, Ord)
 
-data PreCondition = PreCondition (Expression, Expression) | NoPreCondition deriving (Show, Eq)
+------------------------------------------Basic Laws----------------------------------------
 
-data Law = Law { 
-                 lawName :: String, 
-                 lawCond :: PreCondition,
-                 lawLhs  :: Expression, 
-                 lawRhs  :: Expression, 
-                 lawMod  :: Expression
-               } | LawError deriving (Show, Eq)
+modulo_laws :: [String]
+modulo_laws = [
+               "Law2 : p \\equiv_p 0 (mod p)",
+               "Law1 : x ^ (p-1) \\equiv_p 1 (mod p)"
+              ]
 
-data Proof = Proof Expression [ProofStep] | ProofError deriving (Show, Eq)
-type ProofStep = (String, Expression)
-type Substitution = [(String, Expression)]
-
-implicit_law1, implicit_law2, implicit_law3, implicit_law4, implicit_law5 :: String
-implicit_law1 = "Law1 : a = b (mod p) implies a + c = b + c (mod p)"
-implicit_law2 = "Law2 : a = b (mod p) implies c + a = c + b (mod p)"
-implicit_law3 = "Law3 : a = b (mod p) implies a * c = b * c (mod p)"
-implicit_law4 = "Law4 : a = b (mod p) implies c * a = c * b (mod p)"
-implicit_law5 = "Law5 : a = b (mod p) implies a ^ c = b ^ c (mod p)"
-
-explicit_law1, explicit_law2 :: String
-explicit_law1 = "Law1 : x ^ (p-1) = 1 (mod p)"
-explicit_law2 = "Law2 : a + p*b = a (mod p)"
+-- TODO : add artihmetic laws, 0 ,1 , mul, add, power, handle 0 ^ 0
+arithmetic_laws :: [String]
+arithmetic_laws = [
+                   "Law1 : x * 0 = 0",
+                   "Law2 : x + 0 = x",
+                   "Law3 : x * 1 = x",
+                   "Law4 : x * -1 = -x",
+                   "Law5 : x ^ 0 = 1",
+                   "Law6 : 1 ^ x = 1",
+                   "Law7 : x + y = y + x",
+                   "Law8 : x * y = y * x",
+                   "Law9 : x + (y + z) = (x + y) + z",
+                   "Law10 : x * (y * z) = (x * y) * z",
+                   "Law11 : x * (y + z) = x * y + x * z",
+                   "Law12 : x * (y - z) = x * y - x * z",
+                   "Law13 : x ^ (y + z) = x ^ y * x ^ z"
+                  ]
 
 ---------------------------------Character Definitions-------------------------------------------
 
--- Operations -- TODO : Replace with special characters
+-- TODO : Replace with special characters wherever applicable
 charNeg, charAdd, charSub, charMul, charPow :: Char
 charNeg = '-'
 charAdd = '+'
@@ -67,60 +80,51 @@ charClose = ')'
 charEquals = '='
 charColon = ':'
 
-stringMod, stringImplies :: String
+stringMod, stringImplies, stringCongruent :: String
 stringMod = "mod"
 stringImplies = "implies"
+stringCongruent = "\\equiv_p" -- ≡
 
 --------------------------------------Parser Functions-------------------------------------------
 
-parseLaw :: Bool -> String -> Law
-parseLaw isImplicit str = getLaw (parse parserLaw "<myparse>" (filter (\y->y/=' ') str))
-                          where parserLaw = if isImplicit then parserImplicitLaw else parserExplicitLaw
-                                getLaw (Right law) = law
-                                getLaw _ = LawError
+parseLaw :: Bool -> EqualityType -> String -> Law
+parseLaw isFixed lawEqType str = getLaw (parse (parserLaw isFixed) "<myparse>" (filter (\y->y/=' ') str))
+                                 where parserLaw = if lawEqType == Equals then parserArithmeticLaw else parserModuloLaw
+                                       getLaw (Right law) = law
+                                       getLaw _ = LawError
 
-parserImplicitLaw :: Parser Law
-parserImplicitLaw = do _name <- someTill anySingle (char charColon)
-                       _ex1  <- parserExpression
-                       _     <- char charEquals
-                       _ex2  <- parserExpression
-                       _     <- char charOpen
-                       _     <- string stringMod
-                       _     <- parserExpression
-                       _     <- char charClose
-                       _     <- string stringImplies
-                       _lhs  <- parserExpression
-                       _     <- char charEquals
-                       _rhs  <- parserExpression
-                       _     <- char charOpen
-                       _     <- string stringMod
-                       _mod  <- parserExpression
-                       _     <- char charClose
-                       return Law { lawName = _name, lawCond = PreCondition (_ex1, _ex2), lawLhs = _lhs, lawRhs = _rhs, lawMod = _mod }
+-- "Law : x + (y + z) = (x + y) + z",
+parserArithmeticLaw :: Bool -> Parser Law
+parserArithmeticLaw isFixed = do _name <- someTill anySingle (char charColon)
+                                 _lhs  <- parserExpression isFixed
+                                 _     <- char charEquals
+                                 _rhs  <- parserExpression isFixed
+                                 return Law { lawName = _name, lawEq = (_lhs, _rhs), eqType = Equals }
 
-parserExplicitLaw :: Parser Law
-parserExplicitLaw = do _name <- someTill anySingle (char charColon)
-                       _lhs  <- parserExpression
-                       _     <- char charEquals
-                       _rhs  <- parserExpression
-                       _     <- char charOpen
-                       _     <- string stringMod
-                       _mod  <- parserExpression
-                       _     <- char charClose
-                       return Law { lawName = _name, lawCond = NoPreCondition, lawLhs = _lhs, lawRhs = _rhs, lawMod = _mod }
+-- "Law : x ^ (p-1) \\equiv_p 1 (mod p)"
+parserModuloLaw :: Bool -> Parser Law
+parserModuloLaw isFixed = do _name <- someTill anySingle (char charColon)
+                             _lhs  <- parserExpression isFixed
+                             _     <- string stringCongruent
+                             _rhs  <- parserExpression isFixed
+                             _     <- char charOpen
+                             _     <- string stringMod
+                             _mod  <- parserExpression isFixed
+                             _     <- char charClose
+                             return Law {lawName = _name, lawEq = (_lhs, _rhs), eqType = Congruent}
 
-parseExpression :: String -> Expression
-parseExpression x = getExpression (parse parserExpression "<myparse>" (filter (\y->y/=' ') x))
-                    where getExpression (Right law) = law
-                          getExpression _ = ExpressionError
+parseExpression :: Bool -> String -> Expression
+parseExpression isFixed x = getExpression (parse (parserExpression isFixed) "<myparse>" (filter (\y->y/=' ') x))
+                            where getExpression (Right law) = law
+                                  getExpression _ = ExpressionError
 
-parserExpression :: Parser Expression
-parserExpression = makeExprParser parserTerm operatorTable
+parserExpression :: Bool -> Parser Expression
+parserExpression isFixed = makeExprParser (parserTerm isFixed) operatorTable
 
-parserTerm :: Parser Expression
-parserTerm = Con <$> L.lexeme space L.decimal <|>
-             Var <$> L.lexeme space lowerChar <|>
-             parserParenthesis parserExpression
+parserTerm :: Bool -> Parser Expression
+parserTerm isFixed = Con <$> L.lexeme space L.decimal <|>
+                     (if isFixed then Fixed else Var) <$> L.lexeme space lowerChar <|>
+                     parserParenthesis (parserExpression isFixed)
 
 parserParenthesis :: Parser a -> Parser a
 parserParenthesis = between (char charOpen) (char charClose)
@@ -135,50 +139,41 @@ operatorTable =
     [InfixL (BinOp Add <$ char charAdd)]
   ]
 
--------------------------------------Modulo Evaluator----------------------------------------
+-------------------------------------Proofs----------------------------------------
 
-evalExpression :: Expression -> Int -> Maybe Int
-evalExpression (Con i) m = modulo (Just i) m
-evalExpression (UnOp op e) m = modulo (fnOp op (evalExpression e m) Nothing) m
-evalExpression (BinOp op e1 e2) m = modulo (fnOp op (evalExpression e1 m) (evalExpression e2 m)) m
-evalExpression _ _ = Nothing
+getDerivation :: [Law] -> Expression -> Proof
+getDerivation = undefined
 
-modulo :: Maybe Int -> Int -> Maybe Int
-modulo (Just i) m = Just (i `mod` m)
-modulo _ _ = Nothing
+getSteps :: Equation -> Expression -> [Expression]
+getSteps = undefined
 
-fnOp :: Op -> Maybe Int -> Maybe Int -> Maybe Int
-fnOp Neg (Just x) _ = Just (-x)
-fnOp op (Just i1) (Just i2) 
-  = Just (opVal i1 i2)
-    where opVal = case op of
-                  Pow -> (^)
-                  Mul -> (*)
-                  Sub -> (-)
-                  Add -> (+)
-fnOp _ _ _ = Nothing
+match :: Expression -> Expression -> Substitution
+match = undefined
+
+apply :: Substitution -> Expression -> Expression
+apply = undefined
+
+matchE :: Expression -> Expression -> Maybe Substitution
+matchE = undefined
+
+combineTwoSubsts :: Substitution -> Substitution -> Maybe Substitution
+combineTwoSubsts = undefined
+
+lookupInSubst :: String -> [(String, p)] -> p
+lookupInSubst = undefined
+
+-- would go into rewrite function
+-- Law1 : a = b (mod p) implies a + c = b + c (mod p)
+-- Law2 : a = b (mod p) implies c + a = c + b (mod p)
+-- Law3 : a = b (mod p) implies a * c = b * c (mod p)
+-- Law4 : a = b (mod p) implies c * a = c * b (mod p)
+-- Law5 : a = b (mod p) implies a ^ c = b ^ c (mod p)
+
+isPrime :: Int -> Bool -- TODO : Replace
+isPrime k = elem k [2,3,5,7,11,13,17,19,23,29,31]
 
 -------------------------------------Tests----------------------------------------
 
-_e :: String
-_e = "12-13 * 32 ^4"
-
-debugOut :: String
-debugOut = intercalate "\n" (map (show . (parseLaw True)) [implicit_law1, implicit_law2, implicit_law3, implicit_law4, implicit_law5]) ++ "\n" ++ 
-           intercalate "\n" (map (show . (parseLaw False)) [explicit_law1, explicit_law2]) ++ "\n" ++ 
-           show (parseExpression _e) ++ "\n" ++ 
-           show (evalExpression (parseExpression _e) 11)
-
--------------------------------------Proofs----------------------------------------
-
--- getDerivation :: [Law] -> ProbExpr -> Proof
--- getDerivation laws e
---  = Proof e (multiSteps e)
---  where multiSteps e'
---         = case [ (lawName law, res)
---                | law <- laws
---                , res <- getStep (lawEq law) e'
---                ] of
---            [] -> []
---            ((nm,e''):_) -> (nm,e'') : multiSteps e''
-
+debug :: String
+debug = intercalate "\n" (map (show . parseLaw False Equals) arithmetic_laws) ++ "\n" ++ 
+        intercalate "\n" (map (show . parseLaw False Congruent) modulo_laws) ++ "\n"
