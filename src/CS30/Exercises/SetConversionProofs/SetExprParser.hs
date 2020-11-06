@@ -6,7 +6,7 @@ COSC 69.14, 20F
 Group Assignment 2
 -}
 
-module CS30.Exercises.SetConversionProofs.SetExprParser (parseExpr, parseUntil, exprParens, symbol, SetExpr) where
+module CS30.Exercises.SetConversionProofs.SetExprParser (parseExpr, parseUntil, exprParens, symbol, SetExpr(..)) where
 import           Data.Functor.Identity
 import           Data.Void
 import           Text.Megaparsec
