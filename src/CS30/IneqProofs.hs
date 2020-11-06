@@ -27,7 +27,6 @@ data Opr       = Multiplication | Division | Addition | Subtraction
                | Exponentiation | Factorial | Negate deriving (Eq,Show)
 
 data Law        = Law {lawName :: String, lawEq :: Equation}
---type LawName    = String <- I don't think we ever use this
 type Equation   = (Expr,Expr)
 
 data IneqLaw    = IneqLaw {ineqName :: String, ineqEq :: Implies}
@@ -36,7 +35,7 @@ type ProofStep = (String, Expr)
 data IneqProof = IneqProof Inequality [IneqProofStep]
 type IneqProofStep = (String, Inequality)
 type Inequality = (Expr,Ineq,Expr)
-data Ineq       = GThan | GEq | LThan | LEq deriving (Eq)
+data Ineq       = GThan | GEq | EqEq deriving (Eq)
 type Implies    = (Inequality,Inequality)
 
 data Proof     = Proof Expr [ProofStep] deriving Show
@@ -61,8 +60,6 @@ instance Show IneqLaw where
 instance Show Ineq where
   showsPrec _ GThan = showString " > "
   showsPrec _ GEq   = showString " ≥ "
-  showsPrec _ LThan = showString " < "
-  showsPrec _ LEq   = showString " ≤ "
 
 -- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
 lawList :: [String]
@@ -87,7 +84,7 @@ ineqLawList :: [String]
 ineqLawList = [ "Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"
               , "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"
               , "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"
-              , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"
+              , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z" 
               , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"
               , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x" ]
 
@@ -322,13 +319,31 @@ getStep (lhs, rhs) expr
         recurse (Op o [e1])
           = [Op o [e1'] | e1' <- getStep (lhs,rhs) e1]
 
-getStep2 :: Implies -> Inequality -> [Inequality]
-getStep2 (lhs, rhs) ineq
+getStep2 :: [Law] -> (Expr, Expr) -> Ineq -> Expr -> [Expr]
+getStep2 laws (lhs, rhs) ineq e
   = case matchI lhs ineq of
-      Nothing -> recurse ineq
+      Nothing -> recurse e
       Just subst -> [apply2 subst rhs]
-  where recurse -- NEEDED: recurse
+  where recurse (Op o [e1,e2]) 
+         = [Op o [e1', e2] | e1' <- getStep (lhs,rhs) e1, snd (checkFunc o) e2] ++
+           [Op o [e1, e2'] | e2' <- getStep (lhs,rhs) e2, fst (checkFunc o) e1]
 
+        --"Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"
+        isPositive e1 = provesLEQ 1 (getDerivation laws e1)
+        provesLEQ b (Proof e1 steps) = go b e1 steps
+              where go b (Const n) _ | n >= b     = True
+                                     | otherwise = False
+                    go b _ ((_ , e2):ss) = go b e2 ss --b-1 with strict inequalities
+                    go _ _ [] = False
+
+        checkFunc Multiplication = case ineq of 
+                                    EqEq  -> (const True, const True)
+                                    GThan -> (isPositive, isPositive)
+                                    GEq   -> (isNonNeg, isNonNeg)
+        checkFunc Addition       = (const True, const True)
+        checkFunc Division       = (const False, snd (checkFunc Multiplication))
+        checkFunc Subtraction    = (const False, const True)
+        
 
 type Substitution = [(String, Expr)]
 type IneqSubstitution = [(String, String, Inequality)]
