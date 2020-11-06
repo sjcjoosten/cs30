@@ -1,7 +1,9 @@
-import Text.Megaparsec
-import Text.Megaparsec.Char
-import Data.Void
-import Control.Monad.Combinators.Expr
+module CS30.Exercises.SetCardinalitiesProofs.RuleParser where
+import           Control.Monad.Combinators.Expr
+import           Data.Functor.Identity
+import           Data.Void
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 import qualified Text.Megaparsec.Char.Lexer as L
 
@@ -21,18 +23,18 @@ data Symb = Add
 
 data Expr = Var Char | Op Symb [Expr] deriving (Show, Eq)
 
-data Law = Law String Equation deriving (Show)
+data Law = Law {lawName :: String, lawEquation :: Equation} deriving (Show)
 type Equation = (Expr, Expr)  -- (left,right)
 
 
 
 pLaw :: Parser Expr -> Parser Law
 pLaw pExpr = 
-   do lawName <- parseUntil ':' <*spaces
+   do lawNm <- parseUntil ':' <*spaces
       lhs <- pExpr
       _ <- string "=" <*spaces
       rhs <- pExpr
-      return (Law lawName (lhs, rhs))
+      return (Law lawNm (lhs, rhs))
 
 parseUntil :: MonadParsec e s f => Token s -> f [Token s]
 parseUntil c 
@@ -58,6 +60,7 @@ operatorTable =
      [binary "\\setminus" Setminus]
   ]
 
+binary :: String -> Symb -> Operator (ParsecT Void String Data.Functor.Identity.Identity) Expr
 binary name symb = InfixL ((\lhs rhs -> Op symb [lhs,rhs]) <$ symbol name)
 
 
