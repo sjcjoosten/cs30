@@ -9,9 +9,6 @@ import qualified Text.Megaparsec.Char.Lexer as L
 -- import           Data.Functor.Identity
 
 type Parser     = Parsec Void String
-data Law        = Law {lawName :: String, lawEq :: Equation}
---type LawName    = String <- I don't think we ever use this
-type Equation   = (Expr,Expr)
 
 data MathExpr  = MathConst Integer 
                | MathVar String
@@ -23,16 +20,22 @@ data MathExpr  = MathConst Integer
                | Sub MathExpr MathExpr
                | Neg MathExpr
                deriving Show
+
 data Expr      = Var String | Const Integer | Op Opr [Expr] deriving (Eq,Show)
 data Opr       = Multiplication | Division | Addition | Subtraction
                | Exponentiation | Factorial | Negate deriving (Eq,Show)
-data Proof     = Proof Expr [ProofStep] deriving Show
-type ProofStep = (String, Expr)
 
+data Law        = Law {lawName :: String, lawEq :: Equation}
+--type LawName    = String <- I don't think we ever use this
+type Equation   = (Expr,Expr)
+
+data IneqLaw    = IneqLaw {ineqName :: String, ineqEq :: Implies}
 type Inequality = (Expr,Ineq,Expr)
 data Ineq       = GThan | GEq | LThan | LEq deriving (Eq)
 type Implies    = (Inequality,Inequality)
-data IneqLaw    = IneqLaw {ineqName :: String, ineqEq :: Implies}
+
+data Proof     = Proof Expr [ProofStep] deriving Show
+type ProofStep = (String, Expr)
 
 instance Show Law where 
   showsPrec _ (Law name (e1,e2))
