@@ -10,15 +10,15 @@ import qualified Text.Megaparsec.Char.Lexer as L
 
 type Parser     = Parsec Void String
 data Law        = Law {lawName :: String, lawEq :: Equation}
-type LawName    = String
+--type LawName    = String <- I don't think we ever use this
 type Equation   = (Expr,Expr)
 
 data MathExpr  = MathConst Integer 
                | MathVar String
-               | Fact MathExpr            -- factorial
+               | Fact MathExpr             -- factorial
                | Divide MathExpr MathExpr  -- division
-               | Mult  MathExpr MathExpr  -- multiply two MathExpr's 
-               | Expon MathExpr MathExpr  -- set first MathExpr to the second MathExpr power
+               | Mult  MathExpr MathExpr   -- multiply two MathExpr's 
+               | Expon MathExpr MathExpr   -- set first MathExpr to the second MathExpr power
                | Add MathExpr MathExpr
                | Sub MathExpr MathExpr
                | Neg MathExpr
@@ -30,9 +30,9 @@ data Proof     = Proof Expr [ProofStep] deriving Show
 type ProofStep = (String, Expr)
 
 type Inequality = (Expr,Ineq,Expr)
-data Ineq       = GThan | GEq deriving (Eq,Show)
-type Implies    = (Ineq,Ineq)
-data IneqLaw    = IneqLaw {lawName :: String, lawEq :: Implies}
+data Ineq       = GThan | GEq | LThan | LEq deriving (Eq)
+type Implies    = (Inequality,Inequality)
+data IneqLaw    = IneqLaw {ineqName :: String, ineqEq :: Implies}
 
 instance Show Law where 
   showsPrec _ (Law name (e1,e2))
@@ -41,6 +41,7 @@ instance Show Law where
       shows e1 .
       showString " = " . 
       shows e2
+
 instance Show IneqLaw where 
   showsPrec _ (IneqLaw name ((e11,i1,e12),(e21,i2,e22)))
     = showString name . 
@@ -48,9 +49,12 @@ instance Show IneqLaw where
       shows e11 . shows i1 . shows e12 .
       showString " \\Rightarrow " . 
       shows e21 . shows i2 . shows e22
+
 instance Show Ineq where
-  showsPrec GThan = " > "
-  showsPrec GEq = " ≥ "
+  showsPrec _ GThan = showString " > "
+  showsPrec _ GEq   = showString " ≥ "
+  showsPrec _ LThan = showString " < "
+  showsPrec _ LEq   = showString " ≤ "
 
 -- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
 lawList :: [String]
@@ -70,6 +74,7 @@ lawList = [ "Commutative of Addition: a + b = b + a"
           , "Multiplicative Inverse: a / a = 1"
           , "Distributive Law: a - (b + c) = a - b - c"
           , "Distributive Law: a - (b - c) = a - b + c" ]
+
 ineqLawList :: [String]
 ineqLawList = [ "Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"
               , "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"
@@ -188,10 +193,24 @@ mathToExpr (Neg a) = Op Negate [mathToExpr a]
 -- will add those once we get this working for =
 parseLaw :: Parser Law
 parseLaw = do lawName <- parseUntil ':'
-              lhs <- parseExpr
-              _ <- string "="
-              rhs <- parseExpr
+              lhs     <- parseExpr
+              _       <- string "="
+              rhs     <- parseExpr
               return (Law lawName (lhs,rhs))
+
+parseIneqLaw :: Parser IneqLaw
+parseIneqLaw = do 
+               ineqName <- parseUntil ':'
+               lhs1     <- parseExpr
+               ineq1    <- parseUntil '>' <|> parseUntil '≥' <|> parseUntil '<' <|> parseUntil '≤'
+               rhs1     <- parseExpr
+               _        <- string "\\Rightarrow"
+               lhs2     <- parseExpr
+               ineq2    <- parseUntil '>' <|> parseUntil '≥' <|> parseUntil '<' <|> parseUntil '≤'
+               --ineq2    <- string ">" <|> string "≥" <|> string "<" <|> string "≤"
+               rhs2     <- parseExpr
+               return (IneqLaw ineqName ((lhs1, ineq1, rhs1), (lhs2, ineq2, rhs2)))
+
 
 parseUntil :: Char -> Parser String
 parseUntil c = (do _ <- satisfy (== c)
@@ -243,6 +262,7 @@ getStep (lhs, rhs) expr
           = [Op o [e1'] | e1' <- getStep (lhs,rhs) e1]
 -- 0 + x = x
 type Substitution = [(String, Expr)]
+
 matchE :: Expr -> Expr -> Maybe Substitution
 matchE (Var nm) expr = Just [(nm,expr)]
 matchE (Const i) (Const j) | i == j = Just []
@@ -254,11 +274,13 @@ matchE (Op o1 [e1,e2]) (Op o2 [e3,e4]) | o1 == o2
 matchE (Op o1 [e1]) (Op o2 [e2]) | o1 == o2
  = matchE e1 e2
 matchE (Op _ _) _ = Nothing
+
 combineTwoSubsts :: Substitution -> Substitution -> Maybe Substitution
 combineTwoSubsts s1 s2
   = case and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2] of
      True -> Just (s1 ++ s2)
      False -> Nothing
+
 apply :: Substitution -> Expr -> Expr
 apply subst (Var nm) = lookupInSubst nm subst
 apply subst (Const i) = Const i
