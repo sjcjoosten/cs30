@@ -86,7 +86,14 @@ ineqLawList = [ "Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"
               , "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"
               , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z" 
               , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"
-              , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x" ]
+              , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x"
+              , "Addition: x > y \\Rightarrow x + z > y + z"
+              , "Division for x > 0 and z > 0: x < y \\Rightarrow z / x > z / y"
+              , "Division for x > 0 and z > 0: x > y \\Rightarrow z / x < z / y"
+              , "Division for x > 0 and z ≥ 0: x < y \\Rightarrow z / x ≥ z / y"
+              , "Division for x > 0 and z ≥ 0: x > y \\Rightarrow z / x ≤ z / y"
+              , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
+              ]
 
 -- getProofLengthN :: Int -> [Law] -> (Expr -> Law -> [Expr] ) -> Expr -> [Proof]
 -- getProofLengthN 0 _ _ e = [Proof e []]
@@ -210,45 +217,45 @@ parseLaw = do lawName <- parseUntil ':'
 --                return (IneqLaw ineqName ((lhs1, ineq1, rhs1), (lhs2, ineq2, rhs2)))
 -- this is ugly I'm sorry
 parseIneqLaw :: Parser IneqLaw
-parseIneqLaw = do (lawName <- parseUntil ':'
-                  lhs1 <- parseExpr
-                  _ <- string ">"
-                  rhs1 <- parseExpr
-                  _ <- string "\\Rightarrow"
-                  lhs2 <- parseExpr
-                  _ <- string ">"
-                  rhs2 <- parseExpr
-                  return (IneqLaw lawName ((lhs1,GThan,rhs1),(lhs2,GThan,rhs2))))
+parseIneqLaw = (do lawName <- parseUntil ':'
+                   lhs1 <- parseExpr
+                   _ <- string ">"
+                   rhs1 <- parseExpr
+                   _ <- string "\\Rightarrow"
+                   lhs2 <- parseExpr
+                   _ <- string ">"
+                   rhs2 <- parseExpr
+                   return (IneqLaw lawName ((lhs1,GThan,rhs1),(lhs2,GThan,rhs2))))
               <|>
-               do (lawName <- parseUntil ':'
-                  lhs1 <- parseExpr
-                  _ <- string "≥"
-                  rhs1 <- parseExpr
-                  _ <- string "\\Rightarrow"
-                  lhs2 <- parseExpr
-                  _ <- string "≥"
-                  rhs2 <- parseExpr
-                  return (IneqLaw lawName ((lhs1,GEq,rhs1),(lhs2,GEq,rhs2))))
+               (do lawName <- parseUntil ':'
+                   lhs1 <- parseExpr
+                   _ <- string "≥"
+                   rhs1 <- parseExpr
+                   _ <- string "\\Rightarrow"
+                   lhs2 <- parseExpr
+                   _ <- string "≥"
+                   rhs2 <- parseExpr
+                   return (IneqLaw lawName ((lhs1,GEq,rhs1),(lhs2,GEq,rhs2))))
               <|>
-               do (lawName <- parseUntil ':'
-                  lhs1 <- parseExpr
-                  _ <- string ">"
-                  rhs1 <- parseExpr
-                  _ <- string "\\Rightarrow"
-                  lhs2 <- parseExpr
-                  _ <- string "≥"
-                  rhs2 <- parseExpr
-                  return (IneqLaw lawName ((lhs1,GThan,rhs1),(lhs2,GEq,rhs2))))
+               (do lawName <- parseUntil ':'
+                   lhs1 <- parseExpr
+                   _ <- string ">"
+                   rhs1 <- parseExpr
+                   _ <- string "\\Rightarrow"
+                   lhs2 <- parseExpr
+                   _ <- string "≥"
+                   rhs2 <- parseExpr
+                   return (IneqLaw lawName ((lhs1,GThan,rhs1),(lhs2,GEq,rhs2))))
               <|>
-               do (lawName <- parseUntil ':'
-                  lhs1 <- parseExpr
-                  _ <- string "≥"
-                  rhs1 <- parseExpr
-                  _ <- string "\\Rightarrow"
-                  lhs2 <- parseExpr
-                  _ <- string ">"
-                  rhs2 <- parseExpr
-                  return (IneqLaw lawName ((lhs1,GEq,rhs1),(lhs2,GThan,rhs2))))
+               (do lawName <- parseUntil ':'
+                   lhs1 <- parseExpr
+                   _ <- string "≥"
+                   rhs1 <- parseExpr
+                   _ <- string "\\Rightarrow"
+                   lhs2 <- parseExpr
+                   _ <- string ">"
+                   rhs2 <- parseExpr
+                   return (IneqLaw lawName ((lhs1,GEq,rhs1),(lhs2,GThan,rhs2))))
 
 
 parseUntil :: Char -> Parser String
@@ -267,17 +274,17 @@ law1 = Law "Assoc" (Op Addition [Op Addition [Var "X",Var "Y"],Var "Z"], Op Addi
 getDerivation :: [Law] -> Expr -> Proof
 getDerivation laws e = Proof e (multiSteps e)
   where multiSteps e'
-        = case [ (lawName law, res)
-               | law <- laws
-               , res <- getStep (lawEq law) e'
-               ] of
-           [] -> []
-           ((nm,e''):_) -> (nm,e'') : multiSteps e''
+    = case [ (lawName law, res)
+  | law <- laws
+  , res <- getStep (lawEq law) e'
+  ] of
+  [] -> []
+  ((nm,e''):_) -> (nm,e'') : multiSteps e''
 
 getDerivation2 :: [IneqLaw] -> [Law] -> Inequality -> IneqProof
 getDerivation2 ineqlaws laws i = IneqProof i (multiSteps i)
   where multiSteps i' -- first try inequality laws
-        = case [ (lawName iLaw, res)
+        = case [ (ineqName iLaw, res)
                | iLaw <- ineqlaws
                , res <- getStep2 (lawEq law) i'
                ] of
@@ -372,6 +379,7 @@ combineTwoSubsts s1 s2
      True -> Just (s1 ++ s2)
      False -> Nothing
 
+-- fix this to account for free variables on each side
 ineqSubst :: Substitution -> Substitution -> Maybe IneqSubstitution
 ineqSubst s1 s2
   = case and [v1 == v2| (nm1,nm2,v1) <- s1, (nm3,nm4,v2) <- s2, nm1 == nm3 && nm2 == n4] of
@@ -379,7 +387,8 @@ ineqSubst s1 s2
      False -> Nothing
 
 
--- NEEDED: apply2 :: IneqSubstitution -> Inequality -> Inequality
+apply2 :: IneqSubstitution -> Inequality -> Inequality
+
 
 apply :: Substitution -> Expr -> Expr
 apply subst (Var nm) = lookupInSubst nm subst
