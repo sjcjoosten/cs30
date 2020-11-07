@@ -10,12 +10,12 @@ data Proof = Proof SetExpr [(String, SetExpr)] deriving Show
 generateRandomSetExpr :: Int -> ChoiceTree SetExpr
 generateRandomSetExpr = undefined
 
-example1, example2, example3, example4 :: SetExpr
+example1, example2, example3, example4, example5 :: SetExpr
 example1 = (Cap (Var "M") (Var "N"))
 example2 = (Cup (Var "X") (Var "Y"))
-example3 = (Power (Var "P"))
-example4 = (SetMinus (Var "P") (Var "Q"))
-
+example3 = (SetMinus (Var "P") (Var "Q"))
+example4 = (Power (Var "K"))
+example5 = (In (SetBuilder (Var "p"))) -- This should become Var "p"
 
 generateProof :: [Law] -> SetExpr -> Proof -- We need only one proof for our problem
 generateProof laws' e = Proof e (multiSteps e)
