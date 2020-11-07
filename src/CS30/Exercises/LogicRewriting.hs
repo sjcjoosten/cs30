@@ -9,6 +9,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 import           Control.Monad.Combinators.Expr
 import           Data.Void
 import           Data.Functor.Identity
+import           Debug.Trace
 
 data Law = Law LawName Equation
     deriving Show
@@ -25,28 +26,45 @@ data Expr = Var Char          -- variable like 'p' or 'q'
 
 type Parser = ParsecT Void String Identity
 
+-- TODO: display parentheses better
 displayExpr :: Expr -> String
 displayExpr (Var v)         = [v]
 displayExpr (Const b)       = if b then "\\text{true}" else "\\text{false}"
-displayExpr (Neg e)         = "\\neg "++(displayExpr e)
+displayExpr (Neg e)         = "\\neg\\left("++(displayExpr e)++"\\right)"
 displayExpr (And e1 e2)     = "\\left("++(displayExpr e1)++"\\ \\wedge\\ "++(displayExpr e2)++"\\right)"
 displayExpr (Or e1 e2)      = "\\left("++(displayExpr e1)++"\\ \\vee\\ "++(displayExpr e2)++"\\right)"
 displayExpr (Implies e1 e2) = "\\left("++(displayExpr e1)++"\\ \\Rightarrow\\ "++(displayExpr e2)++"\\right)"
 
-logicExercises :: [ChoiceTree [Field]]
-logicExercises = [showProof <$> (getDerivation laws) <$> randomExpr]
-                 where displaySteps []   = []
-                       displaySteps ((lawName, e'):steps) = [FMath "=", FText ("{ "++lawName++" }"), 
-                                                             FIndented 1 [FMath $ displayExpr e']] 
-                                                            ++ displaySteps steps
-                       showProof (Proof e steps) = [FIndented 1 [FMath $ displayExpr e]]
-                                                    ++ (displaySteps steps)
+logicExercises :: [ChoiceTree ([Field], String)]
+logicExercises = [((getDerivation laws) <$> randomExpr) >>= showExer]
+                 where displayStepsExcept _ []   = []
+                       displayStepsExcept n (step:steps) = [FMath "\\equiv", name, 
+                                                            FIndented 1 [FMath $ displayExpr (snd step)]] 
+                                                           ++ displayStepsExcept (n-1) steps
+                                                           where correct = FText ("{ "++(fst step)++" }")
+                                                                 name = if n/=0 then correct
+                                                                        else FChoice "choice" [ [FText "{ DeMorgan's Law }"]
+                                                                                              , [FText "{ Idempotent Law }"]
+                                                                                              , [correct]
+                                                                                              ]
+                                                                                              -- ^ TODO: give random choices/order
+                       showExer (Proof e steps) = nodes [ ([FIndented 1 [FMath $ displayExpr e]] 
+                                                           ++ (displayStepsExcept i steps)
+                                                          , "2") -- TODO: change this to randomly decided correct answer 
+                                                        | i <- [0..(length steps - 1)]]
 
-logicQuer :: [Field] -> Exercise -> Exercise
-logicQuer fs defExer = defExer {eQuestion = fs}
+logicQuer :: ([Field], String) -> Exercise -> Exercise
+logicQuer fs defExer = defExer {eQuestion = fst fs}
 
-logicFeedback :: [Field] -> Map.Map String String -> ProblemResponse -> ProblemResponse
-logicFeedback _ _ defaultRsp = defaultRsp
+logicFeedback :: ([Field], String) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+logicFeedback (_, sol) mStrs defaultRsp 
+    = case rsp of 
+        Just v -> if v == sol then markCorrect $ defaultRsp{prFeedback = [FText "Correct"]}
+                  else if v == "" then markWrong $ defaultRsp{prFeedback = [FText "Please select which law is applied"]}
+                       else markWrong $ defaultRsp{prFeedback = [FText "Incorrect"]} 
+        Nothing -> markWrong $ defaultRsp{prFeedback = [FText "We could not understand your answer"]}
+        -- ^ TODO: give better feedback (probably need to change the solution data structure to give the correct answer)
+    where rsp = Map.lookup "choice" mStrs
 
 logicRewritingEx :: ExerciseType
 logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
@@ -56,7 +74,7 @@ logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
 
 -- 
 randomExpr :: ChoiceTree Expr
-randomExpr = Neg <$> exprOfSize 3
+randomExpr = Neg <$> exprOfSize 5
     where exprOfSize :: Int -> ChoiceTree Expr
           exprOfSize 1 = Branch [nodes (map Const [True,False]), 
                                  nodes (map Var ['p','q','r'])]
