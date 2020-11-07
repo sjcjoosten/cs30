@@ -41,7 +41,7 @@ lawStrings :: [String]
 lawStrings = [
         "Double Negation Law: \\neg (\\neg p) \\equiv p",
         "Identity Law: p \\vee false \\equiv p",
-        "Identity Law: p \\wedge true \\equiv q",
+        "Identity Law: p \\wedge true \\equiv p",
         "Domination Law: p \\wedge false \\equiv false",
         "Domination Law: p \\vee true \\equiv true",
         "Idempotent Law: p \\vee p \\equiv p",
