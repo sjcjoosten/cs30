@@ -1,5 +1,6 @@
 module CS30.Exercises.LogicRewriting where
 
+import           CS30.Exercises.Data
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
@@ -21,6 +22,20 @@ data Expr = Var Char          -- variable like 'p' or 'q'
     deriving (Eq, Show)
 
 type Parser = ParsecT Void String Identity
+
+-- 
+randomExpr :: ChoiceTree Expr
+randomExpr = Neg <$> exprOfSize 3
+    where exprOfSize :: Int -> ChoiceTree Expr
+          exprOfSize 1 = Branch [nodes (map Const [True,False]), 
+                                 nodes (map Var ['p','q','r'])]
+          exprOfSize 2 = Branch [Neg <$> exprOfSize 1]
+          exprOfSize n = Branch ([And <$> exprOfSize i <*> exprOfSize (n-i-1)
+                                | i <- [1..(n-2)]] ++ 
+                                [Or <$> exprOfSize i <*> exprOfSize (n-i-1)
+                                | i <- [1..(n-2)]] ++ 
+                                [Implies <$> exprOfSize i <*> exprOfSize (n-i-1)
+                                | i <- [1..(n-2)]])
 
 lawStrings :: [String]
 lawStrings = [
