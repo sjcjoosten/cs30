@@ -33,14 +33,40 @@ laws :: [Law]
 laws = []
 
 -- | Rachael's code: generate a random expression
+-- followed lecture
 genRanEx :: Int -> ChoiceTree ExExpr
-genRanEx = undefined
+genRanEx i | i < 1 
+   = Branch [ Branch [Node (Eranvar varName) | varName <- ["X","Y","Z"]]
+            , Branch [Node (Econst val) | val <- [2..10]]
+            ]
+genRanEx i 
+   = Branch [do e <- genRanEx (i-1)
+                return (E e)
+            , Branch [ do e1 <- genRanEx i'
+                          e2 <- genRanEx (i - i' - 1)
+                          op <- nodes [Plus, Minus, Times] 
+                          return (EbinOp op e1 e2)
+                     | i' <- [0..i-1] -- ensures e1 and e2 will sum to i
+                     ]
+            ]
+
 -- | Rachael's code: parse an expression
+-- the expression parser does law parser in reverse?
+-- takes something like this:
+-- [law1] (EbinOp Plus (EbinOp Plus (EbinOp Plus (Econst 0) (Econst 1)) (Econst 2)) (Econst 3))
+-- and turns it into something like that:
+-- ((0 + 1) + 2) + 3
 parseExExpr :: Parser ExExpr
 parseExExpr = undefined
+
 -- | Rachael's code: parse a law
+-- we want to do something like this:
+-- genProof [law1] (EbinOp Plus (EbinOp Plus (EbinOp Plus (Econst 0) (Econst 1)) (Econst 2)) (Econst 3))
+-- write this as ((0 + 1) + 2) + 3
+-- so parser needs to turn this ^^ into that up there ^^
 parseLawExExpr :: Parser Law
 parseLawExExpr = undefined
+
 -- | Joint code: combining all details
 --   TODO: generate feedback (printing a proof if the answer is wrong)
 probExProof :: ExerciseType
