@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 module CS30.Exercises.LogicExpr.Parser where
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import Control.Monad.Combinators.Expr
 import           Data.Void
-
+import           Data.Aeson as JSON -- used for 'deriveJSON' line
+import           Data.Aeson.TH
 
 type Parser = Parsec Void String
 data LogicExpr 
@@ -21,6 +23,8 @@ data LogicOp
     | Imply
     deriving (Eq)
     -- deriving (Eq, Show)
+$(deriveJSON defaultOptions ''LogicOp)
+$(deriveJSON defaultOptions ''LogicExpr)
 
 prec :: LogicOp -> Int
 prec And = 2
@@ -39,7 +43,7 @@ symb Imply = implyStr
 
 instance Show LogicExpr where
     showsPrec _ (Con b) = showString (show b)
-    showsPrec _ (Var v) = showString (show v)    
+    showsPrec _ (Var v) = showString [v]    
     showsPrec p (Neg e) = showParen (p > 3) (showString negStr . showsPrec (4) e)
     showsPrec p (Bin op e1 e2)
         = showParen (p >= q) (showsPrec q e1 . showSpace . showOp op . showSpace . showsPrec (q+1) e2) 

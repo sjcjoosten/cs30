@@ -3,6 +3,7 @@
 module CS30.Exercises.LogicExpr.Proof where
 import CS30.Exercises.LogicExpr.Parser hiding (law)
 import Data.Maybe ( fromJust )
+import CS30.Exercises.Data
 
 type Substitution = [(VarName,LogicExpr)]
 type VarName = Char
@@ -37,7 +38,6 @@ input_laws = [
     -- , "Commute: p∧q≡q∧p"
     -- , "Commute: p∨q≡q∨p"
     ]
-
 
 simplify :: [String] -> String -> Proof
 simplify strings str = getDerivation laws e
