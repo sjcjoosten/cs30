@@ -1,6 +1,8 @@
 module CS30.Exercises.LogicRewriting where
 
+import           CS30.Data
 import           CS30.Exercises.Data
+import qualified Data.Map as Map
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
@@ -22,6 +24,35 @@ data Expr = Var Char          -- variable like 'p' or 'q'
     deriving (Eq, Show)
 
 type Parser = ParsecT Void String Identity
+
+displayExpr :: Expr -> String
+displayExpr (Var v)         = [v]
+displayExpr (Const b)       = if b then "\\text{true}" else "\\text{false}"
+displayExpr (Neg e)         = "\\neg "++(displayExpr e)
+displayExpr (And e1 e2)     = "\\left("++(displayExpr e1)++"\\ \\wedge\\ "++(displayExpr e2)++"\\right)"
+displayExpr (Or e1 e2)      = "\\left("++(displayExpr e1)++"\\ \\vee\\ "++(displayExpr e2)++"\\right)"
+displayExpr (Implies e1 e2) = "\\left("++(displayExpr e1)++"\\ \\Rightarrow\\ "++(displayExpr e2)++"\\right)"
+
+logicExercises :: [ChoiceTree [Field]]
+logicExercises = [showProof <$> (getDerivation laws) <$> randomExpr]
+                 where displaySteps []   = []
+                       displaySteps ((lawName, e'):steps) = [FMath "=", FText ("{ "++lawName++" }"), 
+                                                             FIndented 1 [FMath $ displayExpr e']] 
+                                                            ++ displaySteps steps
+                       showProof (Proof e steps) = [FIndented 1 [FMath $ displayExpr e]]
+                                                    ++ (displaySteps steps)
+
+logicQuer :: [Field] -> Exercise -> Exercise
+logicQuer fs defExer = defExer {eQuestion = fs}
+
+logicFeedback :: [Field] -> Map.Map String String -> ProblemResponse -> ProblemResponse
+logicFeedback _ _ defaultRsp = defaultRsp
+
+logicRewritingEx :: ExerciseType
+logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
+                       logicExercises
+                       logicQuer
+                       logicFeedback
 
 -- 
 randomExpr :: ChoiceTree Expr
