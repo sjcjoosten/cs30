@@ -1,12 +1,13 @@
+{-# LANGUAGE TemplateHaskell #-}
 module CS30.Exercises.SetCardinalitiesProofs.RuleParser where
 import           Control.Monad.Combinators.Expr
 import           Data.Functor.Identity
 import           Data.Void
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
-
+import           Data.Aeson as JSON
+import           Data.Aeson.TH
 import qualified Text.Megaparsec.Char.Lexer as L
-
 
 type Parser = Parsec Void String
 data Symb = Add 
@@ -26,7 +27,8 @@ data Expr = Var Char | Op Symb [Expr] deriving (Show, Eq)
 data Law = Law {lawName :: String, lawEquation :: Equation} deriving (Show)
 type Equation = (Expr, Expr)  -- (left,right)
 
-
+$(deriveJSON defaultOptions ''Symb)
+$(deriveJSON defaultOptions ''Expr)
 
 pLaw :: Parser Expr -> Parser Law
 pLaw pExpr = 
