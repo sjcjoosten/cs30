@@ -45,7 +45,7 @@ getStep eq@(lhs, rhs) e = case match lhs e of
                                                        [Wedge e1  e2' | e2' <- getStep eq e2]
                             recurse (Vee e1 e2)      = [Vee e1' e2  | e1' <- getStep eq e1] ++
                                                        [Vee e1  e2' | e2' <- getStep eq e2]  
-                            recurse (In _)           = getStep eq e
+                            recurse (In e1)          = getStep eq e1
                             recurse (NotIn _)        = getStep eq e
                             recurse (Subset _)       = getStep eq e
                             
