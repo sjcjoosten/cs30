@@ -4,6 +4,7 @@ import CS30.Exercises.Data
 import Control.Monad.Combinators.Expr
 import Data.Functor.Identity
 import Data.List
+import Data.Char
 import Data.Ratio
 import Data.Void
 import Data.List.Extra
@@ -26,13 +27,23 @@ type Parser = ParsecT Void String Identity
 type Equation = (ExExpr, ExExpr)
 
 data Law = Law String Equation 
+             deriving (Show)
 
 data Proof = Proof ExExpr [Step]
 type Step = (String, ExExpr)
 
 -- | TODO: put all laws here!
 laws :: [Law]
-laws = [] -- map parse [bunch-of-strings]
+laws = map parseL ["'Linearity of Expectation' E[X+Y]=E[X]+E[Y]"]
+
+latexLaws :: IO ()
+latexLaws = mapM_ f laws 
+               where f (Law _ (e1,e2)) = putStrLn (asLaTeX e1 ++ " = " ++ asLaTeX e2)
+
+parseL :: String -> Law
+parseL str = case (parse parseLawExExpr "" str) of 
+              Right law -> law
+              Left e -> error (errorBundlePretty e)
 
 -- | Rachael's code: generate a random expression
 -- followed lecture
@@ -53,21 +64,71 @@ genRanEx i
             ]
 
 -- | Rachael's code: parse an expression
--- the expression parser does law parser in reverse?
--- takes something like this:
--- [law1] (EbinOp Plus (EbinOp Plus (EbinOp Plus (Econst 0) (Econst 1)) (Econst 2)) (Econst 3))
--- and turns it into something like that:
--- ((0 + 1) + 2) + 3
+-- takes something pleasant to our eyes
+-- turns into our data types
 parseExExpr :: Parser ExExpr
-parseExExpr = undefined
+parseExExpr = makeExprParser term table <?> "expression"
+               where table = [
+                               [(binary "*" Times)]
+                             , [(binary "+" Plus), (binary "-" Minus)] 
+                             ]
+
+binary :: String -> Eop -> Operator (Parser) ExExpr
+binary str op = InfixL
+                (do string str 
+                    spaces
+                    return (EbinOp op))
+
+term :: Parser ExExpr
+term = do string "("  
+          res <- parseExExpr 
+          string ")"
+          return res
+       <|> 
+       do string "E["
+          expr <- parseExExpr
+          string "]"
+          return (E expr)
+       <|>
+       do string "cov("
+          expr1 <- parseExExpr
+          string ","
+          expr2 <- parseExExpr
+          string ")"
+          return (Ecov expr1 expr2)
+       <|> 
+       do num <- some digit 
+          return (Econst (read num))
+       <|>
+       do letter <- satisfy isLetter
+          return (Eranvar [letter])
+       <?> "term"
+
+digit :: Parser Char
+digit = satisfy isDigit
+            where isDigit x = elem x ['0'..'9']
+
 
 -- | Rachael's code: parse a law
 -- we want to do something like this:
 -- genProof [law1] (EbinOp Plus (EbinOp Plus (EbinOp Plus (Econst 0) (Econst 1)) (Econst 2)) (Econst 3))
--- write this as ((0 + 1) + 2) + 3
+-- write this as 'law' ((0 + 1) + 2) + 3 = 6
+--                      beginning of law = ending of law
 -- so parser needs to turn this ^^ into that up there ^^
 parseLawExExpr :: Parser Law
-parseLawExExpr = undefined
+parseLawExExpr = do lawName <- between (string "'") (string "'") (many nonSingleQuote)
+                    spaces
+                    e1 <- parseExExpr
+                    string "="
+                    e2 <- parseExExpr
+                    return (Law lawName (e1,e2))
+
+spaces :: Parser ()
+spaces = space *> return ()
+
+nonSingleQuote :: Parser Char
+nonSingleQuote  = anySingleBut '\''
+
 
 -- | Joint code: combining all details
 --   TODO: generate feedback (printing a proof if the answer is wrong)
