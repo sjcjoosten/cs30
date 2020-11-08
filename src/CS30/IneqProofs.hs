@@ -1,6 +1,6 @@
 module CS30.IneqProofs where
-import CS30.Data
-import CS30.Exercises.Data
+-- import CS30.Data
+-- import CS30.Exercises.Data
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Data.Void
@@ -38,9 +38,6 @@ type Inequality = (Expr,Ineq,Expr)
 data Ineq       = GThan | GEq | EqEq deriving (Eq)
 type Implies    = (Inequality,Inequality)
 
-data Proof     = Proof Expr [ProofStep] deriving Show
-type ProofStep = (String, Expr)
-
 instance Show Law where 
   showsPrec _ (Law name (e1,e2))
     = showString name . 
@@ -60,6 +57,7 @@ instance Show IneqLaw where
 instance Show Ineq where
   showsPrec _ GThan = showString " > "
   showsPrec _ GEq   = showString " ≥ "
+  showsPrec _ EqEq  = showString " = "
 
 -- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
 lawList :: [String]
@@ -81,12 +79,12 @@ lawList = [ "Commutative of Addition: a + b = b + a"
           , "Distributive Law: a - (b - c) = a - b + c" ]
 
 ineqLawList :: [String]
-ineqLawList = [ "Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"
-              , "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"
-              , "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"
-              , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z" 
-              , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"
-              , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x"
+ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"    -- hold off for now
+              --, "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"    -- hold off for now
+                "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"      -- done
+              , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"      -- done
+              , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"      -- done
+              , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x"      -- done
               , "Addition: x > y \\Rightarrow x + z > y + z"
               , "Division for x > 0 and z > 0: x < y \\Rightarrow z / x > z / y"
               , "Division for x > 0 and z > 0: x > y \\Rightarrow z / x < z / y"
@@ -94,17 +92,6 @@ ineqLawList = [ "Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"
               , "Division for x > 0 and z ≥ 0: x > y \\Rightarrow z / x ≤ z / y"
               , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
               ]
-
--- getProofLengthN :: Int -> [Law] -> (Expr -> Law -> [Expr] ) -> Expr -> [Proof]
--- getProofLengthN 0 _ _ e = [Proof e []]
--- getProofLengthN n laws fnc e
---   = [ Proof e ((lawName,e'):steps)
---     | (Law lawName eqn) <- laws
---     , e' <- fnc e (Law lawName eqn)
---     , (Proof _ steps) <- getProofLengthN (n-1) laws fnc e']
-  -- where go exp = case [(lawName,res) | (Law lawName eqn) <- laws, res <- fnc exp (Law lawName eqn)] of 
-  --                 [] -> []
-  --                 (step@(lname,res):_) -> step:go res
 
 digit :: Parser Integer
 digit = do c <- satisfy inRange
@@ -197,65 +184,14 @@ mathToExpr (Sub a1 a2) = Op Subtraction [mathToExpr a1, mathToExpr a2]
 mathToExpr (Neg a) = Op Negate [mathToExpr a]
 
 parseLaw :: Parser Law
-parseLaw = do lawName <- parseUntil ':'
+parseLaw = do lname <- parseUntil ':'
               lhs     <- parseExpr
               _       <- string "="
               rhs     <- parseExpr
-              return (Law lawName (lhs,rhs))
+              return (Law lname (lhs,rhs))
 
--- parseIneqLaw :: Parser IneqLaw
--- parseIneqLaw = do 
---                ineqName <- parseUntil ':'
---                lhs1     <- parseExpr
---                ineq1    <- parseUntil '>' <|> parseUntil '≥' <|> parseUntil '<' <|> parseUntil '≤'
---                rhs1     <- parseExpr
---                _        <- string "\\Rightarrow"
---                lhs2     <- parseExpr
---                ineq2    <- parseUntil '>' <|> parseUntil '≥' <|> parseUntil '<' <|> parseUntil '≤'
---                --ineq2    <- string ">" <|> string "≥" <|> string "<" <|> string "≤"
---                rhs2     <- parseExpr
---                return (IneqLaw ineqName ((lhs1, ineq1, rhs1), (lhs2, ineq2, rhs2)))
--- this is ugly I'm sorry
-parseIneqLaw :: Parser IneqLaw
-parseIneqLaw = (do lawName <- parseUntil ':'
-                   lhs1 <- parseExpr
-                   _ <- string ">"
-                   rhs1 <- parseExpr
-                   _ <- string "\\Rightarrow"
-                   lhs2 <- parseExpr
-                   _ <- string ">"
-                   rhs2 <- parseExpr
-                   return (IneqLaw lawName ((lhs1,GThan,rhs1),(lhs2,GThan,rhs2))))
-              <|>
-               (do lawName <- parseUntil ':'
-                   lhs1 <- parseExpr
-                   _ <- string "≥"
-                   rhs1 <- parseExpr
-                   _ <- string "\\Rightarrow"
-                   lhs2 <- parseExpr
-                   _ <- string "≥"
-                   rhs2 <- parseExpr
-                   return (IneqLaw lawName ((lhs1,GEq,rhs1),(lhs2,GEq,rhs2))))
-              <|>
-               (do lawName <- parseUntil ':'
-                   lhs1 <- parseExpr
-                   _ <- string ">"
-                   rhs1 <- parseExpr
-                   _ <- string "\\Rightarrow"
-                   lhs2 <- parseExpr
-                   _ <- string "≥"
-                   rhs2 <- parseExpr
-                   return (IneqLaw lawName ((lhs1,GThan,rhs1),(lhs2,GEq,rhs2))))
-              <|>
-               (do lawName <- parseUntil ':'
-                   lhs1 <- parseExpr
-                   _ <- string "≥"
-                   rhs1 <- parseExpr
-                   _ <- string "\\Rightarrow"
-                   lhs2 <- parseExpr
-                   _ <- string ">"
-                   rhs2 <- parseExpr
-                   return (IneqLaw lawName ((lhs1,GEq,rhs1),(lhs2,GThan,rhs2))))
+
+-- there was a IneqLaw parser here but I don't think we need one anymore?
 
 
 parseUntil :: Char -> Parser String
@@ -266,52 +202,20 @@ parseUntil c = (do _ <- satisfy (== c)
                    return (c1:rmd)
                )
 
-law1 = Law "Assoc" (Op Addition [Op Addition [Var "X",Var "Y"],Var "Z"], Op Addition [Var "X", Op Addition [Var "Y", Var "Z"]])
+-- law1 = Law "Assoc" (Op Addition [Op Addition [Var "X",Var "Y"],Var "Z"], Op Addition [Var "X", Op Addition [Var "Y", Var "Z"]])
 
 -- generateRandEx :: Int -> ChoiceTree Expr
 -- generateRandEx = undefined
 
-getDerivation :: [Law] -> Expr -> Proof
-getDerivation laws e = Proof e (multiSteps e)
+getDerivation :: [Law] -> Ineq -> Expr -> Proof
+getDerivation laws ineq e = Proof e (multiSteps e)
   where multiSteps e'
-    = case [ (lawName law, res)
-  | law <- laws
-  , res <- getStep (lawEq law) e'
-  ] of
-  [] -> []
-  ((nm,e''):_) -> (nm,e'') : multiSteps e''
-
-getDerivation2 :: [IneqLaw] -> [Law] -> Inequality -> IneqProof
-getDerivation2 ineqlaws laws i = IneqProof i (multiSteps i)
-  where multiSteps i' -- first try inequality laws
-        = case [ (ineqName iLaw, res)
-               | iLaw <- ineqlaws
-               , res <- getStep2 (lawEq law) i'
-               ] of
-            [] -> secondMultiSteps i'
-            ((nm,i''):_) -> (nm,i'') : multiSteps i''
-        secondMultiSteps (lhs,symb,rhs) -- next try expr laws on left side
-        = case [ (lawName law, (res,symb,rhs))
-               | law <- laws
-               , res <- getStep (lawEq law) lhs
-               ] of
-            [] -> thirdMultiSteps (lhs,symb,rhs)
-            ((nm,i''):_) -> (nm,i'') : multiSteps i''
-        thirdMultiSteps (lhs,symb,rhs) -- finally try expr laws on right side
-        = case [ (lawName law, (lhs,symb,res))
-               | law <- laws
-               , res <- getStep (lawEq law) rhs
-               ] of
+          = case [ (lawName law, res)
+                 | law <- laws
+                 , res <- getStep2 laws (lawEq law) ineq e'
+                 ] of
             [] -> []
-            ((nm,i''):_) -> (nm,i'') : multiSteps i''
-
-
--- as example of getStep:
--- (5 - 3) - 1
--- x - y = x + (negate y)
--- lhs: x - y, rhs: x + (negate y)
--- expr: E[(5 - 3) - 1]
--- subst to get: x = 5 - 3, y = 1
+            ((nm,e''):_) -> (nm,e'') : multiSteps e''
 
 getStep :: Equation -> Expr -> [Expr]
 getStep (lhs, rhs) expr
@@ -328,19 +232,25 @@ getStep (lhs, rhs) expr
 
 getStep2 :: [Law] -> (Expr, Expr) -> Ineq -> Expr -> [Expr]
 getStep2 laws (lhs, rhs) ineq e
-  = case matchI lhs ineq of
+  = case matchE lhs e of
       Nothing -> recurse e
-      Just subst -> [apply2 subst rhs]
-  where recurse (Op o [e1,e2]) 
-         = [Op o [e1', e2] | e1' <- getStep (lhs,rhs) e1, snd (checkFunc o) e2] ++
-           [Op o [e1, e2'] | e2' <- getStep (lhs,rhs) e2, fst (checkFunc o) e1]
+      Just subst -> [apply subst rhs]
+  where recurse (Var _) = []
+        recurse (Const _) = []
+        recurse (Op o [e1,e2]) 
+          = [Op o [e1', e2] | e1' <- getStep (lhs,rhs) e1, snd (checkFunc o) e2] ++
+            [Op o [e1, e2'] | e2' <- getStep (lhs,rhs) e2, fst (checkFunc o) e1]
+        recurse (Op o [e1])
+          = [Op o [e1'] | e1' <- getStep (lhs,rhs) e1]
 
         --"Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"
-        isPositive e1 = provesLEQ 1 (getDerivation laws e1)
-        provesLEQ b (Proof e1 steps) = go b e1 steps
-              where go b (Const n) _ | n >= b     = True
+        isPositive e1 = provesGEQ 1 (getDerivation laws ineq e1)
+        isNonNeg e1   = provesGEQ 0 (getDerivation laws ineq e1)
+        provesGEQ b (Proof e1 steps) = go b e1 steps
+              where go b' (Const n) _ | n >= b'     = True
                                      | otherwise = False
-                    go b _ ((_ , e2):ss) = go b e2 ss --b-1 with strict inequalities
+                    --go b' (Op Negation [e]) _ = False
+                    go b' _ ((_ , e2):ss) = go b' e2 ss --b-1 with strict inequalities
                     go _ _ [] = False
 
         checkFunc Multiplication = case ineq of 
@@ -351,9 +261,8 @@ getStep2 laws (lhs, rhs) ineq e
         checkFunc Division       = (const False, snd (checkFunc Multiplication))
         checkFunc Subtraction    = (const False, const True)
         
-
+-- I think we will need to change this function
 type Substitution = [(String, Expr)]
-type IneqSubstitution = [(String, String, Inequality)]
 matchE :: Expr -> Expr -> Maybe Substitution
 matchE (Var nm) expr = Just [(nm,expr)]
 matchE (Const i) (Const j) | i == j = Just []
@@ -366,33 +275,15 @@ matchE (Op o1 [e1]) (Op o2 [e2]) | o1 == o2
  = matchE e1 e2
 matchE (Op _ _) _ = Nothing
 
-matchI :: Inequality -> Inequality -> Maybe IneqSubstitution
-matchI (e1,symbOne,e2 (e3,symbTwo,e4)
-  | symbOne == symbTwo = case (matchE e1 e3, matchE e2 e4) of
-                           (Just s1, Just s2) -> ineqSubst s1 s2
-                           _ -> Nothing
-  | otherwise = Nothing
-
 combineTwoSubsts :: Substitution -> Substitution -> Maybe Substitution
 combineTwoSubsts s1 s2
   = case and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2] of
      True -> Just (s1 ++ s2)
      False -> Nothing
 
--- fix this to account for free variables on each side
-ineqSubst :: Substitution -> Substitution -> Maybe IneqSubstitution
-ineqSubst s1 s2
-  = case and [v1 == v2| (nm1,nm2,v1) <- s1, (nm3,nm4,v2) <- s2, nm1 == nm3 && nm2 == n4] of
-     True -> Just (s1 ++ s2)
-     False -> Nothing
-
-
-apply2 :: IneqSubstitution -> Inequality -> Inequality
-
-
 apply :: Substitution -> Expr -> Expr
 apply subst (Var nm) = lookupInSubst nm subst
-apply subst (Const i) = Const i
+apply _ (Const i) = Const i
 apply subst (Op o [e]) = Op o [apply subst e]
 apply subst (Op o [e1,e2]) = Op o [(apply subst e1),(apply subst e2)]
 
