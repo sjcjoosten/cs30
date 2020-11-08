@@ -2,9 +2,12 @@ module CS30.Exercises.LogicRewriting.Exercise where
 
 import           CS30.Data
 import           CS30.Exercises.Data
+import           CS30.Exercises.Util
 import qualified Data.Map as Map
-import           CS30.Exercises.LogicRewriting.Parsing (laws, Expr (..))
+import           Data.List
+import           CS30.Exercises.LogicRewriting.Parsing (laws, lawNames, Expr (..))
 import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, Proof (..))
+import           Debug.Trace
 
 -- final exercise type
 logicRewritingEx :: ExerciseType
@@ -43,26 +46,32 @@ randomExpr = Neg <$> exprOfSize 5
 -- contains all the exercises: the list of Fields is what we display
 -- and the String is the solution (actually just the index of the right choice)
 logicExercises :: [ChoiceTree ([Field], String)]
-logicExercises = [((getDerivation laws) <$> randomExpr) >>= showExer]
-                 where displayStepsExcept _ []   = []
-                       displayStepsExcept n (step:steps) = [FMath "\\equiv", name, 
-                                                            FIndented 1 [FMath $ displayExpr (snd step)]] 
-                                                           ++ displayStepsExcept (n-1) steps
-                                                           where correct = FText ("{ "++(fst step)++" }")
-                                                                 name = if n/=0 then correct
-                                                                        else FChoice "choice" [ [FText "{ DeMorgan's Law }"]
-                                                                                              , [FText "{ Idempotent Law }"]
-                                                                                              , [correct]
-                                                                                              ]
-                                                                                              -- ^ TODO: give random choices/order
-                       showExer (Proof e steps) = nodes [ ([FIndented 1 [FMath $ displayExpr e]] 
-                                                           ++ (displayStepsExcept i steps)
-                                                          , "2") -- TODO: change this to randomly decided correct answer 
-                                                        | i <- [0..(length steps - 1)]]
+logicExercises = [do e <- randomExpr
+                     let (Proof e' steps) = getDerivation laws e
+                     remStep <- nodes [0..(length steps - 1)]
+                     let (stepName, stepE) = steps!!remStep
+                     choices <- (getOrderedSubset (delete stepName lawNames) 2)
+                     correctN <- nodes [0..2]
+                     let shuffChoices = putElemIn stepName correctN choices 
+                     return (showExer (Proof e' steps) remStep shuffChoices, show correctN)
+                  ]
+                 where putElemIn :: a -> Int -> [a] -> [a]
+                       putElemIn y 0 xs = y:xs
+                       putElemIn y n (x:xs) = x:(putElemIn y (n-1) xs)
+                       displayStepsExcept _ [] _  = []
+                       displayStepsExcept n (s:rem) choices = [FMath "\\equiv", name, 
+                                                               FIndented 1 [FMath $ displayExpr (snd s)]]
+                                                              ++ displayStepsExcept (n-1) rem choices
+                                                              where correct = FText ("{ "++(fst s)++" }")
+                                                                    name = if n/=0 then correct
+                                                                           else FChoice "choice" (map (\x -> [FText $ "{ "++x++" }"]) choices)
+
+                       showExer (Proof e steps) remStep choices = [FIndented 1 [FMath $ displayExpr e]] 
+                                                                  ++ (displayStepsExcept remStep steps choices)
 
 -- generate the question displayed to the user
 logicQuer :: ([Field], String) -> Exercise -> Exercise
-logicQuer fs defExer = defExer {eQuestion = fst fs}
+logicQuer (quer, _) defExer = defExer {eQuestion = quer}
 
 -- generate feedback
 logicFeedback :: ([Field], String) -> Map.Map String String -> ProblemResponse -> ProblemResponse

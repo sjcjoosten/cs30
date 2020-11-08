@@ -46,6 +46,13 @@ laws = map prsLaw lawStrings
                            Left _  -> error ""
                            Right l -> l
 
+-- just the (unique) names of the laws
+lawNames :: [String]
+lawNames = uniques [name | (Law name _) <- laws]
+           where uniques [] = []
+                 uniques (x:xs) = if x `elem` xs then uniques xs
+                                  else x:(uniques xs)
+
 -- parses laws in a format like:
 --   "double negation: \\neg (\\neg p) = p"
 parseLaw :: Parser Law
