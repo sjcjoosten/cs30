@@ -16,16 +16,6 @@ logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
                        logicQuer
                        logicFeedback
 
--- display an Expr as a string (to be used with FMath)
--- TODO: display parentheses better
-displayExpr :: Expr -> String
-displayExpr (Var v)         = [v]
-displayExpr (Const b)       = if b then "\\text{true}" else "\\text{false}"
-displayExpr (Neg e)         = "\\neg\\left("++(displayExpr e)++"\\right)"
-displayExpr (And e1 e2)     = "\\left("++(displayExpr e1)++"\\ \\wedge\\ "++(displayExpr e2)++"\\right)"
-displayExpr (Or e1 e2)      = "\\left("++(displayExpr e1)++"\\ \\vee\\ "++(displayExpr e2)++"\\right)"
-displayExpr (Implies e1 e2) = "\\left("++(displayExpr e1)++"\\ \\Rightarrow\\ "++(displayExpr e2)++"\\right)"
-
 -- generate initial expressions to put through the proover
 -- TODO: decide whether there is a better way to generate "good" expressions
 --   (e.g. do we want to have constants in the expression at all? 
@@ -60,13 +50,13 @@ logicExercises = [do e <- randomExpr
                        putElemIn y n (x:xs) = x:(putElemIn y (n-1) xs)
                        displayStepsExcept _ [] _  = []
                        displayStepsExcept n (s:rem) choices = [FMath "\\equiv", name, 
-                                                               FIndented 1 [FMath $ displayExpr (snd s)]]
+                                                               FIndented 1 [FMath $ show (snd s)]]
                                                               ++ displayStepsExcept (n-1) rem choices
                                                               where correct = FText ("{ "++(fst s)++" }")
                                                                     name = if n/=0 then correct
                                                                            else FChoice "choice" (map (\x -> [FText $ "{ "++x++" }"]) choices)
 
-                       showExer (Proof e steps) remStep choices = [FIndented 1 [FMath $ displayExpr e]] 
+                       showExer (Proof e steps) remStep choices = [FIndented 1 [FMath $ show e]] 
                                                                   ++ (displayStepsExcept remStep steps choices)
 
 -- generate the question displayed to the user

@@ -18,9 +18,31 @@ data Expr = Var Char          -- variable like 'p' or 'q'
           | Or Expr Expr      -- <expr> \vee <expr>
           | Implies Expr Expr -- <expr> \Rightarrow <expr>
           | Neg Expr          -- negation (\neg <expr>)
-    deriving (Eq, Show)
+    deriving Eq
+
+-- display an Expr as a string (to be used with FMath)
+-- TODO: display parentheses better
+instance Show Expr where
+    -- showsPrec :: Int -> Expr -> ShowS
+    showsPrec _ (Var v)         = showChar v
+    showsPrec _ (Const b)       = if b then showString "\\text{true}" 
+                                 else showString "\\text{false}"
+    showsPrec p (Neg e)         = showParenLATEX (p >= 4) (showString "\\neg " . showsPrec 4 e)
+    showsPrec p (And e1 e2)     = showParenLATEX (p > 3)
+                                   (showsPrec 3 e1 . showString "\\ \\wedge\\ " . showsPrec 3 e2)
+    showsPrec p (Or e1 e2)      = showParenLATEX (p > 2)
+                                   (showsPrec 2 e1 . showString "\\ \\vee\\ " . showsPrec 2 e2)
+    showsPrec p (Implies e1 e2) = showParenLATEX (p > 1)
+                                   (showsPrec 1 e1 . showString "\\ \\Rightarrow\\ " . showsPrec 1 e2)                               
 
 type Parser = ParsecT Void String Identity
+
+
+-- 
+showParenLATEX :: Bool -> ShowS -> ShowS
+showParenLATEX b p = if b 
+                     then showString "\\left(" . p . showString "\\right)" 
+                     else p
 
 -- contains all the laws that we use (after parsing)
 lawStrings :: [String]
