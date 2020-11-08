@@ -10,12 +10,14 @@ data Proof = Proof SetExpr [(String, SetExpr)] deriving Show
 generateRandomSetExpr :: Int -> ChoiceTree SetExpr
 generateRandomSetExpr = undefined
 
-example1, example2, example3, example4, example5 :: SetExpr
+example1, example2, example3, example4, example5, example6, example7 :: SetExpr
 example1 = (Cap (Var "M") (Var "N"))
 example2 = (Cup (Var "X") (Var "Y"))
 example3 = (SetMinus (Var "P") (Var "Q"))
 example4 = (Power (Var "K"))
-example5 = (In (SetBuilder (Var "p"))) -- This should become Var "p"
+example5 = (In (SetBuilder (Var "p")))
+example6 = (Cap (Cap (Var "X") (Var "Y")) (Var "Z"))
+example7 = (Cap (Var "X") (Cap (Var "Y") (Var "Z")))
 
 generateProof :: [Law] -> SetExpr -> Proof -- We need only one proof for our problem
 generateProof laws' e = Proof e (multiSteps e)
@@ -33,8 +35,8 @@ getStep eq@(lhs, rhs) e = case match lhs e of
                             (subst:_) -> [apply subst rhs] -- Apply that subst to make rhs
                        where
                             recurse (Var _)          = []
-                            recurse (SetBuilder _)   = []
-                            recurse (Power e1)       = getStep eq e1
+                            recurse (SetBuilder e1)  = [SetBuilder e1' | e1' <- getStep eq e1]
+                            recurse (Power e1)       = [Power e1' | e1' <- getStep eq e1]
                             recurse (Cap e1 e2)      = [Cap e1' e2  | e1' <- getStep eq e1] ++
                                                        [Cap e1  e2' | e2' <- getStep eq e2]
                             recurse (Cup e1 e2)      = [Cup e1' e2  | e1' <- getStep eq e1] ++
@@ -45,9 +47,9 @@ getStep eq@(lhs, rhs) e = case match lhs e of
                                                        [Wedge e1  e2' | e2' <- getStep eq e2]
                             recurse (Vee e1 e2)      = [Vee e1' e2  | e1' <- getStep eq e1] ++
                                                        [Vee e1  e2' | e2' <- getStep eq e2]  
-                            recurse (In e1)          = getStep eq e1
-                            recurse (NotIn _)        = getStep eq e
-                            recurse (Subset _)       = getStep eq e
+                            recurse (In e1)          = [In e1' | e1' <- getStep eq e1]
+                            recurse (NotIn e1)       = [NotIn e1' | e1' <- getStep eq e1]
+                            recurse (Subset e1)      = [Subset e1' | e1' <- getStep eq e1]
                             
 
 type Subst = [(String, SetExpr)]
