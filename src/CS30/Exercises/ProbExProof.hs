@@ -1,12 +1,14 @@
 module CS30.Exercises.ProbExProof where
 import CS30.Data
 import CS30.Exercises.Data
-import           Data.Void
-import           Text.Megaparsec
-import           Text.Megaparsec.Char
-import           Control.Monad.Combinators.Expr
-import           Data.Functor.Identity
-
+import Control.Monad.Combinators.Expr
+import Data.Functor.Identity
+import Data.List
+import Data.Ratio
+import Data.Void
+import Data.List.Extra
+import Text.Megaparsec
+import Text.Megaparsec.Char
 
 data ExExpr =
             Econst Integer
@@ -14,10 +16,10 @@ data ExExpr =
             | EbinOp Eop ExExpr ExExpr 
             | Ecov ExExpr ExExpr
             | E ExExpr 
-            deriving (Eq,Show)
+            deriving (Eq,Ord,Show)
 
 data Eop = Plus | Minus | Times
-            deriving (Eq,Show)
+            deriving (Eq,Ord,Show)
 
 type Parser = ParsecT Void String Identity
 
@@ -30,7 +32,7 @@ type Step = (String, ExExpr)
 
 -- | TODO: put all laws here!
 laws :: [Law]
-laws = []
+laws = [] -- map parse [bunch-of-strings]
 
 -- | Rachael's code: generate a random expression
 -- followed lecture
@@ -82,15 +84,16 @@ probExercises = [fullExercise 3, fullExercise 5, fullExercise 7]
   where fullExercise i = do ex <- genRanEx i
                             let Proof lhs steps = genProof laws ex
                                 (_,rhs) = last steps
-                            (exEval, covEval) <- assignRanVal rhs 
-                            let answer = evaluate exEval covEval rhs
-
-                            return (genFields lhs exEval covEval, answer)
-        genFields lhs exEval covEval 
+                            asgn <- assignRanVal rhs 
+                            let answer = head (evaluate asgn rhs)
+                            let exprs = nubSort (getExprs rhs)
+                            if denominator answer == 1 then return () else error "Resulting answer in the generated puzzle is a fraction, that shouldn't have happened! (Error stems from Sebastiaan's code)" 
+                            return (genFields lhs (evaluate asgn) exprs, numerator answer)
+        showFrac ans | denominator ans == 1 = show (numerator ans)
+        showFrac _ = error "Got a fraction in the generated puzzle, that shouldn't have happened! (Error stems from Sebastiaan's code)"
+        genFields lhs getVal exprs
           = [FText "Given that "] 
-            ++ combine ([FMath ("E[" ++ s ++ "]=" ++ show i) | (s,i) <- exEval] 
-            ++ [FMath ("\\text{cov}(" ++ s1 ++ "," ++ s2 ++ ")=" ++ show i) | (s1,s2,i) <- covEval])
-
+            ++ combine [FMath (asLaTeX e ++ "=" ++ showFrac ans) | e <- exprs, ans <- getVal e]
             ++ [FText ". Compute ", FMath (asLaTeX lhs)] 
 
 combine :: [Field] -> [Field]
@@ -173,14 +176,69 @@ apply lst = go
 type Subst = [(String,ExExpr)]
 
 -- takes inputs to evaluate expected value
-type ExValEval = [(String, Integer)]
--- takes inputs to evaluate covariance
-type CoVarEval = [(String, String, Integer)]
+type RanVals = [(String,[Rational])] -- For each variable, mention the value it takes for each event from the event space. Lists of integers should be equal in size.
 
--- | Sebastiaan's code: evaluate expressions
-evaluate :: ExValEval -> CoVarEval -> ExExpr -> Integer
-evaluate = undefined
+-- | Sebastiaan's code: Evaluate expressions
+-- Given the RanVals, this function returns a list of possible values (one for each event).
+-- If the function is deterministic, this will return the sum value as a singleton list.
+evaluate :: RanVals -> ExExpr -> [Rational]
+evaluate lkp (Eranvar nm)
+  = case lookup nm lkp of
+        Nothing -> error "Evaluate was called with its first argument incomplete.."
+        Just v -> v
+evaluate lkp (E e1) = [avg $ evaluate lkp e1]
+evaluate lkp (Ecov e1 e2) = [avgProd - avg1 * avg2]
+  where avg1 = avg $ evaluate lkp e1
+        avg2 = avg $ evaluate lkp e2
+        avgProd = avg $ evaluate lkp (EbinOp Times e1 e2)
+evaluate _ (Econst i) = [i%1]
+evaluate lkp (EbinOp op e1 e2)
+  = [f v1 v2 | (v1,v2) <- zipRotate (evaluate lkp e1) (evaluate lkp e2)]
+  where f = case op of
+              Plus -> (+)
+              Minus -> (-)
+              Times -> (*)
+        zipRotate [l1] l2 = zip (repeat l1) l2
+        zipRotate l1 l2 = zip l1 (cycle l2)
+
+avg :: [Rational] -> Rational
+avg lst = s / l
+  where (s,l) = foldl' (\(t,n) v -> seq t (seq n (t+v,n+1))) (0,0) lst
+
+-- | Generate a list of things of which we need to tell the user what the value is, based on what the expression was
+getExprs :: ExExpr -> [ExExpr]
+getExprs (Eranvar _) = error "Question is ill-phrased: a random variable is not a value"
+getExprs (Econst _) = []
+getExprs (EbinOp _ e1 e2) = getExprs e1 ++ getExprs e2
+getExprs e@(E _) = [e]
+getExprs e@(Ecov _ _) = [e]
 
 -- | Sebastiaan's code: randomly obtain a valuation
-assignRanVal :: ExExpr -> ChoiceTree (ExValEval, CoVarEval)
-assignRanVal = undefined
+assignRanVal :: ExExpr -> ChoiceTree RanVals
+assignRanVal expr
+  = go (nubSort $ variables expr)
+  where variables (Eranvar nm) = [nm]
+        variables (Econst _) = []
+        variables (EbinOp _ e1 e2) = variables e1 ++ variables e2
+        variables (Ecov e1 e2) = variables e1 ++ variables e2
+        variables (E e) = variables e
+        numvals = case getNumvals expr of
+                    n | n <  7    -> n
+                      | otherwise -> 10
+        getNumvals (E e) = getNumvals e
+        getNumvals (Eranvar _) = 1
+        getNumvals (Econst _) = 0
+        getNumvals (EbinOp op e1 e2)
+           = (case op of
+               Minus -> max
+               Plus -> max
+               Times -> (+)) (getNumvals e1) (getNumvals e2)
+        getNumvals (Ecov e1 e2) = getNumvals e1 + getNumvals e2
+        go [] = return []
+        go (x:xs) = do vals <- getVals numvals
+                       rm <- go xs
+                       return ((x,vals):rm)
+        getVals 0 = return []
+        getVals n = do val <- nodes [2,3,4,5,6,9,10,12,15,20]
+                       rm <- getVals (n-1)
+                       return (val * (numvals % 1):rm)
