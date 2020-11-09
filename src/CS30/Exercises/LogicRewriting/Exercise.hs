@@ -11,7 +11,7 @@ import           Debug.Trace
 
 -- final exercise type
 logicRewritingEx :: ExerciseType
-logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
+logicRewritingEx = exerciseType "LogicRewriting" "L?.?" "Logic Rewriting"
                        logicExercises
                        logicQuer
                        logicFeedback
@@ -61,7 +61,7 @@ logicExercises = [do e <- randomExpr
 
 -- generate the question displayed to the user
 logicQuer :: ([Field], String) -> Exercise -> Exercise
-logicQuer (quer, _) defExer = defExer {eQuestion = quer}
+logicQuer (quer, _) defExer = defExer {eQuestion = quer,eBroughtBy=["Chibuzo","Lucas"]}
 
 -- generate feedback
 logicFeedback :: ([Field], String) -> Map.Map String String -> ProblemResponse -> ProblemResponse

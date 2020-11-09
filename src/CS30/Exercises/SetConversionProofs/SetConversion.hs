@@ -18,7 +18,7 @@ import CS30.Exercises.SetConversionProofs.GenerateProof (Proof(..), generateProo
 
 -- setConv definition for export to Pages.hs
 setConv :: ExerciseType
-setConv = exerciseType "Set Conversion" "L??" "Conversion to set-builder notation" 
+setConv = exerciseType "SetConversion" "L??" "Conversion to set-builder notation" 
               setConversion 
               genProof 
               simpleFeedback  
