@@ -10,10 +10,10 @@ module CS30.Exercises.SetConversionProofs.SetConversion (setConv) where
 import           CS30.Data
 import           CS30.Exercises.Data
 import CS30.Exercises.Util ( reTime )
-import           Data.List.Extra (intercalate)
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import CS30.Exercises.SetConversionProofs.SetExprParser
+import CS30.Exercises.SetConversionProofs.LawParser (parsedLaws)
+import CS30.Exercises.SetConversionProofs.GenerateProof (Proof(..), generateProof)
 
 
 -- setConv definition for export to Pages.hs
@@ -23,14 +23,25 @@ setConv :: ExerciseType
 --             setConvQuer 
 --             setConvFeedback
 setConv = exerciseType "Set Conversion" "L??" "Conversion to set-builder notation" 
-              [permutations 5] genProof simpleFeedback
-        where simpleFeedback sol rsp pr
+              setConversion 
+              genProof 
+              simpleFeedback  
+
+simpleFeedback :: ([Field],[Int]) -> Map.Map [Char] String -> ProblemResponse -> ProblemResponse
+simpleFeedback (_problem, sol) rsp pr
                = reTime $ case Map.lookup "proof" rsp of
                    Just str
-                     -> if map ((sol !!) . read) (breakUnderscore str) == [0..4]
+                   -- need to fix the bottom line here
+                     -> if isSucc (map ((sol !!) . read) (breakUnderscore str) )--  == [0..4] -- replace [0..4] with proof length, check that the list is consecutive
                         then markCorrect pr
                         else markWrong pr{prFeedback=[FText "You answered: ",FText str]}
                    Nothing -> error "Client response is missing 'proof' field"
+
+isSucc :: (Enum a, Eq a) => [a] -> Bool
+isSucc [] = True
+isSucc (_x:[]) = True
+isSucc (x:y:zs) | y == succ x = isSucc $ y:zs
+isSucc _ = False
 
 permutations :: Int -> ChoiceTree [Int]
 permutations 0 = Node []
@@ -59,147 +70,122 @@ generateRandEx i
         ;return (opr e1 e2)
        }
 
-setConversion :: [ChoiceTree ([Field], [Int])]
+setConversion :: [ChoiceTree ([Field], [Int])] 
 setConversion
- = [do { i <- nodes [1..3] 
-         ; expr <- generateRandEx i
-         ; return ([FMath(myShow expr)], [])-- what goes in this list of ints?
-    }]
+ = [do { expr <- generateRandEx i
+         ; let (Proof _expr steps) = generateProof parsedLaws expr
+         ; order <- permutations (length steps)
+         ; return ([FIndented 1 [FMath (myShow expr)], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
+    } | i <- [1..3]]
 
-genProof :: [Int] -> Exercise -> Exercise
-genProof order def 
- = def{ eQuestion = [ FText $"Here is an example proof, can you put it in the right order?"
-                    , FIndented 1 [FMath "(x + y)^2"] -- starting point, from result of generateRandEx
-                    , FReorder "proof"
-                        (map ([step1,step2,step3,step4,step5] !!) order)
-                    ]
-      , eBroughtBy = ["Donia Tung & Mikio Obuchi"] }
- where 
-    --  expr = randomSelect(setConversion!!0)
-    --  proof = 
-     step1 = [ FMath "=", FText "{ definition of taking a square }"
-            , FIndented 1 [FMath "(x + y) \\cdot (x + y)"] ]
-     step2 = [ FMath "=", FText "{ distributivity of multiplication over addition }"
-            , FIndented 1 [FMath "x \\cdot (x + y) + y \\cdot (x + y)"] ]
-     step3 = [ FMath "=", FText "{ distributivity of multiplication over addition (applied twice) }"
-            , FIndented 1 [FMath "x \\cdot x + x \\cdot y + y \\cdot x + y \\cdot y"] ]
-     step4 = [ FMath "=", FText "{ definition of taking a square }"
-            , FIndented 1 [FMath "x^2 + x \\cdot y + y \\cdot x + y^2"] ]
-     step5 = [ FMath "=", FText "{ combining equal values }"
-            , FIndented 1 [FMath "x^2 + 2xy + y^2"] ]
+-- inverse permutation, checking in the other code 
 
--- -- for generating the actual text of the question displayed to client
--- setConvQuer :: ([Field],[Integer]) -> Exercise -> Exercise
--- setConvQuer (quer, _solution) exer 
---   = exer { eQuestion=[FText "This is thequestion:  "] ++ quer ++
---                      [FFieldMath "answer"]}
-  
+genProof :: ([Field],[Int]) -> Exercise -> Exercise
+genProof (problem, _order) def 
+ = def{ eQuestion = [ FText $"Here is a proof, can you put it in the right order?"] ++ problem
+      , eBroughtBy = ["Donia Tung", "Mikio Obuchi"] }
 
--- -- fxn for generating feedback to the users, based on their parsed input
--- setConvFeedback :: ([Field],[Integer]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
--- setConvFeedback (quer, sol) mStrs defaultRsp 
---   = reTime $ case Map.lookup "answer" mStrs of
---       Just v -> markCorrect $ 
---                 defaultRsp {prFeedback = [FText("you entered" ++ show v)]}
---       Nothing -> markWrong $
---                 defaultRsp {prFeedback = [FText("wrong, you entered nothing")]}
 
+-- translating a line in a proof into a field
+showProofLine :: (String, SetExpr) -> [Field]
+showProofLine (lwnm, expr)
+  = [
+      FMath "=", FText lwnm
+      , FIndented 1 [FMath (myShow expr)]
+    ] 
 
 ----------- SHOWING SETEXPR AS STRINGS ------
 prec :: SetExpr -> Int 
-prec (Cup _ _) = 2
-prec (Cap _ _) = 2
-prec (SetMinus _ _) = 2
+-- I ended up keeping this because it was used in myShow, in which I don't enumerate all the various 
+-- setexpr cases, but if there is a way to get rid of it without having to entirely rewrite that function, I can do that
+prec (Var _) = 0
 prec (Power _) = 1
-prec (Wedge _ _ ) = 2
-prec (Vee _ _ ) = 2
-prec (In _) = 1
-prec (NotIn _) = 1 
+prec (SetBuilder _) = 1
 prec (Subset _) = 1
---          | Wedge SetExpr SetExpr   -- and, intersection
---               | Vee SetExpr SetExpr     -- or, union
---               | In SetExpr      -- element of 
---               | NotIn SetExpr   -- not an element of
---               | Subset SetExpr -- subset of
-
--- symb :: SetExpr -> String 
--- symb (Var a) = a
--- symb (Cup e1 e2) = myShow e1 ++ "\\cup" ++ myShow e2
--- symb (Cap e1 e2) = myShow e1 ++ "\\cap" ++ myShow e2
--- symb (SetMinus e1 e2) = myShow e1 ++  "\\setminus" ++ myShow e2
--- symb (Power e) = "\\P(" ++ myShow e ++ ")"
-symb :: SetExpr -> String 
-symb (Var a) = a
-symb (Cup _ _) = "\\cup" 
-symb (Cap _ _ ) = "\\cap" 
-symb (SetMinus _ _) =  "\\setminus" 
--- symb (Power _) = "\\P(" ++ myShow e ++ ")"
-symb (Wedge _ _ ) = "\\wedge"
-symb (Vee _ _ ) = "\\vee"
-symb (In _) = "e \\in"
-symb (NotIn _) = "e \\notin"
-symb (Subset _) = "e \\subseteq"
+prec (Vee _ _) = 2 
+prec (Wedge _ _) = 2 
+prec (In _) = 3
+prec (NotIn _) = 3 
+prec (Cap _ _) = 4
+prec (Cup _ _) = 4
+prec (SetMinus _ _) = 4
 
 showSpace :: String
 showSpace = " "
 
 myShow :: SetExpr -> String
 myShow (Var n) = n 
-myShow (SetBuilder e) 
-  = "\\left\\{ e | " ++ myShow e ++ "\\right\\}"
-myShow e
-  = "(for all " ++ vars ++ ") " ++ showsPrec' p e
+myShow e 
+  = showsPrec' p e
     where p = prec e
-          vars = list_to_string ( getVars e )
-          --  vars = removeDuplicates (list_to_string ( getVars e ) )
-   
+
 showParen' :: Bool -> String -> String
 showParen' p x = if p then
                 "(" ++ x ++  ")"
                 else x
 
 showsPrec' :: Int -> SetExpr -> String
-showsPrec' p (Var n) = n
+showsPrec' _p (Var n) = n
 showsPrec' p (Cap e1 e2)
   = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
-        symb (Cap e1 e2) ++ showSpace ++ showsPrec' (q-1) e2)
-    where q = prec (Cap e1 e2)
+        "\\cap" ++ showSpace ++ showsPrec' (q-1) e2)
+    where q = 4
 showsPrec' p (Cup e1 e2)
   = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
-        symb (Cup e1 e2) ++ showSpace ++ showsPrec' (q-1) e2)
-    where q = prec (Cup e1 e2)
+        "\\cup" ++ showSpace ++ showsPrec' (q-1) e2)
+    where q = 4
 showsPrec' p (SetMinus e1 e2)
   = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
-        symb (SetMinus e1 e2) ++ showSpace ++ showsPrec' (q-1) e2)
-    where q = prec (SetMinus e1 e2)
--- showsPrec' p (op (x:xs))
---     = showParen' (p<q) (showsPrec' q x ++ showSpace ++
---             symb op ++ showSpace ++ showsPrec' (q-1) (head xs))
---       where q = prec op
+        "\\setminus" ++ showSpace ++ showsPrec' (q-1) e2)
+    where q = 4
+showsPrec' p (Wedge e1 e2)
+  = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
+        "\\wedge" ++ showSpace ++ showsPrec' (q-1) e2)
+    where q = 2
+showsPrec' p (Vee e1 e2)
+  = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
+         "\\vee" ++ showSpace ++ showsPrec' (q-1) e2)
+    where q = 2
+showsPrec' p (In e)
+  = showParen' (p < q) ( "e \\in" ++ showSpace ++ showsPrec' (q-1) e)
+    where q = 3
+showsPrec' p (NotIn e)
+  = showParen' (p < q) ( "e \\notin" ++ showSpace ++ showsPrec' (q-1) e)
+    where q = 3
+showsPrec' p (Subset e)
+  = showParen' (p < q) ( "e \\subseteq" ++ showSpace ++ showsPrec' (q-1) e)
+    where q = 1
+showsPrec' p (Power e)
+  = showParen' (p < q) ( "\\P" ++ showsPrec' (0) e)
+    where q = 1
+showsPrec' p (SetBuilder e) 
+  = showParen' (p < q) ( "\\left\\{ e | " ++ myShow e ++ "\\right\\}")
+    where q = 1
 
--- fxn for extracting the variables in a set expression (not in use rn)
-getVars :: SetExpr -> [String]
-getVars (Var x) = [x]
-getVars (Cap e1 e2) = getVars e1  ++ getVars e2
-getVars (Cup e1 e2) = getVars e1 ++ getVars e2
-getVars (SetMinus e1 e2) = getVars e1 ++ getVars e2
-getVars (Wedge e1 e2) = getVars e1 ++ getVars e2
-getVars (Vee e1 e2) = getVars e1 ++ getVars e2
-getVars (Power e) = getVars e
-getVars (In e) = getVars e
-getVars (NotIn e) = getVars e
-getVars (SetBuilder e) = getVars e
-getVars (Subset e) = getVars e
 
--- helper fxn to get from list to strings
-list_to_string :: [String] -> String
-list_to_string = intercalate ", " . map show
+-- -- fxn for extracting the variables in a set expression (not in use rn)
+-- getVars :: SetExpr -> [String]
+-- getVars (Var x) = [x]
+-- getVars (Cap e1 e2) = getVars e1  ++ getVars e2
+-- getVars (Cup e1 e2) = getVars e1 ++ getVars e2
+-- getVars (SetMinus e1 e2) = getVars e1 ++ getVars e2
+-- getVars (Wedge e1 e2) = getVars e1 ++ getVars e2
+-- getVars (Vee e1 e2) = getVars e1 ++ getVars e2
+-- getVars (Power e) = getVars e
+-- getVars (In e) = getVars e
+-- getVars (NotIn e) = getVars e
+-- getVars (SetBuilder e) = getVars e
+-- getVars (Subset e) = getVars e
 
-removeDuplicates :: (Eq a) => [a] -> [a]
-removeDuplicates list = remDups list []
+-- -- helper fxn to get from list to strings
+-- list_to_string :: [String] -> String
+-- list_to_string = intercalate ", " . map show
 
-remDups :: (Eq a) => [a] -> [a] -> [a]
-remDups [] _ = []
-remDups (x:xs) list2
-    | (x `elem` list2) = remDups xs list2
-    | otherwise = x : remDups xs (x:list2)
+-- removeDuplicates :: (Eq a) => [a] -> [a]
+-- removeDuplicates list = remDups list []
+
+-- remDups :: (Eq a) => [a] -> [a] -> [a]
+-- remDups [] _ = []
+-- remDups (x:xs) list2
+--     | (x `elem` list2) = remDups xs list2
+--     | otherwise = x : remDups xs (x:list2)

@@ -6,9 +6,18 @@ import CS30.Exercises.SetConversionProofs.LawParser
 
 data Proof = Proof SetExpr [(String, SetExpr)] deriving Show
 
-
-generateRandomSetExpr :: Int -> ChoiceTree SetExpr
-generateRandomSetExpr = undefined
+-- fxn for generating a random expression, using \cap, \cup, and \setminus operators (as specified in the assignment sheet)
+generateRandEx :: Int -> ChoiceTree SetExpr
+generateRandEx i | i < 1
+ = Branch [ Branch [Node (Var varName) | varName <- ["A","B","C"]] -- should I have options like (Cap (Var "A") (Var "A") ? (do this and document in comments, as a creative)
+          ]
+generateRandEx i
+ = do { i' <- nodes [0..i-1]
+        ;e1 <- generateRandEx i'
+        ;e2 <- generateRandEx (i - i' - 1)
+        ;opr <- nodes [Cap, Cup, SetMinus]
+        ;return (opr e1 e2)
+       }
 
 example1, example2, example3, example4, example5, example6, example7 :: SetExpr
 example1 = (Cap (Var "M") (Var "N"))
