@@ -1,10 +1,15 @@
-module CS30.IneqProofs where
+-- module CS30.Exercises.IneqProofs(ineqProofExercise) where
 -- import CS30.Data
 -- import CS30.Exercises.Data
-import Text.Megaparsec
-import Text.Megaparsec.Char
-import Data.Void
-import Control.Monad.Combinators.Expr
+-- import           CS30.Data
+-- import           CS30.Exercises.Data
+import           Control.Monad.Combinators.Expr
+import qualified Data.Map as Map
+import           Data.Void
+import           Data.Either
+import           Data.Maybe
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
 -- defining datas and types
@@ -59,6 +64,8 @@ instance Show Ineq where
   showsPrec _ GEq   = showString " ≥ "
   showsPrec _ EqEq  = showString " = "
 
+{- laws to be used in our proofs -}
+
 -- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
 lawList :: [String]
 lawList = [ "Commutative of Addition: a + b = b + a"
@@ -71,8 +78,6 @@ lawList = [ "Commutative of Addition: a + b = b + a"
           , "Multiplicative Association: a * (b * c) = (a * b) * c"
           , "Multiplication Times 0: 0 * a = 0"
           , "Multiplication Times 0: a * 0 = 0"
-          
-          --let's hope we never divide by zero lol
           , "Dividing Zero: 0 / a = 0"
           , "Multiplicative Inverse: a / a = 1"
           , "Distributive Law: a - (b + c) = a - b - c"
@@ -92,6 +97,8 @@ ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"  
               , "Division for x > 0 and z ≥ 0: x > y \\Rightarrow z / x ≤ z / y"
               , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
               ]
+
+lawBois = stringsToLaw lawList
 
 digit :: Parser Integer
 digit = do c <- satisfy inRange
@@ -189,10 +196,6 @@ parseLaw = do lname <- parseUntil ':'
               _       <- string "="
               rhs     <- parseExpr
               return (Law lname (lhs,rhs))
-
-
--- there was a IneqLaw parser here but I don't think we need one anymore?
-
 
 parseUntil :: Char -> Parser String
 parseUntil c = (do _ <- satisfy (== c)
@@ -292,3 +295,63 @@ lookupInSubst nm ((nm',v):rm)
  | nm == nm' = v
  | otherwise = lookupInSubst nm rm
 lookupInSubst _ [] = error "Substitution was not complete, or free variables existed in the rhs of some equality"
+
+-- {- displaying the proofs -}
+
+-- permutations :: Int -> ChoiceTree [Int]
+-- permutations 0 = Node []
+-- permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you can more easily check this out in GHCI.
+--  = do i <- nodes [0..n-1]
+--       rm <- permutations (n-1)
+--       return (i : map (\v -> if v >= i then v+1 else v) rm)
+
+-- breakUnderscore :: String -> [String]
+-- breakUnderscore s
+--   =  case dropWhile (=='_') s of
+--        "" -> []
+--        s' -> w : breakUnderscore s''
+--              where (w, s'') = break (=='_') s'
+
+-- ineqProofExercise :: ExerciseType
+-- ineqProofExercise = exerciseType "ineqProof" "L?.???" "Logic: Inequality"
+--                       [permutations 5] genProof simpleFeedback
+--                where simpleFeedback sol rsp pr
+--                       = case Map.lookup "proof" rsp of
+--                           Just str
+--                             -> if map ((sol !!) . read ) (breakUnderscore str) == [0..4]
+--                                then markCorrect pr
+--                                else markWrong pr{prFeedback=[FText "You answered: ",FText str]}
+--                           Nothing -> error "Client response is missing 'proof' field"
+
+-- -- data Proof     = Proof Expr [ProofStep] deriving Show
+-- -- type ProofStep = (String, Expr)
+
+-- genProof :: [Int] -> Exercise -> Exercise
+-- genProof order def 
+--  = def{ eQuestion = [ FText $"Can you put the following proof in the right order?"
+--                     , FIndented 1 [FMath "(n + 1)"]
+--                     , FReorder "proof"
+--                         (map ([step1,step2,step3,step4,step5] !!) order)
+--                     ]
+--       , eBroughtBy = ["Kyle Bensink and Lucas Boebel"] }
+-- -- getDerivation :: [Law] -> Ineq -> Expr -> Proof
+
+--       where --hardcoded example
+--         step1 = [ FMath "=", FText "{ definition of factorial }"
+--                 , FIndented 1 [FMath "(n + 1)! ≥ (n + 1) \\cdot (n)!"] ]
+--         step2 = [ FMath "=", FText "{ Given x > 0: n + 1 > 0, n! > n }"
+--                 , FIndented 1 [FMath "(n + 1)! > (n + 1) \\cdot (n)!"] ]
+--         step3 = [ FMath "=", FText "{ n > 0, n + 1 > 1 }"
+--                 , FIndented 1 [FMath "(n + 1)! > (n + 1) \\cdot n"] ]
+--         step4 = [ FMath "=", FText "{ n > 0, n + 1 > 1 }"
+--                 , FIndented 1 [FMath "(n + 1)! > 1 * n"] ]
+--         step5 = [ FMath "=", FText "{ Multiplication by 1 }"
+--                 , FIndented 1 [FMath "(n + 1)! > n"] ]
+
+-- this might work, but idk how to use things with Maybe
+stringsToLaw :: [String] -> [Law]
+stringsToLaw l = catMaybes $ map convert l
+  where convert v = case parse parseLaw "" v of
+                 Left _ -> Nothing
+                 Right v -> Just v
+
