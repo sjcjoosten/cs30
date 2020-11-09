@@ -14,6 +14,8 @@ import CS30.Exercises.TruthTable (truthEx)
 import CS30.Exercises.ProofStub (proofStub)
 import CS30.Exercises.LogicExpr.Display (logicProof)
 
+import CS30.Exercises.SetConversionProofs.SetConversion (setConv)
+
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
 -- http://math.chapman.edu/~jipsen/mathquill/test/MathQuillsymbolsMathJax.html
 -- http://math.chapman.edu/~jipsen/mathquill/test/test.html
@@ -32,6 +34,7 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , modN
         , logicProof
         -- , combinEx -- too slow, see TODO
+        , setConv
         ]
 
 -- the definition below is to prevent warnings about unused imports
