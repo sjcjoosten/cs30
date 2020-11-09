@@ -19,11 +19,8 @@ data FracExpr
 data Law = Law {lawName :: String, lawEq :: Equation} deriving Show
 type Equation = (FracExpr,FracExpr)
 
-law1 :: Law
-law1 = Law "DeMorgan" (NegaEvent (AndEvent (FVar 'A') (FVar 'B')), OrEvent (NegaEvent (FVar 'A')) (FVar 'B'))
-
 -- laws given in the Final Assignmentss
-{-deMorgan1 :: String
+deMorgan1 :: String
 deMorgan1 =  "DeMorgan: \\neg (A \\wedge B) = \\neg A \\vee \\neg B"
 deMorgan2 :: String
 deMorgan2 = "DeMorgan: \\neg (A \\vee B) = \\neg A \\wedge \\neg B"
@@ -40,7 +37,7 @@ emptyElimiV = "Empty-set elimination: \\emptyset \\wedge A = \\emptyset"
 negaProba :: String
 negaProba = "Negation in probability: Pr[\\neg A] = 1 - Pr[A]"
 difference :: String
-difference = "Difference: Pr[A \\wedge \\neg B] = Pr[A] - Pr[A \\wedge B]"-}
+difference = "Difference: Pr[A \\wedge \\neg B] = Pr[A] - Pr[A \\wedge B]"
 
 -- x - y = x + (nagate y)
 -- lhs : x - y; rhs : x + (nagate y)
@@ -62,15 +59,11 @@ parseUntil c
         return (accum:rmd) 
         )
 
-{-laws :: [String] 
-laws = [deMorgan1, deMorgan2] -- dbNegat, omegaElimiW, emptyElimiW]-}
-
-laws1 :: [Law]
-laws1 = [law1]
+laws :: [String] 
+laws = [deMorgan1, deMorgan2] --, dbNegat, omegaElimiW, omegaElimiV, emptyElimiW, emptyElimiV]
 
 parsedLaws :: [Law]
-parsedLaws = laws1
-    --Prelude.map strToLaw laws
+parsedLaws = Prelude.map strToLaw laws
 
 strToLaw :: String -> Law 
 strToLaw law =  case parse parseLaws "" law of
@@ -184,6 +177,14 @@ fractional_parser = do {lt_spaces;
                     }
                     <|>
                     do {
+                        string "(";
+                        e1 <- fractional_parser;
+                        string ")";
+                        lt_spaces;
+                        return (e1)
+                    }
+                    <|>
+                    do {
                         e1 <- fractional_parser;
                         string "\\wedge";
                         e2 <- fractional_parser;
@@ -202,8 +203,8 @@ fractional_parser = do {lt_spaces;
                     }
                     <|>
                     do {
-                        e1 <- fractional_parser;
                         string "\\neg";
+                        e1 <- fractional_parser;
                         lt_spaces;
                         return (NegaEvent e1)
                     }
