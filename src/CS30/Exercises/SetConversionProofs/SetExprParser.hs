@@ -6,7 +6,7 @@ COSC 69.14, 20F
 Group Assignment 2
 -}
 
-module CS30.Exercises.SetConversionProofs.SetExprParser (parseExpr, parseUntil, exprParens, symbol, SetExpr) where
+module CS30.Exercises.SetConversionProofs.SetExprParser where
 import           Data.Functor.Identity
 import           Data.Void
 import           Text.Megaparsec
@@ -28,19 +28,12 @@ data SetExpr = Var String -- single variable
               | In SetExpr      -- element of 
               | NotIn SetExpr   -- not an element of
               | Subset SetExpr -- subset of
-              deriving Show
+              deriving (Show, Eq)
 
 type Parser = ParsecT Void String Identity
 
 
--- fxn for extracting the variables in a set expression (not in use rn)
--- getVars :: SetExpr -> String
--- getVars (Var x)    = x
--- getVars (Cap e1 e2)     = getVars e1  ++ getVars e2
--- getVars (Cup e1 e2) = getVars e1++getVars e2
--- getVars (SetMinus e1 e2) = getVars e1++getVars e2
--- getVars (Power e1) = getVars e1
--- getVars (Wedge e1 e2) = getVars e1++getVars e2
+
 
 -- parse spaces (used w/ symbol and lexeme)
 spaceConsumer :: Parser ()
