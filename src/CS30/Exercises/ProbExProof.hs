@@ -145,7 +145,7 @@ probExercises :: [ChoiceTree ([Field], Integer)] -- first thing in field will be
 probExercises = [fullExercise 3, fullExercise 5, fullExercise 7]
   where fullExercise i = do ex <- genRanEx i
                             let Proof lhs steps = genProof laws ex
-                                (_,rhs) = last steps
+                                rhs = last (ex : map snd steps)
                             asgn <- assignRanVal rhs 
                             let answer = head (evaluate asgn rhs)
                             let exprs = nubSort (getExprs rhs)
