@@ -36,6 +36,7 @@ pagesStandardTests
 checkField :: Field -> Property
 checkField = property . validField
 
+resultAll :: [QCP.Result] -> QCP.Result
 resultAll = foldr preferFail QCP.succeeded
  where preferFail r1 r2
         = case QCP.ok r1 of
@@ -50,7 +51,9 @@ validField (FFieldMath str) = validHTMLName "The Field with constructor FFieldMa
 validField (FText str) = seq str QCP.succeeded
 validField (FNote str) = seq str QCP.succeeded
 validField (FIndented n lst) | n >= 0 = resultAll (map validField lst)
-validField (FIndented n lst) = QCP.failed{QCP.reason = "Indentation cannot be negative."}
+validField (FIndented _n _lst) = QCP.failed{QCP.reason = "Indentation cannot be negative."}
+validField (FChoice nm lst)
+ = resultAll (validHTMLName "The Field with constructor FValue" nm:concatMap (map validField) lst)
 validField (FReorder nm lst)
  = resultAll (validHTMLName "The Field with constructor FValue" nm:concatMap (map validField) lst)
 validField (FValue a b)
