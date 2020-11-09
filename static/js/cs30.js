@@ -91,8 +91,35 @@ function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_, submitAction
             handleField(q.fContent[i], pushHandler, function(v){elmt.appendChild(v);}, submitAction);
           }
           appendHandler(elmt);
+    break; case "FChoice":
+          var elmt = document.createElement('div');
+          elmt.className = "dropdown";
+          var ctx = document.createElement('span');
+          ctx.appendChild(document.createTextNode("Select"));
+          elmt.appendChild(ctx);
+          var data = {value : ""};
+          var dd = document.createElement('ul');
+          dd.className = "dropdown-content";
+          var lis = new Array();
+          for (var i=0; i<q.fClusters.length; i++){
+            lis[i] = document.createElement('li');
+            lis[i].setAttribute('nr',i.toString());
+            var cluster = q.fClusters[i];
+            for (var j=0; j<cluster.length; j++){
+              handleField(cluster[j], pushHandler, function(v){lis[i].appendChild(v);}, submitAction);
+            }
+            lis[i].onclick=(i => function(evt){
+              ctx.replaceChild(lis[i].cloneNode(true),ctx.childNodes[0]);
+              data.value = lis[i].getAttribute('nr');
+            })(i);
+            dd.appendChild(lis[i]);
+          }
+          elmt.appendChild(dd);
+          pushHandler({name:q.fvName,q:q,getVal:function(){return data.value;}});
+          appendHandler(elmt);
     break; case "FReorder":
           var elmt = document.createElement('ul');
+          elmt.className="sortable";
           for (var i=0; i<q.fClusters.length; i++){
             var li = document.createElement('li');
             li.setAttribute('data-id',i);
