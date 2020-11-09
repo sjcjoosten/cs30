@@ -34,11 +34,12 @@ type Step = (String, ExExpr)
 
 -- | TODO: put all laws here!
 laws :: [Law]
-laws = map parseL ["'Linearity of Expectation' E[X+Y]=E[X]+E[Y]"]
+laws = map parseL ["'Linearity of Expectation' E[X+Y]=E[X]+E[Y]"] ++
+       map parseL ["'Linearity of Expectation' E[X+Y] = E[X] + E[Y]"]
 
 latexLaws :: IO ()
 latexLaws = mapM_ f laws 
-               where f (Law _ (e1,e2)) = putStrLn (asLaTeX e1 ++ " = " ++ asLaTeX e2)
+               where f (Law _ (e1,e2)) = putStrLn (asLatex e1 ++ " = " ++ asLatex e2)
 
 parseL :: String -> Law
 parseL str = case (parse parseLawExExpr "" str) of 
@@ -119,7 +120,7 @@ parseLawExExpr :: Parser Law
 parseLawExExpr = do lawName <- between (string "'") (string "'") (many nonSingleQuote)
                     spaces
                     e1 <- parseExExpr
-                    string "="
+                    _ <- string "=" <|> string " = "<|> string " =" <|> string "= " -- TODO: improve this poor way of making extra spaces work
                     e2 <- parseExExpr
                     return (Law lawName (e1,e2))
 
@@ -154,8 +155,8 @@ probExercises = [fullExercise 3, fullExercise 5, fullExercise 7]
         showFrac _ = error "Got a fraction in the generated puzzle, that shouldn't have happened! (Error stems from Sebastiaan's code)"
         genFields lhs getVal exprs
           = [FText "Given that "] 
-            ++ combine [FMath (asLaTeX e ++ "=" ++ showFrac ans) | e <- exprs, ans <- getVal e]
-            ++ [FText ". Compute ", FMath (asLaTeX lhs)] 
+            ++ combine [FMath (asLatex e ++ "=" ++ showFrac ans) | e <- exprs, ans <- getVal e]
+            ++ [FText ". Compute ", FMath (asLatex lhs)] 
 
 combine :: [Field] -> [Field]
 combine [] = []
@@ -165,8 +166,19 @@ combine [x,y,z] = [x, FText ", ", y, FText ", and ", z]
 combine (x:xs) = [x, FText ", "] ++ combine xs
 
 -- | take an expression, generate latex string
-asLaTeX :: ExExpr -> String 
-asLaTeX = undefined
+asLatex :: ExExpr -> String 
+asLatex expr = undefined -- latexHelper (words (show expr)) 0 []
+
+{-- stopped working on this because I know it's wrong and in the completely wrong direction
+latexHelper :: [String] -> Int -> String -> String
+latexHelper exprStr n res = if n > length exprStr - 1   then return (res ++ "]") else
+                            if exprStr !! n == "E"      then res ++ "E["         else
+                            if exprStr !! n == "EbinOp" then (let op = exprStr !! n+1
+                                                                  l  = exprStr !! n+2
+                                                                  r  = exprStr !! n+3 
+                                                                  n  = n+4
+                                                              in  res ++ l ++ op ++ r) else
+--}
 
 -- randomSelect (Branch choiceTreeList)
 genQuestion :: ([Field], a) -> Exercise -> Exercise
