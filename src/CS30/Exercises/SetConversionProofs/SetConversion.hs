@@ -18,31 +18,29 @@ import CS30.Exercises.SetConversionProofs.GenerateProof (Proof(..), generateProo
 
 -- setConv definition for export to Pages.hs
 setConv :: ExerciseType
--- setConv = exerciseType "Set Conversion" "L??" "Conversion to set-builder notation" 
---             setConversion
---             setConvQuer 
---             setConvFeedback
 setConv = exerciseType "Set Conversion" "L??" "Conversion to set-builder notation" 
               setConversion 
               genProof 
               simpleFeedback  
 
+-- simple feedback mechanism 
 simpleFeedback :: ([Field],[Int]) -> Map.Map [Char] String -> ProblemResponse -> ProblemResponse
 simpleFeedback (_problem, sol) rsp pr
                = reTime $ case Map.lookup "proof" rsp of
                    Just str
-                   -- need to fix the bottom line here
-                     -> if isSucc (map ((sol !!) . read) (breakUnderscore str) )--  == [0..4] -- replace [0..4] with proof length, check that the list is consecutive
+                     -> if isSucc (map ((sol !!) . read) (breakUnderscore str) )
                         then markCorrect pr
                         else markWrong pr{prFeedback=[FText "You answered: ",FText str]}
                    Nothing -> error "Client response is missing 'proof' field"
 
+-- fxn for determining if a list is comprised of directly successive numbers
 isSucc :: (Enum a, Eq a) => [a] -> Bool
 isSucc [] = True
 isSucc (_x:[]) = True
 isSucc (x:y:zs) | y == succ x = isSucc $ y:zs
 isSucc _ = False
 
+-- from ProofStub.hs
 permutations :: Int -> ChoiceTree [Int]
 permutations 0 = Node []
 permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you can more easily check this out in GHCI.
@@ -50,6 +48,7 @@ permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you ca
       rm <- permutations (n-1)
       return (i : map (\v -> if v >= i then v+1 else v) rm)
 
+-- from ProofStub.hs
 breakUnderscore :: String -> [String]
 breakUnderscore s
   =  case dropWhile (=='_') s of
@@ -70,6 +69,7 @@ generateRandEx i
         ;return (opr e1 e2)
        }
 
+-- creating the choice tree for problems, 3 levels in terms of degree of nested expr
 setConversion :: [ChoiceTree ([Field], [Int])] 
 setConversion
  = [do { expr <- generateRandEx i
@@ -80,6 +80,7 @@ setConversion
 
 -- inverse permutation, checking in the other code 
 
+-- generating the proof question
 genProof :: ([Field],[Int]) -> Exercise -> Exercise
 genProof (problem, _order) def 
  = def{ eQuestion = [ FText $"Here is a proof, can you put it in the right order?"] ++ problem
@@ -161,31 +162,3 @@ showsPrec' p (Power e)
 showsPrec' p (SetBuilder e) 
   = showParen' (p < q) ( "\\left\\{ e | " ++ myShow e ++ "\\right\\}")
     where q = 1
-
-
--- -- fxn for extracting the variables in a set expression (not in use rn)
--- getVars :: SetExpr -> [String]
--- getVars (Var x) = [x]
--- getVars (Cap e1 e2) = getVars e1  ++ getVars e2
--- getVars (Cup e1 e2) = getVars e1 ++ getVars e2
--- getVars (SetMinus e1 e2) = getVars e1 ++ getVars e2
--- getVars (Wedge e1 e2) = getVars e1 ++ getVars e2
--- getVars (Vee e1 e2) = getVars e1 ++ getVars e2
--- getVars (Power e) = getVars e
--- getVars (In e) = getVars e
--- getVars (NotIn e) = getVars e
--- getVars (SetBuilder e) = getVars e
--- getVars (Subset e) = getVars e
-
--- -- helper fxn to get from list to strings
--- list_to_string :: [String] -> String
--- list_to_string = intercalate ", " . map show
-
--- removeDuplicates :: (Eq a) => [a] -> [a]
--- removeDuplicates list = remDups list []
-
--- remDups :: (Eq a) => [a] -> [a] -> [a]
--- remDups [] _ = []
--- remDups (x:xs) list2
---     | (x `elem` list2) = remDups xs list2
---     | otherwise = x : remDups xs (x:list2)
