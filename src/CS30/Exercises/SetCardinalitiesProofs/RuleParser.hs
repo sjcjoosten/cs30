@@ -22,7 +22,7 @@ data Symb = Add
          | Setminus 
          deriving (Show, Eq)
 
-data Expr = Var Char | Op Symb [Expr] deriving (Show, Eq)
+data Expr = Var Char | Op Symb [Expr] deriving (Show, Eq)--BinOp Symb Expr Expr | MonOp Symb Expr deriving (Show, Eq)
 
 data Law = Law {lawName :: String, lawEquation :: Equation} deriving (Show)
 type Equation = (Expr, Expr)  -- (left,right)

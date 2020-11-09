@@ -8,7 +8,9 @@ type Laws = [Law]
 type Expressions = [Expr]
 type Substitution = [(Char, Expr)]
 
-data Proof = Proof Expr Steps
+data Proof = Proof Expr Steps deriving (Show, Eq)
+
+law1 = Law {lawName = "TestLaw", lawEquation = (Op Cardinality [Op Union [Var 'A',Var 'B']],Op Sub [Op Add [Op Cardinality [Var 'A'],Op Cardinality [Var 'B']],Op Cardinality [Op Intersection [Var 'A',Var 'B']]])}
 
 lookupInSubstitution :: Char -> Substitution -> Expr
 lookupInSubstitution name ((nm, v):rm)
@@ -24,13 +26,24 @@ combineTwoSubs sub1 sub2
 
 match :: Expr -> Expr -> Maybe Substitution
 match (Var name) expr = Just [(name, expr)]
-match (Op symb1 exprs1) (Op symb2 exprs2) = undefined -- Ask how to handle matching two Op Exprs
+match (Op op1 exprs1) (Op op2 exprs2)
+    | op1 == op2 = 
+        combineAll (zipWith match exprs1 exprs2)
+    | otherwise = Nothing
 match (Op _ _) (Var _) = Nothing
+
+
+combineAll :: [Maybe Substitution] -> Maybe Substitution
+combineAll [] = Just []
+combineAll (Nothing:_) = Nothing
+combineAll (Just x:xs) = case combineAll xs of
+                            Nothing -> Nothing
+                            Just s  -> combineTwoSubs x s
+                
 
 apply :: Substitution -> Expr -> Expr
 apply sub (Var name) = lookupInSubstitution name sub
-apply sub (Op symb (expr : exprs)) = Op symb ((apply sub expr):exprs) -- Ask how to handle applying for Op Expr
-apply _ (Op _ []) = undefined -- Ask how to handle empty set for Op Expr
+apply sub (Op symb exprs) = Op symb (map (apply sub) exprs) -- Ask how to handle applying for Op Expr
 
 getStep :: Equation -> Expr -> Expressions
 getStep (lhs, rhs) expr
@@ -38,8 +51,15 @@ getStep (lhs, rhs) expr
         Nothing -> recurse expr
         Just sub -> [apply sub rhs]
     where recurse (Var _) = []
-          recurse (Op symb (ex : exs)) = undefined -- Ask how to modify getStep for handling Op Expr
-          recurse (Op _ []) = []
+          recurse (Op symb exprs) = [Op symb (context e')| (e, context) <- takeOneOf exprs, e' <- getStep (lhs,rhs) e ] -- Ask how to modify getStep for handling Op Expr
+
+takeOneOf :: [a] -> [(a, a -> [a])]
+takeOneOf [] = []
+takeOneOf (a:as) = (a,(:as)): map f (takeOneOf as)
+    where
+        f (a', fn) = (a',(a:) . fn) -- a is put in front of the result of fn
+
+
 
 getDerivation :: Laws -> Expr -> Proof
 getDerivation laws expr = Proof expr (multiSteps expr)
