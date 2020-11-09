@@ -1,4 +1,4 @@
-module CS30.Exercises.SetCardinalitiesProofs.CardinalityProof where
+module CS30.Exercises.SetCardinalitiesProofs.Proof where
 import CS30.Exercises.SetCardinalitiesProofs.RuleParser
 
 type Step = (String, Expr)
@@ -8,9 +8,19 @@ type Laws = [Law]
 type Expressions = [Expr]
 type Substitution = [(Char, Expr)]
 
-data Proof = Proof Expr Steps deriving (Show, Eq)
+data Proof = Proof Expr Steps deriving (Show,Eq)
 
-law1 = Law {lawName = "TestLaw", lawEquation = (Op Cardinality [Op Union [Var 'A',Var 'B']],Op Sub [Op Add [Op Cardinality [Var 'A'],Op Cardinality [Var 'B']],Op Cardinality [Op Intersection [Var 'A',Var 'B']]])}
+-- Sebastians Code
+genProof :: [Law] -> Expr -> Proof
+genProof laws' e
+ = Proof e (multiSteps e)
+ where multiSteps e'
+         = case [ (nm, res)
+                | Law nm eq <- laws'
+                , res <- getStep eq e'] of
+             [] -> []
+             ((nm,e''):_) -> (nm,e'') : multiSteps e''
+
 
 lookupInSubstitution :: Char -> Substitution -> Expr
 lookupInSubstitution name ((nm, v):rm)
@@ -25,6 +35,8 @@ combineTwoSubs sub1 sub2
           False -> Nothing
 
 match :: Expr -> Expr -> Maybe Substitution
+match (Val v) _ = Nothing
+match _ (Val v) = Nothing
 match (Var name) expr = Just [(name, expr)]
 match (Op op1 exprs1) (Op op2 exprs2)
     | op1 == op2 = 
@@ -42,6 +54,7 @@ combineAll (Just x:xs) = case combineAll xs of
                 
 
 apply :: Substitution -> Expr -> Expr
+apply sub (Val v) = (Val v)
 apply sub (Var name) = lookupInSubstitution name sub
 apply sub (Op symb exprs) = Op symb (map (apply sub) exprs) -- Ask how to handle applying for Op Expr
 
@@ -51,6 +64,7 @@ getStep (lhs, rhs) expr
         Nothing -> recurse expr
         Just sub -> [apply sub rhs]
     where recurse (Var _) = []
+          recurse (Val _) = []
           recurse (Op symb exprs) = [Op symb (context e')| (e, context) <- takeOneOf exprs, e' <- getStep (lhs,rhs) e ] -- Ask how to modify getStep for handling Op Expr
 
 takeOneOf :: [a] -> [(a, a -> [a])]

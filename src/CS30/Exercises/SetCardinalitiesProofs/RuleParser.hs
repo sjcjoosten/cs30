@@ -23,16 +23,17 @@ data Symb = Add
          | Setminus 
          deriving (Show, Eq)
 
-data Expr = Var Char | Op Symb [Expr] deriving (Show, Eq)--BinOp Symb Expr Expr | MonOp Symb Expr deriving (Show, Eq)
+data Expr = Val Integer | Var Char | Op Symb [Expr] deriving (Show, Eq)
 
-data Law = Law String Equation deriving (Show)
+data Law = Law {lawName :: String, lawEquation :: Equation} deriving (Show)
+
 type Equation = (Expr, Expr)  -- (left,right)
 
 $(deriveJSON defaultOptions ''Symb)
 $(deriveJSON defaultOptions ''Expr)
 
 laws :: [Law]
-laws = map parseLaw lawStrings
+laws = map lawFromString lawStrings
    where
       lawStrings = [ -- all given Rules
          "Inclusion-Exclusion: |A \\cup B| = |A| + |B| - |A \\cap B|",      
@@ -41,9 +42,14 @@ laws = map parseLaw lawStrings
          "Setminus Cardinality: |A \\setminus B| = |A| - |A \\cap B|"
          ]
 
-parseLaw :: String -> Law
-parseLaw s = case (parse (pLaw parseExpr) "" s) of 
+lawFromString :: String -> Law
+lawFromString s = case (parse (pLaw parseExpr) "" s) of 
                Right law -> law
+               Left e -> error (errorBundlePretty e)
+
+exprFromString :: String -> Expr
+exprFromString s = case (parse parseExpr "" s) of 
+               Right expr -> expr
                Left e -> error (errorBundlePretty e)
 
 pLaw :: Parser Expr -> Parser Law
@@ -137,14 +143,22 @@ parseVar = Var <$> satisfy isCapLetter <* spaces
       isCapLetter c = elem c ['A'..'Z']
 
 parseInt :: Parser Expr
-parseInt = Var <$> satisfy isNumber <* spaces
+parseInt = do
+   num <- some digit
+   return (Val (read num))
+
+digit :: Parser Char
+digit = satisfy isMyDigit
+            where isMyDigit x = elem x ['0'..'9']
 
 parseTerm :: Parser Expr
 parseTerm =  brackets parseExpr <|> parseCardinality <|> parsePowerset <|> parseVar <|> parseInt
 
-
 parseExpr :: Parser Expr
 parseExpr =  makeExprParser parseTerm operatorTable
+
+
+-- Haskell types to Latex String conversions:
 
 lawToLatex :: Law -> String
 lawToLatex (Law name eq) = name ++ ": " ++ eqToLatex eq
@@ -154,6 +168,7 @@ eqToLatex (lhs,rhs) = exprToLatex lhs ++ " = " ++ exprToLatex rhs
 
 exprToLatex :: Expr -> String
 exprToLatex (Var v) = [v]
+exprToLatex (Val v) = show v
 -- unary operators
 exprToLatex (Op Cardinality [e]) = "|" ++ exprToLatex e ++ "|"
 exprToLatex (Op Powerset [e]) = "\\P(" ++ exprToLatex e ++")"
@@ -174,7 +189,6 @@ symbLookup s
    | s == Expon         = "^"
    | s == Setminus      = ""
    | otherwise          = error ("Invalid symbol: " ++ show s)
-
 
 
 -- Given Rules:
