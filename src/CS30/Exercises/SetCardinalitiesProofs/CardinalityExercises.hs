@@ -1,9 +1,29 @@
 module CS30.Exercises.SetCardinalitiesProofs.CardinalityExercises(cardinalityProofExer) where
-import           CS30.Data
-import           CS30.Exercises.Data
-import           CS30.Exercises.SetCardinalitiesProofs.CardinalityProof
-import           CS30.Exercises.SetCardinalitiesProofs.RuleParser
+import CS30.Data
+import CS30.Exercises.Data
+import CS30.Exercises.SetCardinalitiesProofs.CardinalityProof
+import CS30.Exercises.SetCardinalitiesProofs.RuleParser
 import qualified Data.Map as Map
+
+
+
+-- setExercises :: [ChoiceTree ([Field], Integer)] -- first thing in field will be expression, rest its equivalencies
+-- setExercises = [fullExercise 3, fullExercise 5, fullExercise 7]
+--   where fullExercise i = do ex <- generateRandSetExpr i
+--                             let Proof lhs steps = genProof laws ex
+--                                 (_,rhs) = last steps
+--                             asgn <- assignRanVal rhs 
+--                             let answer = head (evaluate asgn rhs)
+--                             let exprs = nubSort (getExprs rhs)
+--                             if denominator answer == 1 then return () else error "Resulting answer in the generated puzzle is a fraction, that shouldn't have happened! (Error stems from Sebastiaan's code)" 
+--                             return (genFields lhs (evaluate asgn) exprs, numerator answer)
+--         showFrac ans | denominator ans == 1 = show (numerator ans)
+--         showFrac _ = error "Got a fraction in the generated puzzle, that shouldn't have happened! (Error stems from Sebastiaan's code)"
+--         genFields lhs getVal exprs
+--           = [FText "Given that "] 
+--             ++ combine [FMath (asLatex e ++ "=" ++ showFrac ans) | e <- exprs, ans <- getVal e]
+--             ++ [FText ". Compute ", FMath (asLatex lhs)] 
+
 
 generateRandSetExpr :: Int -> ChoiceTree Expr
 generateRandSetExpr n 
@@ -12,7 +32,7 @@ generateRandSetExpr n = do {
                             symb <- nodes [Intersection, Union, Powerset, Cartesian, Setminus];
                             if symb == Powerset then
                                 do {
-                                    expr <- generateRandSetExpr n-1;
+                                    expr <- generateRandSetExpr (n-1);
                                     return (Op symb [expr])
                                 }
                             else 
@@ -50,32 +70,22 @@ genAllPossibleValues expr = assignAll toAssign
         }
 
 
-    
-getExprVal :: Expr -> PossibleVals -> Maybe Integer
-getExprVal key ((e, i):xs) = if key == e then Just i
-                                else getExprVal key xs
-getExprVal _ [] = Nothing
-
-
 -- evaluate will assign values from genAllpossiblevalues to the cardinaliteis in the rhs of the expression
 -- then it will compute
 
 --minus/plus/mult
-evaluate :: PossibleValue -> Expr -> Integer
+evaluate :: PossibleVals -> Expr -> Integer
 evaluate _ (Var _) = error "Cannot evaluate var"
 evaluate pV (Op Cardinality [expr]) = case (lookup expr pV) of
                                     Just i -> i
-                                    Nothing -> error "Content of cardinality needs to be in possible Values. expr in |expr| = " ++ show expr
-evaluate pV (Op symb [e1,e2]) = (evaluate e1) (f symb) (evaluate e2)
-    where
-        f symb = case symb of
-                    Mult -> (*)
-                    Plus -> (+)
-                    Minus -> (-)
+                                    Nothing -> error ("Content of cardinality needs to be in possible Values. expr in |expr| = " ++ (show expr))
+evaluate pV (Op Mult [e1,e2]) = (evaluate pV e1) * (evaluate pV e2)
+evaluate pV (Op Add [e1,e2]) = (evaluate pV e1) + (evaluate pV e2)
+evaluate pV (Op Sub [e1,e2]) = (evaluate pV e1) - (evaluate pV e2)
                             
 
 
 getExprs :: Expr -> [Expr]
-getExprs (Op Cardinality e) = [e]
+getExprs (Op Cardinality [e]) = [e]
 getExprs (Op _ exprs) = concatMap getExprs exprs
 getExprs (Var _) = error "Question is poorly phrased, a set is not a valid variable" -- If we have a set on its own in the expression, we throw an error
