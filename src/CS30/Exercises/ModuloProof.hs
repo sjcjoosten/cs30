@@ -29,10 +29,10 @@ arithmetic_laws = map (parseLaw False)
                    ,"Law4 : x * -1 = -x"
                    ,"Law5 : x ^ 0 = 1"
                    ,"Law6 : 1 ^ x = 1"
-                  --,  "Law7 : x + y = y + x"
-                  --,  "Law8 : x * y = y * x"
-                  --,  "Law9 : (x + y) + z = x + (y + z)"
-                  --,  "Law10 : (x * y) * z = x * (y * z)"
+                  ,  "Law7 : x + y = y + x"
+                  ,  "Law8 : x * y = y * x"
+                  ,  "Law9 : (x + y) + z = x + (y + z)"
+                  ,  "Law10 : (x * y) * z = x * (y * z)"
                    ,"Law11 : x * (y + z) = x * y + x * z"
                    ,"Law12 : x * (y - z) = x * y - x * z"
                    ,"Law14 : (x + y) * z = x * z + y * z"
@@ -40,8 +40,7 @@ arithmetic_laws = map (parseLaw False)
                    ,"Law13 : x ^ (y + z) = x ^ y * x ^ z"
                   --  ,"Law99 : a \\equiv_p b = a + c \\equiv_p b + c"
                   ]
->>>>>>> 4c1bd75aec6baf472fbe4d7e13b97d9234ccd130
-
+                  
 -------------------------------------Proofs----------------------------------------
 
 getDerivation :: Int -> [Law] -> Expression -> Proof
