@@ -4,16 +4,20 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           CS30.Exercises.Probability.SolutionChecker
 import CS30.Exercises.Data
+import Control.Monad.Combinators.Expr
 
 
 data FracExpr 
     = FConst Rational -- the constants 0 and 1
     | FVar Char -- basic evert : A, B 
     | FExpr FracExpr FracExpr -- ^ probability expression like Pr[A|B].
-    | FBin MathExpr FracExpr FracExpr -- ^ multiplication
+    | FBin MathOp FracExpr FracExpr -- ^ multiplication
     | AndEvent FracExpr FracExpr  -- ‘and’ \wedge and ‘or’ \vee  
     | OrEvent FracExpr FracExpr 
     | NegaEvent FracExpr  -- event negation \neg
+    | Omega 
+    | EmptySet
+    | Prob FracExpr
     deriving (Show, Eq)
 
 data Law = Law {lawName :: String, lawEq :: Equation} deriving Show
@@ -23,7 +27,14 @@ law1 :: Law
 law1 = Law "DeMorgan" (NegaEvent (AndEvent (FVar 'A') (FVar 'B')), OrEvent (NegaEvent (FVar 'A')) (FVar 'B'))
 
 -- laws given in the Final Assignmentss
-{-deMorgan1 :: String
+rules = map (takeRh . parse parseLaws "" ) 
+        [deMorgan1, deMorgan2, dbNegat, omegaElimiW, omegaElimiV, negaProba, difference,
+        condition, totalProb, bayesRule, incluExclu]
+
+takeRh e = case e of (Right l) -> l
+                     (Left e) -> error (errorBundlePretty e)
+
+deMorgan1 :: String
 deMorgan1 =  "DeMorgan: \\neg (A \\wedge B) = \\neg A \\vee \\neg B"
 deMorgan2 :: String
 deMorgan2 = "DeMorgan: \\neg (A \\vee B) = \\neg A \\wedge \\neg B"
@@ -40,7 +51,16 @@ emptyElimiV = "Empty-set elimination: \\emptyset \\wedge A = \\emptyset"
 negaProba :: String
 negaProba = "Negation in probability: Pr[\\neg A] = 1 - Pr[A]"
 difference :: String
-difference = "Difference: Pr[A \\wedge \\neg B] = Pr[A] - Pr[A \\wedge B]"-}
+difference = "Difference: Pr[A \\wedge \\neg B] = Pr[A] - Pr[A \\wedge B]"
+condition :: String
+condition = "Definition of conditional probability: Pr[ A | B ] = Pr[A \\wedge B]\\cdot Pr[B]"
+totalProb :: String
+totalProb = "Law of total probability: Pr[ A ] = Pr[A | B]\\cdot Pr[B] + Pr[A | \\neg B]\\cdot Pr[\\neg B]"
+bayesRule :: String
+bayesRule = "Bayes'rule: Pr[ A | B ] = \\frac{Pr[B | A]*Pr[A]}{Pr[B]}"
+incluExclu :: String
+incluExclu = "Inclusion exclusion: Pr[A \\vee B] = Pr[A] + Pr[B] - Pr[A \\wedge B]"
+
 
 -- x - y = x + (nagate y)
 -- lhs : x - y; rhs : x + (nagate y)
@@ -49,6 +69,7 @@ parseLaws = do {lawname <- parseUntil ':';
                 lt_spaces;
                 lhs <- fractional_parser;
                 _ <- string "=";
+                lt_spaces;
                 rhs <- fractional_parser;
                 return (Law lawname (lhs,rhs))}
 
@@ -167,80 +188,103 @@ basEvent_parser = do {lt_spaces;
                     _ <- lt_spaces;
                     return (FVar c)}
                 where isLetterforEvent v = elem v ['A'..'Z']
+
+
+omeEmpParser :: Parser FracExpr
+omeEmpParser = do {lt_spaces; 
+                    _ <- string "\\Omega";
+                    _ <- lt_spaces;
+                    return (Omega)}
+            <|> 
+                do {lt_spaces; 
+                    _ <- string "\\emptyset";
+                    _ <- lt_spaces;
+                    return (EmptySet)}
                
 fractional_parser :: Parser FracExpr
-fractional_parser = do {lt_spaces;
-                    do {r <- (string "0"*> return 0) <|> (string "1"*> return 1);
+fractional_parser = makeExprParser termParser operatorTable
+             
+termParser :: Parser FracExpr
+termParser =  do {r <- (string "0"*> return 0) <|> (string "1"*> return 1);
                         lt_spaces;
                         return (FConst r)}
-                    <|>
-                    do {string "Pr[";
-                        e1 <- fractional_parser;
-                        string "|";
-                        e2 <- fractional_parser;
-                        string "]";
-                        lt_spaces;
-                        return (FExpr e1 e2)
+            <|>
+            omeEmpParser
+            <|>
+            {- do {string "Pr[";
+                lt_spaces;
+                e1 <- fractional_parser;
+                string "|";
+                lt_spaces;
+                e2 <- fractional_parser;
+                string "]";
+                lt_spaces;
+                return (FExpr e1 e2)
                     }
-                    <|>
-                    do {
-                        e1 <- fractional_parser;
-                        string "\\wedge";
-                        e2 <- fractional_parser;
-                    
-                        lt_spaces;
-                        return (AndEvent e1 e2)
-                    } 
-                    <|>
-                    do {
-                        e1 <- fractional_parser;
-                        string "\\vee";
-                        e2 <- fractional_parser;
-                        
-                        lt_spaces;
-                        return (OrEvent e1 e2)
+            <|> -}
+             do {string "(";
+                lt_spaces;
+                e1 <- fractional_parser;
+                string ")";
+                lt_spaces;
+                return (e1)
                     }
-                    <|>
-                    do {
-                        e1 <- fractional_parser;
-                        string "\\neg";
-                        lt_spaces;
-                        return (NegaEvent e1)
+            <|>
+             do {string "\\frac{";
+                lt_spaces;
+                e1 <- fractional_parser;
+                lt_spaces;
+                string "}";
+                lt_spaces;
+                string "{";
+                e2 <- fractional_parser;
+                lt_spaces;
+                string "}";
+                lt_spaces;
+                return (FBin Frac e1 e2)
+                }
+            <|>
+            do {string "Pr[";
+                lt_spaces;
+                e1 <- fractional_parser;
+                string "]";
+                lt_spaces;
+                return (Prob e1)
                     }
-                    <|>
-                    do {
-                        e1 <- basEvent_parser;
-                        return (e1)
-                    }
-                    } 
-
-
+            <|> 
+            basEvent_parser
+        
 
 -- codes copied from Cardinality.hs
-data MathExpr 
-    = Const Rational 
-    | Divide MathExpr MathExpr  -- division
-    | Mult  MathExpr MathExpr  -- multiply two MathExpr's 
+data MathOp
+    = Minus
+    | Divide   -- division
+    | Mult   -- multiply two FracExpr's 
+    | Plus 
+    | Frac
     deriving (Show, Eq)
 
 -- ^here lets us parse things like (3)(3) = 3*3
-{- operatorTable :: [[Operator Parser MathExpr]]
-operatorTable = [[binary "\\cdot" Mult, binary "" Mult]]
+operatorTable :: [[Operator Parser FracExpr]]
+operatorTable = [[Prefix 
+                    (do {string "\\neg" <|> string "!";
+                        lt_spaces;
+                        return NegaEvent})],
+                [mathOp "\\cdot" Mult, mathOp "*" Mult, mathOp "/" Divide],
+                [mathOp "+" Plus, mathOp "-" Minus],
+                [binary "\\wedge" AndEvent, binary "&" AndEvent, 
+                    binary "|" OrEvent,binary "\\vee" OrEvent]                
+                ]
+
 
 binary :: String -> (a -> a -> a) -> Operator Parser a
-binary name f = InfixL (f <$ symbol name)
+binary name f = InfixL 
+                (do {string name;
+                lt_spaces;
+                return f})
 
-symbol :: String -> Parser String
-symbol = L.symbol spaceConsumer
-
-spaceConsumer :: Parser ()
-spaceConsumer = L.space spaces empty empty 
-
-spaces :: Parser ()
-spaces = some spc >> return ()
- where spc = string " " <|> string "\t" <|> string "\n" <|> string "\r"
-             <|> string "\\ " <|> string "~"-} 
-
+mathOp :: String -> MathOp -> Operator Parser FracExpr
+mathOp str opin = binary str (FBin opin)
 
 -- generate problems 
 generateRandEx :: Int -> ChoiceTree FracExpr
