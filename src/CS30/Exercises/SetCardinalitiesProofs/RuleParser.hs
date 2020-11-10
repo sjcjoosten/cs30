@@ -1,13 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 module CS30.Exercises.SetCardinalitiesProofs.RuleParser where
 import           Control.Monad.Combinators.Expr
+import           Data.Aeson as JSON
+import           Data.Aeson.TH
 import           Data.Functor.Identity
 import           Data.Void
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
-import           Data.Aeson as JSON
-import           Data.Aeson.TH
-import           Data.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
 type Parser = Parsec Void String

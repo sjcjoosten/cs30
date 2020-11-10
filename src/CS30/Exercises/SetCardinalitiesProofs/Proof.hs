@@ -28,15 +28,17 @@ lookupInSubstitution name ((nm, v):rm)
     | otherwise = lookupInSubstitution name rm
 lookupInSubstitution _ [] = error "Substitution was not complete"
 
+
 combineTwoSubs :: Substitution -> Substitution -> Maybe Substitution
 combineTwoSubs sub1 sub2
     = case and [v1 == v2 | (name1, v1) <- sub1, (name2, v2) <- sub2, name1 == name2] of
           True -> Just (sub1 ++ sub2)
           False -> Nothing
 
+
 match :: Expr -> Expr -> Maybe Substitution
-match (Val v) _ = Nothing
-match _ (Val v) = Nothing
+match (Val _) _ = Nothing
+match _ (Val _) = Nothing
 match (Var name) expr = Just [(name, expr)]
 match (Op op1 exprs1) (Op op2 exprs2)
     | op1 == op2 = 
@@ -51,12 +53,13 @@ combineAll (Nothing:_) = Nothing
 combineAll (Just x:xs) = case combineAll xs of
                             Nothing -> Nothing
                             Just s  -> combineTwoSubs x s
-                
+
 
 apply :: Substitution -> Expr -> Expr
-apply sub (Val v) = (Val v)
+apply _ (Val v) = (Val v)
 apply sub (Var name) = lookupInSubstitution name sub
 apply sub (Op symb exprs) = Op symb (map (apply sub) exprs) -- Ask how to handle applying for Op Expr
+
 
 getStep :: Equation -> Expr -> Expressions
 getStep (lhs, rhs) expr
@@ -67,6 +70,7 @@ getStep (lhs, rhs) expr
           recurse (Val _) = []
           recurse (Op symb exprs) = [Op symb (context e')| (e, context) <- takeOneOf exprs, e' <- getStep (lhs,rhs) e ] -- Ask how to modify getStep for handling Op Expr
 
+
 takeOneOf :: [a] -> [(a, a -> [a])]
 takeOneOf [] = []
 takeOneOf (a:as) = (a,(:as)): map f (takeOneOf as)
@@ -74,12 +78,11 @@ takeOneOf (a:as) = (a,(:as)): map f (takeOneOf as)
         f (a', fn) = (a',(a:) . fn) -- a is put in front of the result of fn
 
 
-
 getDerivation :: Laws -> Expr -> Proof
-getDerivation laws expr = Proof expr (multiSteps expr)
+getDerivation lawSet expr = Proof expr (multiSteps expr)
     where multiSteps expr' 
             = case ( [(lawName law, resultingStep) 
-                   | law <- laws
+                   | law <- lawSet
                    , resultingStep <- getStep (lawEquation law) expr'
                    ]) of
                 [] -> []
