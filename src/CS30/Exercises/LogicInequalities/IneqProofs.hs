@@ -339,22 +339,35 @@ lookupInSubst _ [] = error "Substitution was not complete, or free variables exi
 -- can expand the function if necessary
 -- or we can just carefully generate expressions that fit these params
 evaluate :: Expr -> Expr -> Maybe (Ineq,Integer)
-evaluate left right = findSmallest seeWhatWorks
+evaluate one two = 
+  let s = seeWhatWorks one two
+  in findIneq (findSmallest s) s
   where
-    seeWhatWorks = take 1 [(leftVal,rightVal,tryNum)
-                          | tryNum <- [0..100]
-                          , (l,r) <- sub (left,right) "n" tryNum
-                          , leftVal <- compute l
-                          , rightVal <- compute r
-                          , isJust leftVal && isJust rightVal
-                          , leftVal >= rightVal]
-    findSmallest [] = Nothing
-    findSmallest [(l,r,n)] = case (l>r) of
-                              True -> Just (GEq,n)
-                              False -> Just (GThan,n)
+    seeWhatWorks left right = [ (leftVal,rightVal,tryNum)
+                              | tryNum <- [0..100]
+                              , let (l,r) = sub (left,right) "n" tryNum
+                              , let leftVal = compute l
+                              , let rightVal = compute r
+                              , isJust leftVal && isJust rightVal
+                              , leftVal >= rightVal]
+    findSmallest l = case last l of
+                    (_,_,100) -> Just (last (zipWith (\(_,_,x) y -> x - y) l [0..100]) + 1)
+                    (_,_,_) -> Nothing
 
+expr1 = Op Addition [Op Multiplication [Const 3,Var "n"], Const 6]
+expr2 = Op Exponentiation [Var "n", Const 2]
+expr3 = Op Factorial [Var "n"]
 
-
+findIneq :: Maybe Integer -> [(Maybe Integer,Maybe Integer,Integer)] -> Maybe (Ineq,Integer)
+findIneq Nothing _ = Nothing
+findIneq _ [] = Nothing
+findIneq (Just v) ((l,r,n):xs) | n == v = case (l>r) of
+                                            True -> Just (GThan,n)
+                                            False -> Just (GEq,n)
+                               | n == v + 1 = case (l>r) of
+                                                True -> Just (GThan,n)
+                                                False -> Just (GEq,n)
+                               | otherwise = findIneq (Just v) xs
 
 sub :: (Expr,Expr) -> String -> Integer -> (Expr,Expr)
 sub (l,r) v n = (go l v n, go r v n)
@@ -387,12 +400,11 @@ compute (Op o [e1,e2]) = case (compute e1, compute e2, o) of
                           (Just eval1, Just eval2, Exponentiation) -> Just (eval1 ^ eval2)
 
 evalFac :: Integer -> Maybe Integer
-evalFrac 0 = Just 0
-evalFac n = case (n>0) of
+evalFac n = case (n>=0) of
               False -> Nothing
-              True -> Just realFac n
+              True -> Just (realFac n)
   where realFac 0 = 1
-        realFac x = x * (x - 1)
+        realFac x = x * realFac (x - 1)
               
 
 
