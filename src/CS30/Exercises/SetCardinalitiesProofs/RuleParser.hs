@@ -182,17 +182,49 @@ symbLookup :: Symb -> String
 symbLookup s 
    | s == Add           = "+"
    | s == Sub           = "-"
-   | s == Mult          = "*"
+   | s == Mult          = "\\cdot"
    | s == Intersection  = "\\cap"
    | s == Union         = "\\cup"
    | s == Cartesian     = "\\times"
-   | s == Expon         = "^"
-   | s == Setminus      = ""
+   | s == Setminus      = "\\setminus"
    | otherwise          = error ("Invalid symbol: " ++ show s)
 
 
--- Given Rules:
--- |A \\cup B| = |A| + |B| - |A \\cap B|
--- |A \\times B| = |A| \\cdot |B|
--- |\\P(A)| = 2^{|A|}
--- |A \\setminus B| = |A| - |A \\cap B|
+-- These functions do the same thing as the exprToLatex and symbLookup functions from above
+-- They just incorporate some of the feedback we got in the parser section
+
+exprToLatexAlt :: Expr -> String
+exprToLatexAlt expr =
+   case expr of
+      Var v -> [v]
+      Val v -> show v
+      -- Unary expressions: Cardinality and Powerset are the only valid operations
+      Op symb [e] -> case symb of
+                        Cardinality -> "|" ++ exprToLatexAlt e ++ "|"
+                        Powerset -> "\\P(" ++ exprToLatexAlt e ++")"
+                        _ -> "Invalid operator for unary expression"
+      -- Binary expressions: Expon is treated in a special manner. The rest rely on symbLookupAlt
+      Op symb [e1, e2] -> case symb of
+                              Expon -> "(" ++ exprToLatexAlt e1 ++ ")^{" ++ exprToLatexAlt e2 ++ "}"
+                              _ -> exprToLatexAlt e1 ++ " " ++ symbLookupAlt symb ++ " " ++ exprToLatexAlt e2
+      _ -> error ("Invalid expression: " ++ show expr)
+
+-- This function matches the operation to the latex string
+-- It is only used in the case when you have a binary expression and a symbol
+-- other than Expon. Because Expon needs brackets to be syntactically valid,
+-- this function isn't used in that case. Realistically, it should also never
+-- meet the "Cardinality" and "Powerset" cases, since binary expressions shouldn't
+-- have those.
+symbLookupAlt :: Symb -> String
+symbLookupAlt s =
+    case s of
+       Add -> "+"
+       Sub -> "-"
+       Mult -> "\\cdot"
+       Intersection -> "\\cap"
+       Union -> "\\cup"
+       Cartesian -> "\\times"
+       Setminus -> "\\setminus"
+       Cardinality -> "|"
+       Powerset -> "\\P"
+       Expon -> "^"
