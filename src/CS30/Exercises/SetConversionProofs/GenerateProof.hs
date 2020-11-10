@@ -2,11 +2,13 @@ module CS30.Exercises.SetConversionProofs.GenerateProof  where
 import CS30.Exercises.Data
 import CS30.Exercises.SetConversionProofs.SetExprParser
 import CS30.Exercises.SetConversionProofs.LawParser
+import Data.List --( intersect, \\ )
 
 
 data Proof = Proof SetExpr [(String, SetExpr)] deriving Show
 
 -- fxn for generating a random expression, using \cap, \cup, and \setminus operators (as specified in the assignment sheet)
+-- for testing
 generateRandEx :: Int -> ChoiceTree SetExpr
 generateRandEx i | i < 1
  = Branch [ Branch [Node (Var varName) | varName <- ["A","B","C"]] -- should I have options like (Cap (Var "A") (Var "A") ? (do this and document in comments, as a creative)
@@ -18,6 +20,37 @@ generateRandEx i
         ;opr <- nodes [Cap, Cup, SetMinus]
         ;return (opr e1 e2)
        }
+
+-- evaluate fxn, calcualtes values for expressions to test that they are valid 
+-- generates [int] representation for a set, need to compare two to evaluate 
+evaluate :: SetExpr -> [Int]
+evaluate (Var "A") = [0,1,2,3]
+evaluate (Var "B") = [0,2,4,6]
+evaluate (Var "C") = [0,1,4,5]
+evaluate (Var _v) = [] -- should never reach this case
+evaluate (Cup e1 e2) = (evaluate e1) ++ (evaluate e2)
+evaluate (Vee e1 e2) = (evaluate e1) ++ (evaluate e2)
+evaluate (Cap e1 e2) = (evaluate e1) `intersect` (evaluate e2)
+evaluate (Wedge e1 e2) = (evaluate e1) `intersect` (evaluate e2)
+evaluate (SetMinus e1 e2) = (evaluate e1) \\ (evaluate e2)
+evaluate (NotIn e) = [0,1,2,3,4,5,6] \\ (evaluate e)
+evaluate (In e) = evaluate e
+evaluate (SetBuilder e) = evaluate e
+
+-- problem because these are returning a list of lists
+-- evaluate (Power e) = powerset (evaluate e)
+-- evaluate (Subset e) = powerset (evaluate e)
+
+-- fxn for building out the powerset of a variable list
+powerset :: [a] -> [[a]]
+powerset [] = [[]]
+powerset (x:xs) = [x:ps | ps <- powerset xs] ++ powerset xs
+
+-- power
+-- in
+-- notin
+-- subset
+
 
 example1, example2, example3, example4, example5, example6, example7 :: SetExpr
 example1 = (Cap (Var "M") (Var "N"))

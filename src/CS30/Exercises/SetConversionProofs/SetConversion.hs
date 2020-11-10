@@ -59,7 +59,7 @@ breakUnderscore s
 -- fxn for generating a random expression, using \cap, \cup, and \setminus operators (as specified in the assignment sheet)
 generateRandEx :: Int -> ChoiceTree SetExpr
 generateRandEx i | i < 1
- = Branch [ Branch [Node (Var varName) | varName <- ["A","B","C"]] -- should I have options like (Cap (Var "A") (Var "A") ? (do this and document in comments, as a creative)
+ = Branch [ Branch [Node (Var varName) | varName <- ["A"]] -- should I have options like (Cap (Var "A") (Var "A") ? (do this and document in comments, as a creative)
           ]
 generateRandEx i
  = do { i' <- nodes [0..i-1]
@@ -68,6 +68,9 @@ generateRandEx i
         ;opr <- nodes [Cap, Cup, SetMinus]
         ;return (opr e1 e2)
        }
+
+-- assignVar :: SetExpr -> SetExpr -- function to iterate on a setexpr and replace variable names
+-- assignVar = foldl
 
 -- creating the choice tree for problems, 3 levels in terms of degree of nested expr
 setConversion :: [ChoiceTree ([Field], [Int])] 
@@ -147,14 +150,14 @@ showsPrec' p (Vee e1 e2)
   = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
          "\\vee" ++ showSpace ++ showsPrec' (q-1) e2)
     where q = 2
-showsPrec' _p (In e)
-  = ( "e \\in" ++ showSpace ++ showsPrec' (q-1) e)
+showsPrec' _p (In e) -- removing showParen maybe works, but honestly I don't know enough about set builder notation to be able to say
+  =  ("e \\in" ++ showSpace ++ showsPrec' (q-1) e)
     where q = 3
 showsPrec' _p (NotIn e)
-  = ( "e \\notin" ++ showSpace ++ showsPrec' (q-1) e)
+  =( "e \\notin" ++ showSpace ++ showsPrec' (q-1) e)
     where q = 3
-showsPrec' p (Subset e)
-  = showParen' (p < q) ( "e \\subseteq" ++ showSpace ++ showsPrec' (q-1) e)
+showsPrec' _p (Subset e)
+  =  ( "e \\subseteq" ++ showSpace ++ showsPrec' (q-1) e)
     where q = 1
 showsPrec' p (Power e)
   = showParen' (p < q) ( "\\P" ++ showsPrec' (0) e)
