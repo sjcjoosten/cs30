@@ -35,8 +35,6 @@ instance Show Expr where
     showsPrec p (Implies e1 e2) = showParenLATEX (p > 1)
                                    (showsPrec 1 e1 . showString "\\ \\Rightarrow\\ " . showsPrec 1 e2)                               
 
-type Parser = ParsecT Void String Identity
-
 -- evaluates an expression containing only variables 'p', 'r', 'q'
 evalExpr :: Expr -> [Bool]
 evalExpr (Var v)         = case v of
@@ -91,6 +89,8 @@ lawNames = uniques [name | (Law name _) <- laws]
            where uniques [] = []
                  uniques (x:xs) = if x `elem` xs then uniques xs
                                   else x:(uniques xs)
+
+type Parser = ParsecT Void String Identity
 
 -- parses laws in a format like:
 --   "double negation: \\neg (\\neg p) = p"

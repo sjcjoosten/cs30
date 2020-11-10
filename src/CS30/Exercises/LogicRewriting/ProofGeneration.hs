@@ -16,18 +16,17 @@ manyStep laws e = if null steps then []
                   -- ^ TODO: should we change the condition here?
                   --   since our ultimate goal is to propagate negation inwards?
                   else step : manyStep laws (snd step)
-                  where rws expr = [(name,e') | Law name eqn <- laws,
-                                                e' <- rewrites eqn e,
-                                                e' /= e]
-                        steps = rws e
+                  where steps = [(name,e') | Law name eqn <- laws,
+                                             e' <- rewrites eqn e,
+                                             e' /= e]
                         step = head steps
 
 -- rewrites gives all the ways of rewriting given expression
 -- using only the provided equation (law)
 rewrites :: Equation -> Expr -> [Expr]
-rewrites (lhs, rhs) e = 
-    case matchExpr lhs e of
-        []         -> recurse e
+rewrites (lhs, rhs) expr = 
+    case matchExpr lhs expr of
+        []         -> recurse expr
         (sub:subs) -> [apply s rhs | s <- (sub:subs)]
     where recurse (Var _)         = []
           recurse (Const _)       = []
@@ -39,7 +38,6 @@ rewrites (lhs, rhs) e =
                                     [Or e1 e2' | e2' <- rewrites (lhs, rhs) e2]
           recurse (Implies e1 e2) = [Implies e1' e2 | e1' <- rewrites (lhs, rhs) e1] ++
                                     [Implies e1 e2' | e2' <- rewrites (lhs, rhs) e2]
-
 
 type Subst = [(Char, Expr)]
 
@@ -75,12 +73,12 @@ combine xs ys = [x ++ y | x <- xs, y <- ys, compatible x y]
 
 -- apply a substitution to transform one expression to another
 apply :: Subst -> Expr -> Expr
-apply subst (Var v)         = lookupInSubst v subst
-apply subst (Const b)       = Const b
-apply subst (Neg e)         = Neg (apply subst e)
-apply subst (And e1 e2)     = And (apply subst e1) (apply subst e2)
-apply subst (Or e1 e2)      = Or (apply subst e1) (apply subst e2)
-apply subst (Implies e1 e2) = Implies (apply subst e1) (apply subst e2)
+apply subst  (Var v)         = lookupInSubst v subst
+apply _subst (Const b)       = Const b
+apply subst  (Neg e)         = Neg (apply subst e)
+apply subst  (And e1 e2)     = And (apply subst e1) (apply subst e2)
+apply subst  (Or e1 e2)      = Or (apply subst e1) (apply subst e2)
+apply subst  (Implies e1 e2) = Implies (apply subst e1) (apply subst e2)
 
 -- return the expression to transform variable "v" into
 lookupInSubst :: Char -> Subst -> Expr

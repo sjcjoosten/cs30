@@ -7,7 +7,6 @@ import qualified Data.Map as Map
 import           Data.List
 import           CS30.Exercises.LogicRewriting.Parsing (laws, lawNames, Expr (..))
 import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, Proof (..))
-import           Debug.Trace
 
 -- final exercise type
 logicRewritingEx :: ExerciseType
@@ -39,7 +38,7 @@ logicExercises :: [ChoiceTree ([Field], String)]
 logicExercises = [do e <- randomExpr
                      let (Proof e' steps) = getDerivation laws e
                      remStep <- nodes [0..(length steps - 1)]
-                     let (stepName, stepE) = steps!!remStep
+                     let (stepName, _) = steps!!remStep
                      choices <- (getOrderedSubset (delete stepName lawNames) 2)
                      correctN <- nodes [0..2]
                      let shuffChoices = putElemIn stepName correctN choices 
@@ -47,11 +46,12 @@ logicExercises = [do e <- randomExpr
                   ]
                  where putElemIn :: a -> Int -> [a] -> [a]
                        putElemIn y 0 xs = y:xs
+                       putElemIn y _ [] = y:[]
                        putElemIn y n (x:xs) = x:(putElemIn y (n-1) xs)
                        displayStepsExcept _ [] _  = []
-                       displayStepsExcept n (s:rem) choices = [FMath "\\equiv", name, 
+                       displayStepsExcept n (s:rems) choices = [FMath "\\equiv", name, 
                                                                FIndented 1 [FMath $ show (snd s)]]
-                                                              ++ displayStepsExcept (n-1) rem choices
+                                                              ++ displayStepsExcept (n-1) rems choices
                                                               where correct = FText ("{ "++(fst s)++" }")
                                                                     name = if n/=0 then correct
                                                                            else FChoice "choice" (map (\x -> [FText $ "{ "++x++" }"]) choices)
