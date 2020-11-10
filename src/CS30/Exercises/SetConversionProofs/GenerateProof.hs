@@ -27,19 +27,20 @@ evaluate :: SetExpr -> [Int]
 evaluate (Var "A") = [0,1,2,3]
 evaluate (Var "B") = [0,2,4,6]
 evaluate (Var "C") = [0,1,4,5]
-evaluate (Var _v) = [] -- should never reach this case
+evaluate (Var _v) = [] -- should never reach this case if var assignment happens correctly 
 evaluate (Cup e1 e2) = (evaluate e1) ++ (evaluate e2)
 evaluate (Vee e1 e2) = (evaluate e1) ++ (evaluate e2)
 evaluate (Cap e1 e2) = (evaluate e1) `intersect` (evaluate e2)
 evaluate (Wedge e1 e2) = (evaluate e1) `intersect` (evaluate e2)
 evaluate (SetMinus e1 e2) = (evaluate e1) \\ (evaluate e2)
-evaluate (NotIn e) = [0,1,2,3,4,5,6] \\ (evaluate e)
-evaluate (In e) = evaluate e
+evaluate (NotIn e1 e2) = [0,1,2,3,4,5,6] \\ (evaluate e2)
+evaluate (In e1 e2) = evaluate e2
 evaluate (SetBuilder e) = evaluate e
 
+-- TODO - how to fix this: 
 -- problem because these are returning a list of lists
 -- evaluate (Power e) = powerset (evaluate e)
--- evaluate (Subset e) = powerset (evaluate e)
+-- evaluate (Subset e1 e2) = powerset (evaluate e2)
 
 -- fxn for building out the powerset of a variable list
 powerset :: [a] -> [[a]]
@@ -52,12 +53,14 @@ powerset (x:xs) = [x:ps | ps <- powerset xs] ++ powerset xs
 -- subset
 
 
-example1, example2, example3, example4, example5, example6, example7 :: SetExpr
+example1, example2, example3, example4, example6, example7 :: SetExpr
+-- example1, example2, example3, example4, example5, example6, example7 :: SetExpr
+
 example1 = (Cap (Var "M") (Var "N"))
 example2 = (Cup (Var "X") (Var "Y"))
 example3 = (SetMinus (Var "P") (Var "Q"))
 example4 = (Power (Var "K"))
-example5 = (In (SetBuilder (Var "p")))
+-- example5 = (In (SetBuilder (Var "p")))
 example6 = (Cap (Cap (Var "X") (Var "Y")) (Var "Z"))
 example7 = (Cap (Var "X") (Cap (Var "Y") (Var "Z")))
 
@@ -89,9 +92,9 @@ getStep eq@(lhs, rhs) e = case match lhs e of
                                                        [Wedge e1  e2' | e2' <- getStep eq e2]
                             recurse (Vee e1 e2)      = [Vee e1' e2  | e1' <- getStep eq e1] ++
                                                        [Vee e1  e2' | e2' <- getStep eq e2]  
-                            recurse (In e1)          = [In e1' | e1' <- getStep eq e1]
-                            recurse (NotIn e1)       = [NotIn e1' | e1' <- getStep eq e1]
-                            recurse (Subset e1)      = [Subset e1' | e1' <- getStep eq e1]
+                         --    recurse (In e1)          = [In e1' | e1' <- getStep eq e1]
+                         --    recurse (NotIn e1)       = [NotIn e1' | e1' <- getStep eq e1]
+                         --    recurse (Subset e1)      = [Subset e1' | e1' <- getStep eq e1]
                             
 
 type Subst = [(String, SetExpr)]
@@ -105,9 +108,9 @@ match (Cup e1 e1') (Cup e2 e2')           = [concat ((match e1 e2) ++ (match e1'
 match (SetMinus e1 e1') (SetMinus e2 e2') = [concat ((match e1 e2) ++ (match e1' e2'))]
 match (Wedge e1 e1') (Wedge e2 e2')       = [concat ((match e1 e2) ++ (match e1' e2'))]
 match (Vee e1 e1') (Vee e2 e2')           = [concat ((match e1 e2) ++ (match e1' e2'))]
-match (In e1) (In e2)                     = match e1 e2
-match (NotIn e1) (NotIn e2)               = match e1 e2
-match (Subset e1) (Subset e2)             = match e1 e2  
+-- match (In e1) (In e2)                     = match e1 e2
+-- match (NotIn e1) (NotIn e2)               = match e1 e2
+-- match (Subset e1) (Subset e2)             = match e1 e2  
 match _ _ = []
 
 apply :: Subst -> SetExpr -> SetExpr
@@ -119,9 +122,9 @@ apply subst (Cup e1 e2)      = Cup (apply subst e1) (apply subst e2)
 apply subst (SetMinus e1 e2) = SetMinus (apply subst e1) (apply subst e2)
 apply subst (Wedge e1 e2)    = Wedge (apply subst e1) (apply subst e2)
 apply subst (Vee e1 e2)      = Vee (apply subst e1) (apply subst e2)
-apply subst (In e)           = In (apply subst e)
-apply subst (NotIn e)        = NotIn (apply subst e)
-apply subst (Subset e)       = Subset (apply subst e)
+-- apply subst (In e)           = In (apply subst e)
+-- apply subst (NotIn e)        = NotIn (apply subst e)
+-- apply subst (Subset e)       = Subset (apply subst e)
 
 
 lookupInSubst :: String -> [(String, SetExpr)] -> SetExpr

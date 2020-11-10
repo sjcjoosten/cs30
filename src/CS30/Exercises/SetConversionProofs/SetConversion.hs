@@ -69,6 +69,7 @@ generateRandEx i
         ;return (opr e1 e2)
        }
 
+-- TODO - assignVar definition to go over the final expression by replacing all variables from left to right.
 -- assignVar :: SetExpr -> SetExpr -- function to iterate on a setexpr and replace variable names
 -- assignVar = foldl
 
@@ -81,7 +82,6 @@ setConversion
          ; return ([FIndented 1 [FMath (myShow expr)], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
     } | i <- [1..3]]
 
--- inverse permutation, checking in the other code 
 
 -- generating the proof question
 genProof :: ([Field],[Int]) -> Exercise -> Exercise
@@ -105,11 +105,11 @@ prec :: SetExpr -> Int
 prec (Var _) = 0
 prec (Power _) = 1
 prec (SetBuilder _) = 1
-prec (Subset _) = 1
+prec (Subset _ _) = 1
 prec (Vee _ _) = 2 
 prec (Wedge _ _) = 2 
-prec (In _) = 3
-prec (NotIn _) = 3 
+prec (In _ _) = 3
+prec (NotIn _ _) = 3 
 prec (Cap _ _) = 4
 prec (Cup _ _) = 4
 prec (SetMinus _ _) = 4
@@ -150,14 +150,14 @@ showsPrec' p (Vee e1 e2)
   = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
          "\\vee" ++ showSpace ++ showsPrec' (q-1) e2)
     where q = 2
-showsPrec' _p (In e) -- removing showParen maybe works, but honestly I don't know enough about set builder notation to be able to say
-  =  ("e \\in" ++ showSpace ++ showsPrec' (q-1) e)
+showsPrec' _p (In _e1 e2) -- removing showParen maybe works, but honestly I don't know enough about set builder notation to be able to say
+  =  ("e \\in" ++ showSpace ++ showsPrec' (q-1) e2)
     where q = 3
-showsPrec' _p (NotIn e)
-  =( "e \\notin" ++ showSpace ++ showsPrec' (q-1) e)
+showsPrec' _p (NotIn _e1 e2)
+  =( "e \\notin" ++ showSpace ++ showsPrec' (q-1) e2)
     where q = 3
-showsPrec' _p (Subset e)
-  =  ( "e \\subseteq" ++ showSpace ++ showsPrec' (q-1) e)
+showsPrec' _p (Subset _e1 e2)
+  =  ( "e \\subseteq" ++ showSpace ++ showsPrec' (q-1) e2)
     where q = 1
 showsPrec' p (Power e)
   = showParen' (p < q) ( "\\P" ++ showsPrec' (0) e)
