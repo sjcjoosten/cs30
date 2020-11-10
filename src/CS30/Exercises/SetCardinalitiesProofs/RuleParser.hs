@@ -179,17 +179,15 @@ exprToLatex (Op symb [e1,e2]) = exprToLatex e1 ++ " " ++ symbLookup symb ++ " " 
 exprToLatex e = error ("Invalid expression: " ++ show e)
 
 symbLookup :: Symb -> String
-symbLookup s 
-   | s == Add           = "+"
-   | s == Sub           = "-"
-   | s == Mult          = "*"
-   | s == Intersection  = "\\cap"
-   | s == Union         = "\\cup"
-   | s == Cartesian     = "\\times"
-   | s == Expon         = "^"
-   | s == Setminus      = ""
-   | otherwise          = error ("Invalid symbol: " ++ show s)
-
+symbLookup Add           = "+"
+symbLookup Sub           = "-"
+symbLookup Mult          = "*"
+symbLookup Intersection  = "\\cap"
+symbLookup Union         = "\\cup"
+symbLookup Cartesian     = "\\times"
+symbLookup Expon         = "^"
+symbLookup Setminus      = "\\setminus"
+symbLookup _             = "error"
 
 -- Given Rules:
 -- |A \\cup B| = |A| + |B| - |A \\cap B|

@@ -52,15 +52,18 @@ generateRandSetExpr n = do {
                                 }
 } 
 
-generateQuestion :: Expr -> Exercise -> Exercise
-generateQuestion expr exer = undefined
+generateQuestion :: ([Field], Integer) -> Exercise -> Exercise
+generateQuestion (myProblem,sol) def 
+    = def { eQuestion =  [FText "helloWorld"]--myProblem --, (FText [(show sol)]) 
+          , eBroughtBy = ["Paul Gralla","Joseph Hajjar","Roberto Brito"] }
 
-generateFeedback :: Expr -> Map.Map String String -> ProblemResponse -> ProblemResponse
+
+generateFeedback :: ([Field], Integer) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 generateFeedback _ _ rsp = rsp
 
 cardinalityProofExer :: ExerciseType
-cardinalityProofExer = exerciseType "Cardinality" "L?.?" "Sets: Cardinalities"
-                            [generateRandSetExpr 5]
+cardinalityProofExer = exerciseType "Set Cardinality" "L?.?" "Sets: Cardinalities"
+                            setEx
                             generateQuestion
                             generateFeedback
 
