@@ -70,54 +70,54 @@ parseExpr s =
     Left m -> error $ show m
     Right e' -> e'
 
+negStr :: String; andStr :: String; orStr :: String; implyStr :: String; equalStr :: String
 (negStr, andStr, orStr, implyStr, equalStr) = ("¬", "∧", "∨", "⇒", "≡")
--- negStr = "-"; andStr = "^"; orStr = "v"; implyStr = "=>"
--- (negStr, andStr, orStr, implyStr, equalStr) = ("\\neg", "\\wedge", "\\vee", "\\Rightarrow", "\\equiv")
 
 logicExpr :: Parser LogicExpr
-logicExpr = space *> makeExprParser term ops <* space
+logicExpr = space' *> makeExprParser term ops <* space'
     where
         term = (do 
-            v <- satisfy (\v -> v=='p' || v=='q' || v=='r') <* space
+            v <- satisfy (\v -> v=='p' || v=='q' || v=='r') <* space'
             return (Var v)
             )
             <|>
             (do
-                v <- (string "true" <|> string "false") <* space
+                v <- (string "true" <|> string "false") <* space'
                 return (Con (if v == "true" then True else False)))
             <|>
             (do 
-                string "(" *> space
+                string "(" *> space'
                 t <- logicExpr
-                string ")" *> space
+                string ")" *> space'
                 return t
                 )
 
         ops = [
-            [ Prefix (return Neg <* string negStr <* space)]
+            [ Prefix (return Neg <* string negStr <* space')]
             , [ infixL andStr And
                 , infixL orStr Or]
             , [infixL implyStr Imply]
             ]            
-        space = ((string " " <|> string "\\t" <|> string "\\ ") *> space)
+        space' = ((string " " <|> string "\\t" <|> string "\\ ") *> space')
                 <|> return ()            
-        infixL str op = InfixL (return (Bin op) <* string str <* space)
+        infixL str op = InfixL (return (Bin op) <* string str <* space')
 
 
 law :: Parser Law
 law = do
     name <- parseUntil ':' <* space    
     e1 <- logicExpr <* space
-    string equalStr
+    _ <- string equalStr
     e2 <- logicExpr <* space
     return (Law name (e1,e2))
 
 
 -- runParser logicExpr "" "pVq^true"
 -- runParser law "" "fei  : -(-p) ≡ p"
+parseUntil :: MonadParsec e s f => Token s -> f [Token s]
 parseUntil c = 
     do 
-        satisfy (== c)
+        _ <- satisfy (== c)
         return []
     <|> 
     do
