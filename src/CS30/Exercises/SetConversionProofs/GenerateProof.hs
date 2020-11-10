@@ -28,13 +28,13 @@ evaluate (Var "A") = [0,1,2,3]
 evaluate (Var "B") = [0,2,4,6]
 evaluate (Var "C") = [0,1,4,5]
 evaluate (Var _v) = [] -- should never reach this case if var assignment happens correctly 
-evaluate (Cup e1 e2) = (evaluate e1) ++ (evaluate e2)
-evaluate (Vee e1 e2) = (evaluate e1) ++ (evaluate e2)
+evaluate (Cup e1 e2) = (evaluate e1) `union` (evaluate e2)
+evaluate (Vee e1 e2) = (evaluate e1) `union` (evaluate e2)
 evaluate (Cap e1 e2) = (evaluate e1) `intersect` (evaluate e2)
 evaluate (Wedge e1 e2) = (evaluate e1) `intersect` (evaluate e2)
 evaluate (SetMinus e1 e2) = (evaluate e1) \\ (evaluate e2)
-evaluate (NotIn e1 e2) = [0,1,2,3,4,5,6] \\ (evaluate e2)
-evaluate (In e1 e2) = evaluate e2
+evaluate (NotIn _e1 e2) = [0,1,2,3,4,5,6] \\ (evaluate e2)
+evaluate (In _e1 e2) = evaluate e2
 evaluate (SetBuilder e) = evaluate e
 
 -- TODO - how to fix this: 
