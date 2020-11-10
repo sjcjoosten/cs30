@@ -62,18 +62,18 @@ showParenLATEX b p = if b
 -- contains all the laws that we use (after parsing)
 lawStrings :: [String]
 lawStrings = [
-        "Double Negation Law: \\neg (\\neg p) \\equiv p",
-        "Identity Law: p \\vee false \\equiv p",
-        "Identity Law: p \\wedge true \\equiv p",
-        "Domination Law: p \\wedge false \\equiv false",
-        "Domination Law: p \\vee true \\equiv true",
-        "Idempotent Law: p \\vee p \\equiv p",
-        "Idempotent Law: p \\wedge p \\equiv p",
-        "Implication Law: p \\Rightarrow q \\equiv \\neg p \\vee q",
-        "De Morgan's Law: \\neg (p \\wedge q) \\equiv \\neg p \\vee \\neg q",
-        "De Morgan's Law: \\neg (p \\vee q) \\equiv \\neg p \\wedge \\neg q",
-        "Negation Law: p \\vee \\neg p \\equiv true",
-        "Negation Law: p \\wedge \\neg p \\equiv false"
+        "Double Negation Law: !(!p) = p",
+        "Identity Law: p || false = p",
+        "Identity Law: p && true = p",
+        "Domination Law: p && false = false",
+        "Domination Law: p || true = true",
+        "Idempotent Law: p || p = p",
+        "Idempotent Law: p && p = p",
+        "Implication Law: p => q = !p || q",
+        "De Morgan's Law: !(p && q) = !p || !q",
+        "De Morgan's Law: !(p || q) = !p && !q",
+        "Negation Law: p || !p = true",
+        "Negation Law: p && !p = false"
     ]
 
 -- parse all the laws into our Law data structure
@@ -95,7 +95,7 @@ lawNames = uniques [name | (Law name _) <- laws]
 parseLaw :: Parser Law
 parseLaw = do name  <- someTill anySingle (symbol ":")
               expr1 <- parseExpr
-              _     <- symbol "\\equiv" 
+              _     <- symbol "\\equiv" <|> symbol "="
               expr2 <- parseExpr
               return (Law name (expr1,expr2))
 
@@ -124,10 +124,10 @@ parens = between (symbol "(") (symbol ")")
 -- operator table for makeExprParser
 operatorTable :: [[Operator Parser Expr]]
 operatorTable = 
-    [ [prefix "\\neg" Neg],
-      [binary "\\vee" Or, 
-       binary "\\wedge" And, 
-       binary "\\Rightarrow" Implies]
+    [ [prefix "\\neg" Neg, prefix "!" Neg],
+      [binary "\\vee" Or, binary "||" Or, 
+       binary "\\wedge" And, binary "&&" And,
+       binary "\\Rightarrow" Implies, binary "=>" Implies]
     ]
 
 -- helper function for generating an binary infix operator
