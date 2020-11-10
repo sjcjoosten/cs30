@@ -22,7 +22,7 @@ data MathExpr      = MathConst Integer
                    | Neg MathExpr
                    deriving Show
 
-data Expr          = Var String | Const Integer | Op Opr [Expr] deriving (Eq,Show)
+data Expr          = Var String | Const Integer | Op Opr [Expr] deriving (Eq)
 data Opr           = Multiplication | Division | Addition | Subtraction
                    | Exponentiation | Factorial | Negate deriving (Eq,Show)
   
@@ -58,6 +58,38 @@ instance Show Ineq where
   showsPrec _ GThan = showString " > "
   showsPrec _ GEq   = showString " ≥ "
   showsPrec _ EqEq  = showString " = "
+
+instance Show Expr where
+  showsPrec p (Var s) = showString (show s)
+  showsPrec p (Const n) = showString (show n)
+  showsPrec p (Op o [e1]) = case o of
+    Factorial -> showParens (p>q) (showsPrec q e1 . showString (symb Factorial))
+    Negate -> showParens (p>q) (showString (symb Negate) . showsPrec q e1)
+    where q = prec o
+  showsPrec p (Op o [e1,e2]) = showParens (p>q) (showsPrec q e1 . showString (symb o) . showsPrec (q+1) e2)
+      where q = prec o
+
+prec :: Opr -> Int
+prec Factorial = 3
+prec Exponentiation = 3
+prec Negate = 3
+prec Multiplication = 2
+prec Division = 2
+prec Addition = 1
+prec Subtraction = 1
+
+symb :: Opr -> String
+symb Multiplication = " \\cdot "
+symb Division = " / "
+symb Addition = " + "
+symb Subtraction = " - "
+symb Factorial = "!"
+symb Exponentiation = "^"
+symb Negate = "-"
+
+showParens :: Bool -> (String -> String) -> (String -> String)
+showParens True s = showChar '(' . s . showChar ')'
+showParens False s = s
 
 {- laws to be used in our proofs -}
 
