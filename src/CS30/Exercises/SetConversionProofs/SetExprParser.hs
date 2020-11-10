@@ -13,8 +13,6 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Control.Monad.Combinators.Expr
-import Debug.Trace
-
 
 -- datatype that we parse all expressions into 
 data SetExpr = Var String -- single variable
@@ -31,9 +29,6 @@ data SetExpr = Var String -- single variable
               deriving (Show, Eq)
 
 type Parser = ParsecT Void String Identity
-
-
-
 
 -- parse spaces (used w/ symbol and lexeme)
 spaceConsumer :: Parser ()

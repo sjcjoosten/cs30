@@ -147,11 +147,11 @@ showsPrec' p (Vee e1 e2)
   = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
          "\\vee" ++ showSpace ++ showsPrec' (q-1) e2)
     where q = 2
-showsPrec' p (In e)
-  = showParen' (p < q) ( "e \\in" ++ showSpace ++ showsPrec' (q-1) e)
+showsPrec' _p (In e)
+  = ( "e \\in" ++ showSpace ++ showsPrec' (q-1) e)
     where q = 3
-showsPrec' p (NotIn e)
-  = showParen' (p < q) ( "e \\notin" ++ showSpace ++ showsPrec' (q-1) e)
+showsPrec' _p (NotIn e)
+  = ( "e \\notin" ++ showSpace ++ showsPrec' (q-1) e)
     where q = 3
 showsPrec' p (Subset e)
   = showParen' (p < q) ( "e \\subseteq" ++ showSpace ++ showsPrec' (q-1) e)
