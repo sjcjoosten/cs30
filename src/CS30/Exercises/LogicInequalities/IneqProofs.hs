@@ -243,11 +243,6 @@ parseUntil c = (do _ <- satisfy (== c)
                    return (c1:rmd)
                )
 
--- law1 = Law "Assoc" (Op Addition [Op Addition [Var "X",Var "Y"],Var "Z"], Op Addition [Var "X", Op Addition [Var "Y", Var "Z"]])
-
--- generateRandEx :: Int -> ChoiceTree Expr
--- generateRandEx = undefined
-
 getDerivation :: [Law] -> Ineq -> Expr -> Proof
 getDerivation laws ineq e = Proof e (multiSteps e)
   where multiSteps e'
@@ -374,8 +369,9 @@ sub (l,r) v n = (go l v n, go r v n)
   where go expr val num
           = case expr of
               Const someNum -> Const someNum
-              Var val -> Const n
-              Var otherVal -> Var otherVal -- idk what to do about this particular line
+              Var v -> case (v == val) of
+                        True -> Const n
+                        False -> Var v -- idk what to do about this particular line
               Op o [e1] -> Op o [go e1 val num]
               Op o [e1,e2] -> Op o [go e1 val num, go e2 val num]
 
@@ -407,7 +403,19 @@ evalFac n = case (n>=0) of
         realFac x = x * realFac (x - 1)
               
 
-
+-- generateRandEx :: Int -> ChoiceTree Expr
+-- generateRandEx i | i < 1
+--  = Branch [ Branch [Node (EVar varName) | varName <- ["n"]] -- add support for more variables
+--           , Branch [Node (EConst val) | val <- [2..10]]
+--           ]
+-- generateRandEx i
+--  = Branch [do {e1 <- generateRandEx i'
+--               ;e2 <- generateRandEx (i - i' - 1)
+--               ;opr <- nodes [Plus,Minus,Times]
+--               ;return (EBin opr e1 e2)
+--               }
+--           | i' <- [0..i-1]
+--           ]
 
 -- {- displaying the proofs -}
 
