@@ -37,6 +37,21 @@ instance Show Expr where
 
 type Parser = ParsecT Void String Identity
 
+-- evaluates an expression containing only variables 'p', 'r', 'q'
+evalExpr :: Expr -> [Bool]
+evalExpr (Var v)         = case v of
+                            'p' -> [True,True,True,True,False,False,False,False]
+                            'q' -> [True,True,False,False,True,True,False,False]
+                            'r' -> [True,False,True,False,True,False,True,False]
+                            _   -> error "expression contains unrecognized variable (not p,q, or r)"
+evalExpr (Const b)       = replicate 8 b
+evalExpr (Neg e)         = [not b | b <- evalExpr e]
+evalExpr (And e1 e2)     = [b1 && b2 | (b1,b2) <- zip (evalExpr e1) (evalExpr e2)]
+evalExpr (Or e1 e2)      = [b1 || b2 | (b1,b2) <- zip (evalExpr e1) (evalExpr e2)]
+evalExpr (Implies e1 e2) = [not b1 || b2 | (b1,b2) <- zip (evalExpr e1) (evalExpr e2)]
+
+checkLaw :: Law -> Bool
+checkLaw (Law _ (e1,e2)) = evalExpr e1 == evalExpr e2
 
 -- 
 showParenLATEX :: Bool -> ShowS -> ShowS
