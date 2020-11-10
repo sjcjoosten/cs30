@@ -23,16 +23,14 @@ data FracExpr
 data Law = Law {lawName :: String, lawEq :: Equation} deriving Show
 type Equation = (FracExpr,FracExpr)
 
-law1 :: Law
-law1 = Law "DeMorgan" (NegaEvent (AndEvent (FVar 'A') (FVar 'B')), OrEvent (NegaEvent (FVar 'A')) (FVar 'B'))
-
--- laws given in the Final Assignmentss
+-- laws given in the Final Assignments
 rules = map (takeRh . parse parseLaws "" ) 
         [deMorgan1, deMorgan2, dbNegat, omegaElimiW, omegaElimiV, negaProba, difference,
         condition, totalProb, bayesRule, incluExclu]
 
 takeRh e = case e of (Right l) -> l
                      (Left e) -> error (errorBundlePretty e)
+
 
 deMorgan1 :: String
 deMorgan1 =  "DeMorgan: \\neg (A \\wedge B) = \\neg A \\vee \\neg B"
@@ -62,6 +60,7 @@ incluExclu :: String
 incluExclu = "Inclusion exclusion: Pr[A \\vee B] = Pr[A] + Pr[B] - Pr[A \\wedge B]"
 
 
+
 -- x - y = x + (nagate y)
 -- lhs : x - y; rhs : x + (nagate y)
 parseLaws :: Parser Law
@@ -83,15 +82,11 @@ parseUntil c
         return (accum:rmd) 
         )
 
-{-laws :: [String] 
-laws = [deMorgan1, deMorgan2] -- dbNegat, omegaElimiW, emptyElimiW]-}
-
-laws1 :: [Law]
-laws1 = [law1]
+laws :: [String] 
+laws = [deMorgan1, deMorgan2] --, dbNegat, omegaElimiW, omegaElimiV, emptyElimiW, emptyElimiV]
 
 parsedLaws :: [Law]
-parsedLaws = laws1
-    --Prelude.map strToLaw laws
+parsedLaws = Prelude.map strToLaw laws
 
 strToLaw :: String -> Law 
 strToLaw law =  case parse parseLaws "" law of
@@ -227,8 +222,7 @@ termParser =  do {r <- (string "0"*> return 0) <|> (string "1"*> return 1);
                 e1 <- fractional_parser;
                 string ")";
                 lt_spaces;
-                return (e1)
-                    }
+                return (e1)}
             <|>
              do {string "\\frac{";
                 lt_spaces;
