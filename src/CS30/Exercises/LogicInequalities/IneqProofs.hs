@@ -27,7 +27,7 @@ data MathExpr  = MathConst Integer
                | Neg MathExpr
                deriving Show
 
-data Expr      = Var String | Const Integer | Op Opr [Expr] deriving (Eq,Show)
+data Expr      = Var String | Const Integer | Op Opr [Expr] deriving (Eq)
 data Opr       = Multiplication | Division | Addition | Subtraction
                | Exponentiation | Factorial | Negate deriving (Eq,Show)
 
@@ -42,6 +42,25 @@ type IneqProofStep = (String, Inequality)
 type Inequality = (Expr,Ineq,Expr)
 data Ineq       = GThan | GEq | EqEq deriving (Eq)
 type Implies    = (Inequality,Inequality)
+
+prec :: Opr -> Int
+prec Factorial = 3
+prec Exponentiation = 3
+prec Negate = 3
+prec Multiplication = 2
+prec Division = 2
+prec Addition = 1
+prec Subtraction = 1
+
+symb :: Opr -> String
+symb Multiplication = " \\cdot "
+symb Division = " / "
+symb Addition = " + "
+symb Subtraction = " - "
+symb Factorial = "!"
+symb Exponentiation = "^"
+symb Negate = "-"
+
 
 instance Show Law where 
   showsPrec _ (Law name (e1,e2))
@@ -63,6 +82,20 @@ instance Show Ineq where
   showsPrec _ GThan = showString " > "
   showsPrec _ GEq   = showString " ≥ "
   showsPrec _ EqEq  = showString " = "
+
+instance Show Expr where
+  showsPrec p (Var s) = showString (show s)
+  showsPrec p (Const n) = showString (show n)
+  showsPrec p (Op o [e1]) = case o of
+    Factorial -> showParens (p>q) (showsPrec q e1 . showString (symb Factorial))
+    Negate -> showParens (p>q) (showString (symb Negate) . showsPrec q e1)
+    where q = prec o
+  showsPrec p (Op o [e1,e2]) = showParens (p>q) (showsPrec q e1 . showString (symb o) . showsPrec (q+1) e2)
+      where q = prec o
+
+showParens :: Bool -> (String -> String) -> (String -> String)
+showParens True s = showChar '(' . s . showChar ')'
+showParens False s = s
 
 {- laws to be used in our proofs -}
 
@@ -98,7 +131,12 @@ ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"  
               , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
               ]
 
-lawBois = stringsToLaw lawList
+lawBois = stringsToLaws lawList
+stringsToLaws :: [String] -> [Law]
+stringsToLaws l = catMaybes $ map convert l
+  where convert v = case parse parseLaw "" v of
+                 Left _ -> Nothing
+                 Right v -> Just v
 
 digit :: Parser Integer
 digit = do c <- satisfy inRange
@@ -296,6 +334,69 @@ lookupInSubst nm ((nm',v):rm)
  | otherwise = lookupInSubst nm rm
 lookupInSubst _ [] = error "Substitution was not complete, or free variables existed in the rhs of some equality"
 
+-- only supports monotonically increasing functions of one variable
+-- i realize those are some pretty narrow restrictions
+-- can expand the function if necessary
+-- or we can just carefully generate expressions that fit these params
+evaluate :: Expr -> Expr -> Maybe (Ineq,Integer)
+evaluate left right = findSmallest seeWhatWorks
+  where
+    seeWhatWorks = take 1 [(leftVal,rightVal,tryNum)
+                          | tryNum <- [0..100]
+                          , (l,r) <- sub (left,right) "n" tryNum
+                          , leftVal <- compute l
+                          , rightVal <- compute r
+                          , isJust leftVal && isJust rightVal
+                          , leftVal >= rightVal]
+    findSmallest [] = Nothing
+    findSmallest [(l,r,n)] = case (l>r) of
+                              True -> Just (GEq,n)
+                              False -> Just (GThan,n)
+
+
+
+
+sub :: (Expr,Expr) -> String -> Integer -> (Expr,Expr)
+sub (l,r) v n = (go l v n, go r v n)
+  where go expr val num
+          = case expr of
+              Const someNum -> Const someNum
+              Var val -> Const n
+              Var otherVal -> Var otherVal -- idk what to do about this particular line
+              Op o [e1] -> Op o [go e1 val num]
+              Op o [e1,e2] -> Op o [go e1 val num, go e2 val num]
+
+-- Does only integer math for now
+-- Would need to alter our datatype to do work with rationals/floats
+compute :: Expr -> Maybe Integer
+compute (Const c) = Just c
+compute (Var _) = Just 1 -- ??????
+compute (Op o [e1]) = case (compute e1, o) of
+                          (Nothing,_) -> Nothing
+                          (Just eval1,Factorial) -> evalFac eval1
+                          (Just eval1, Negate) -> Just (-1 * eval1)
+compute (Op o [e1,e2]) = case (compute e1, compute e2, o) of
+                          (Nothing,_,_) -> Nothing
+                          (Just eval1, Nothing,_) -> Nothing
+                          (Just eval1, Just eval2, Addition)-> Just (eval1 + eval2)
+                          (Just eval1, Just eval2, Subtraction) -> Just (eval1 - eval2)
+                          (Just eval1, Just eval2, Multiplication) -> Just (eval1 * eval2)
+                          (Just eval1, Just eval2, Division) -> case eval2 of
+                                                                      0 -> Nothing
+                                                                      _ -> Just (eval1 `div` eval2)
+                          (Just eval1, Just eval2, Exponentiation) -> Just (eval1 ^ eval2)
+
+evalFac :: Integer -> Maybe Integer
+evalFrac 0 = Just 0
+evalFac n = case (n>0) of
+              False -> Nothing
+              True -> Just realFac n
+  where realFac 0 = 1
+        realFac x = x * (x - 1)
+              
+
+
+
 -- {- displaying the proofs -}
 
 -- permutations :: Int -> ChoiceTree [Int]
@@ -348,10 +449,5 @@ lookupInSubst _ [] = error "Substitution was not complete, or free variables exi
 --         step5 = [ FMath "=", FText "{ Multiplication by 1 }"
 --                 , FIndented 1 [FMath "(n + 1)! > n"] ]
 
--- this might work, but idk how to use things with Maybe
-stringsToLaw :: [String] -> [Law]
-stringsToLaw l = catMaybes $ map convert l
-  where convert v = case parse parseLaw "" v of
-                 Left _ -> Nothing
-                 Right v -> Just v
+
 
