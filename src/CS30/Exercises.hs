@@ -12,7 +12,11 @@ import CS30.Exercises.SetBasics (rosterEx, powsetEx, setOpsEx)
 import CS30.Exercises.Table (tableStub)
 import CS30.Exercises.TruthTable (truthEx)
 import CS30.Exercises.ProofStub (proofStub)
+<<<<<<< HEAD
+import CS30.Exercises.LogicInequalities (logicInequalitiesEx)
+=======
 import CS30.Exercises.IneqProofs (ineqProofExercise)
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
 -- http://math.chapman.edu/~jipsen/mathquill/test/MathQuillsymbolsMathJax.html
@@ -30,7 +34,11 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , incExcCards -- from IncExcCardinalities
         , probaEx
         , modN
+<<<<<<< HEAD
+        , logicInequalitiesEx
+=======
         , ineqProofExercise
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
         -- , combinEx -- too slow, see TODO
         ]
 

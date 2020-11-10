@@ -1,58 +1,11 @@
--- module CS30.Exercises.IneqProofs(ineqProofExercise) where
--- import CS30.Data
--- import CS30.Exercises.Data
--- import           CS30.Data
-<<<<<<< HEAD
--- import           CS30.Exercises.Data
-=======
 import           CS30.Exercises.Data
->>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 import           Control.Monad.Combinators.Expr
 import qualified Data.Map as Map
 import           Data.Void
 import           Data.Either
 import           Data.Maybe
-import           Text.Megaparsec
-import           Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char.Lexer as L
+import CS30.Exercises.LogicInequalities.IneqParser
 
--- defining datas and types
-type Parser     = Parsec Void String
-
--- MathExpr for parsing, converted to Expr for everything else
-data MathExpr  = MathConst Integer 
-               | MathVar String
-               | Fact MathExpr             -- factorial
-               | Divide MathExpr MathExpr  -- division
-               | Mult  MathExpr MathExpr   -- multiply two MathExpr's 
-               | Expon MathExpr MathExpr   -- set first MathExpr to the second MathExpr power
-               | Add MathExpr MathExpr
-               | Sub MathExpr MathExpr
-               | Neg MathExpr
-               deriving Show
-
-<<<<<<< HEAD
-data Expr      = Var String | Const Integer | Op Opr [Expr] deriving (Eq,Show)
-=======
-data Expr      = Var String | Const Integer | Op Opr [Expr] deriving (Eq)
->>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
-data Opr       = Multiplication | Division | Addition | Subtraction
-               | Exponentiation | Factorial | Negate deriving (Eq,Show)
-
-data Law        = Law {lawName :: String, lawEq :: Equation}
-type Equation   = (Expr,Expr)
-
-data IneqLaw    = IneqLaw {ineqName :: String, ineqEq :: Implies}
-data Proof     = Proof Expr [ProofStep] deriving Show
-type ProofStep = (String, Expr)
-data IneqProof = IneqProof Inequality [IneqProofStep]
-type IneqProofStep = (String, Inequality)
-type Inequality = (Expr,Ineq,Expr)
-data Ineq       = GThan | GEq | EqEq deriving (Eq)
-type Implies    = (Inequality,Inequality)
-
-<<<<<<< HEAD
-=======
 prec :: Opr -> Int
 prec Factorial = 3
 prec Exponentiation = 3
@@ -72,7 +25,6 @@ symb Exponentiation = "^"
 symb Negate = "-"
 
 
->>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 instance Show Law where 
   showsPrec _ (Law name (e1,e2))
     = showString name . 
@@ -94,8 +46,6 @@ instance Show Ineq where
   showsPrec _ GEq   = showString " ≥ "
   showsPrec _ EqEq  = showString " = "
 
-<<<<<<< HEAD
-=======
 instance Show Expr where
   showsPrec p (Var s) = showString (show s)
   showsPrec p (Const n) = showString (show n)
@@ -110,7 +60,6 @@ showParens :: Bool -> (String -> String) -> (String -> String)
 showParens True s = showChar '(' . s . showChar ')'
 showParens False s = s
 
->>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 {- laws to be used in our proofs -}
 
 -- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
@@ -145,16 +94,11 @@ ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"  
               , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
               ]
 
-<<<<<<< HEAD
-lawBois = stringsToLaw lawList
-=======
-lawBois = stringsToLaws lawList
 stringsToLaws :: [String] -> [Law]
 stringsToLaws l = catMaybes $ map convert l
   where convert v = case parse parseLaw "" v of
                  Left _ -> Nothing
                  Right v -> Just v
->>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 
 digit :: Parser Integer
 digit = do c <- satisfy inRange
@@ -261,14 +205,6 @@ parseUntil c = (do _ <- satisfy (== c)
                    return (c1:rmd)
                )
 
-<<<<<<< HEAD
--- law1 = Law "Assoc" (Op Addition [Op Addition [Var "X",Var "Y"],Var "Z"], Op Addition [Var "X", Op Addition [Var "Y", Var "Z"]])
-
--- generateRandEx :: Int -> ChoiceTree Expr
--- generateRandEx = undefined
-
-=======
->>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 getDerivation :: [Law] -> Ineq -> Expr -> Proof
 getDerivation laws ineq e = Proof e (multiSteps e)
   where multiSteps e'
@@ -322,7 +258,7 @@ getStep2 laws (lhs, rhs) ineq e
         checkFunc Addition       = (const True, const True)
         checkFunc Division       = (const False, snd (checkFunc Multiplication))
         checkFunc Subtraction    = (const False, const True)
-        
+
 -- I think we will need to change this function
 type Substitution = [(String, Expr)]
 matchE :: Expr -> Expr -> Maybe Substitution
@@ -355,8 +291,6 @@ lookupInSubst nm ((nm',v):rm)
  | otherwise = lookupInSubst nm rm
 lookupInSubst _ [] = error "Substitution was not complete, or free variables existed in the rhs of some equality"
 
-<<<<<<< HEAD
-=======
 -- only supports monotonically increasing functions of one variable
 -- i realize those are some pretty narrow restrictions
 -- can expand the function if necessary
@@ -377,8 +311,11 @@ evaluate one two =
                     (_,_,100) -> Just (last (zipWith (\(_,_,x) y -> x - y) l [0..100]) + 1)
                     (_,_,_) -> Nothing
 
+expr1 :: Expr
 expr1 = Op Addition [Op Multiplication [Const 3,Var "n"], Const 6]
+expr2 :: Expr
 expr2 = Op Exponentiation [Var "n", Const 2]
+expr3 :: Expr
 expr3 = Op Factorial [Var "n"]
 
 findIneq :: Maybe Integer -> [(Maybe Integer,Maybe Integer,Integer)] -> Maybe (Ineq,Integer)
@@ -430,7 +367,6 @@ evalFac n = case (n>=0) of
   where realFac 0 = 1
         realFac x = x * realFac (x - 1)
               
-
 generateRandEx :: Int -> ChoiceTree Expr
 generateRandEx i | i < 1
  = Branch [ Branch [Node (Var varName) | varName <- ["n"]] -- add support for more variables
@@ -451,68 +387,3 @@ hasVar (Var _) = True
 hasVar (Const _) = False
 hasVar (Op _ [e1]) = hasVar e1
 hasVar (Op _ [e1,e2]) = hasVar e1 || hasVar e2
-
->>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
--- {- displaying the proofs -}
-
--- permutations :: Int -> ChoiceTree [Int]
--- permutations 0 = Node []
--- permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you can more easily check this out in GHCI.
---  = do i <- nodes [0..n-1]
---       rm <- permutations (n-1)
---       return (i : map (\v -> if v >= i then v+1 else v) rm)
-
--- breakUnderscore :: String -> [String]
--- breakUnderscore s
---   =  case dropWhile (=='_') s of
---        "" -> []
---        s' -> w : breakUnderscore s''
---              where (w, s'') = break (=='_') s'
-
--- ineqProofExercise :: ExerciseType
--- ineqProofExercise = exerciseType "ineqProof" "L?.???" "Logic: Inequality"
---                       [permutations 5] genProof simpleFeedback
---                where simpleFeedback sol rsp pr
---                       = case Map.lookup "proof" rsp of
---                           Just str
---                             -> if map ((sol !!) . read ) (breakUnderscore str) == [0..4]
---                                then markCorrect pr
---                                else markWrong pr{prFeedback=[FText "You answered: ",FText str]}
---                           Nothing -> error "Client response is missing 'proof' field"
-
--- -- data Proof     = Proof Expr [ProofStep] deriving Show
--- -- type ProofStep = (String, Expr)
-
--- genProof :: [Int] -> Exercise -> Exercise
--- genProof order def 
---  = def{ eQuestion = [ FText $"Can you put the following proof in the right order?"
---                     , FIndented 1 [FMath "(n + 1)"]
---                     , FReorder "proof"
---                         (map ([step1,step2,step3,step4,step5] !!) order)
---                     ]
---       , eBroughtBy = ["Kyle Bensink and Lucas Boebel"] }
--- -- getDerivation :: [Law] -> Ineq -> Expr -> Proof
-
---       where --hardcoded example
---         step1 = [ FMath "=", FText "{ definition of factorial }"
---                 , FIndented 1 [FMath "(n + 1)! ≥ (n + 1) \\cdot (n)!"] ]
---         step2 = [ FMath "=", FText "{ Given x > 0: n + 1 > 0, n! > n }"
---                 , FIndented 1 [FMath "(n + 1)! > (n + 1) \\cdot (n)!"] ]
---         step3 = [ FMath "=", FText "{ n > 0, n + 1 > 1 }"
---                 , FIndented 1 [FMath "(n + 1)! > (n + 1) \\cdot n"] ]
---         step4 = [ FMath "=", FText "{ n > 0, n + 1 > 1 }"
---                 , FIndented 1 [FMath "(n + 1)! > 1 * n"] ]
---         step5 = [ FMath "=", FText "{ Multiplication by 1 }"
---                 , FIndented 1 [FMath "(n + 1)! > n"] ]
-
-<<<<<<< HEAD
--- this might work, but idk how to use things with Maybe
-stringsToLaw :: [String] -> [Law]
-stringsToLaw l = catMaybes $ map convert l
-  where convert v = case parse parseLaw "" v of
-                 Left _ -> Nothing
-                 Right v -> Just v
-=======
-
->>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
-
