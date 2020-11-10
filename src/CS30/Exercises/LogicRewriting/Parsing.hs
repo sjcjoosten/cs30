@@ -62,18 +62,20 @@ showParenLATEX b p = if b
 -- contains all the laws that we use (after parsing)
 lawStrings :: [String]
 lawStrings = [
-        "Double Negation Law: !(!p) = p",
+        "Double Negation Law: ~(~p) = p",
         "Identity Law: p || false = p",
         "Identity Law: p && true = p",
         "Domination Law: p && false = false",
         "Domination Law: p || true = true",
         "Idempotent Law: p || p = p",
         "Idempotent Law: p && p = p",
-        "Implication Law: p => q = !p || q",
-        "De Morgan's Law: !(p && q) = !p || !q",
-        "De Morgan's Law: !(p || q) = !p && !q",
-        "Negation Law: p || !p = true",
-        "Negation Law: p && !p = false"
+        "Implication Law: p => q = ~p || q",
+        "De Morgan's Law: ~(p && q) = ~p || ~q",
+        "De Morgan's Law: ~(p || q) = ~p && ~q",
+        "Negation Law: p || ~p = true",
+        "Negation Law: p && ~p = false",
+        "Definition of True: ~false = true",
+        "Definition of False: ~true = false"
     ]
 
 -- parse all the laws into our Law data structure
@@ -124,7 +126,7 @@ parens = between (symbol "(") (symbol ")")
 -- operator table for makeExprParser
 operatorTable :: [[Operator Parser Expr]]
 operatorTable = 
-    [ [prefix "\\neg" Neg, prefix "!" Neg],
+    [ [prefix "\\neg" Neg, prefix "~" Neg],
       [binary "\\vee" Or, binary "||" Or, 
        binary "\\wedge" And, binary "&&" And,
        binary "\\Rightarrow" Implies, binary "=>" Implies]
