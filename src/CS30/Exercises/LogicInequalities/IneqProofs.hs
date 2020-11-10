@@ -2,7 +2,7 @@
 -- import CS30.Data
 -- import CS30.Exercises.Data
 -- import           CS30.Data
--- import           CS30.Exercises.Data
+import           CS30.Exercises.Data
 import           Control.Monad.Combinators.Expr
 import qualified Data.Map as Map
 import           Data.Void
@@ -403,19 +403,26 @@ evalFac n = case (n>=0) of
         realFac x = x * realFac (x - 1)
               
 
--- generateRandEx :: Int -> ChoiceTree Expr
--- generateRandEx i | i < 1
---  = Branch [ Branch [Node (EVar varName) | varName <- ["n"]] -- add support for more variables
---           , Branch [Node (EConst val) | val <- [2..10]]
---           ]
--- generateRandEx i
---  = Branch [do {e1 <- generateRandEx i'
---               ;e2 <- generateRandEx (i - i' - 1)
---               ;opr <- nodes [Plus,Minus,Times]
---               ;return (EBin opr e1 e2)
---               }
---           | i' <- [0..i-1]
---           ]
+generateRandEx :: Int -> ChoiceTree Expr
+generateRandEx i | i < 1
+ = Branch [ Branch [Node (Var varName) | varName <- ["n"]] -- add support for more variables
+          , Branch [Node (Const val) | val <- [2..10]]
+          ]
+generateRandEx i
+ = Branch [do {e1 <- generateRandEx i'
+              ;e2 <- generateRandEx (i - i' - 1)
+              ;opr <- nodes [Addition,Subtraction,Multiplication,Division,Exponentiation]
+              ;return (Op opr [e1,e2])
+              }
+          | i' <- [0..i-1]
+          ]
+
+-- eventually used to filter out expressions that have no variables in them whatsoever
+hasVar :: Expr -> Bool
+hasVar (Var _) = True
+hasVar (Const _) = False
+hasVar (Op _ [e1]) = hasVar e1
+hasVar (Op _ [e1,e2]) = hasVar e1 || hasVar e2
 
 -- {- displaying the proofs -}
 
