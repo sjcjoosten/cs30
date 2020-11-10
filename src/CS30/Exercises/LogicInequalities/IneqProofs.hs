@@ -2,7 +2,11 @@
 -- import CS30.Data
 -- import CS30.Exercises.Data
 -- import           CS30.Data
+<<<<<<< HEAD
 -- import           CS30.Exercises.Data
+=======
+import           CS30.Exercises.Data
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 import           Control.Monad.Combinators.Expr
 import qualified Data.Map as Map
 import           Data.Void
@@ -27,7 +31,11 @@ data MathExpr  = MathConst Integer
                | Neg MathExpr
                deriving Show
 
+<<<<<<< HEAD
 data Expr      = Var String | Const Integer | Op Opr [Expr] deriving (Eq,Show)
+=======
+data Expr      = Var String | Const Integer | Op Opr [Expr] deriving (Eq)
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 data Opr       = Multiplication | Division | Addition | Subtraction
                | Exponentiation | Factorial | Negate deriving (Eq,Show)
 
@@ -43,6 +51,28 @@ type Inequality = (Expr,Ineq,Expr)
 data Ineq       = GThan | GEq | EqEq deriving (Eq)
 type Implies    = (Inequality,Inequality)
 
+<<<<<<< HEAD
+=======
+prec :: Opr -> Int
+prec Factorial = 3
+prec Exponentiation = 3
+prec Negate = 3
+prec Multiplication = 2
+prec Division = 2
+prec Addition = 1
+prec Subtraction = 1
+
+symb :: Opr -> String
+symb Multiplication = " \\cdot "
+symb Division = " / "
+symb Addition = " + "
+symb Subtraction = " - "
+symb Factorial = "!"
+symb Exponentiation = "^"
+symb Negate = "-"
+
+
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 instance Show Law where 
   showsPrec _ (Law name (e1,e2))
     = showString name . 
@@ -64,6 +94,23 @@ instance Show Ineq where
   showsPrec _ GEq   = showString " ≥ "
   showsPrec _ EqEq  = showString " = "
 
+<<<<<<< HEAD
+=======
+instance Show Expr where
+  showsPrec p (Var s) = showString (show s)
+  showsPrec p (Const n) = showString (show n)
+  showsPrec p (Op o [e1]) = case o of
+    Factorial -> showParens (p>q) (showsPrec q e1 . showString (symb Factorial))
+    Negate -> showParens (p>q) (showString (symb Negate) . showsPrec q e1)
+    where q = prec o
+  showsPrec p (Op o [e1,e2]) = showParens (p>q) (showsPrec q e1 . showString (symb o) . showsPrec (q+1) e2)
+      where q = prec o
+
+showParens :: Bool -> (String -> String) -> (String -> String)
+showParens True s = showChar '(' . s . showChar ')'
+showParens False s = s
+
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 {- laws to be used in our proofs -}
 
 -- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
@@ -98,7 +145,16 @@ ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"  
               , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
               ]
 
+<<<<<<< HEAD
 lawBois = stringsToLaw lawList
+=======
+lawBois = stringsToLaws lawList
+stringsToLaws :: [String] -> [Law]
+stringsToLaws l = catMaybes $ map convert l
+  where convert v = case parse parseLaw "" v of
+                 Left _ -> Nothing
+                 Right v -> Just v
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 
 digit :: Parser Integer
 digit = do c <- satisfy inRange
@@ -205,11 +261,14 @@ parseUntil c = (do _ <- satisfy (== c)
                    return (c1:rmd)
                )
 
+<<<<<<< HEAD
 -- law1 = Law "Assoc" (Op Addition [Op Addition [Var "X",Var "Y"],Var "Z"], Op Addition [Var "X", Op Addition [Var "Y", Var "Z"]])
 
 -- generateRandEx :: Int -> ChoiceTree Expr
 -- generateRandEx = undefined
 
+=======
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 getDerivation :: [Law] -> Ineq -> Expr -> Proof
 getDerivation laws ineq e = Proof e (multiSteps e)
   where multiSteps e'
@@ -296,6 +355,104 @@ lookupInSubst nm ((nm',v):rm)
  | otherwise = lookupInSubst nm rm
 lookupInSubst _ [] = error "Substitution was not complete, or free variables existed in the rhs of some equality"
 
+<<<<<<< HEAD
+=======
+-- only supports monotonically increasing functions of one variable
+-- i realize those are some pretty narrow restrictions
+-- can expand the function if necessary
+-- or we can just carefully generate expressions that fit these params
+evaluate :: Expr -> Expr -> Maybe (Ineq,Integer)
+evaluate one two = 
+  let s = seeWhatWorks one two
+  in findIneq (findSmallest s) s
+  where
+    seeWhatWorks left right = [ (leftVal,rightVal,tryNum)
+                              | tryNum <- [0..100]
+                              , let (l,r) = sub (left,right) "n" tryNum
+                              , let leftVal = compute l
+                              , let rightVal = compute r
+                              , isJust leftVal && isJust rightVal
+                              , leftVal >= rightVal]
+    findSmallest l = case last l of
+                    (_,_,100) -> Just (last (zipWith (\(_,_,x) y -> x - y) l [0..100]) + 1)
+                    (_,_,_) -> Nothing
+
+expr1 = Op Addition [Op Multiplication [Const 3,Var "n"], Const 6]
+expr2 = Op Exponentiation [Var "n", Const 2]
+expr3 = Op Factorial [Var "n"]
+
+findIneq :: Maybe Integer -> [(Maybe Integer,Maybe Integer,Integer)] -> Maybe (Ineq,Integer)
+findIneq Nothing _ = Nothing
+findIneq _ [] = Nothing
+findIneq (Just v) ((l,r,n):xs) | n == v = case (l>r) of
+                                            True -> Just (GThan,n)
+                                            False -> Just (GEq,n)
+                               | n == v + 1 = case (l>r) of
+                                                True -> Just (GThan,n)
+                                                False -> Just (GEq,n)
+                               | otherwise = findIneq (Just v) xs
+
+sub :: (Expr,Expr) -> String -> Integer -> (Expr,Expr)
+sub (l,r) v n = (go l v n, go r v n)
+  where go expr val num
+          = case expr of
+              Const someNum -> Const someNum
+              Var v -> case (v == val) of
+                        True -> Const n
+                        False -> Var v -- idk what to do about this particular line
+              Op o [e1] -> Op o [go e1 val num]
+              Op o [e1,e2] -> Op o [go e1 val num, go e2 val num]
+
+-- Does only integer math for now
+-- Would need to alter our datatype to do work with rationals/floats
+compute :: Expr -> Maybe Integer
+compute (Const c) = Just c
+compute (Var _) = Just 1 -- ??????
+compute (Op o [e1]) = case (compute e1, o) of
+                          (Nothing,_) -> Nothing
+                          (Just eval1,Factorial) -> evalFac eval1
+                          (Just eval1, Negate) -> Just (-1 * eval1)
+compute (Op o [e1,e2]) = case (compute e1, compute e2, o) of
+                          (Nothing,_,_) -> Nothing
+                          (Just eval1, Nothing,_) -> Nothing
+                          (Just eval1, Just eval2, Addition)-> Just (eval1 + eval2)
+                          (Just eval1, Just eval2, Subtraction) -> Just (eval1 - eval2)
+                          (Just eval1, Just eval2, Multiplication) -> Just (eval1 * eval2)
+                          (Just eval1, Just eval2, Division) -> case eval2 of
+                                                                      0 -> Nothing
+                                                                      _ -> Just (eval1 `div` eval2)
+                          (Just eval1, Just eval2, Exponentiation) -> Just (eval1 ^ eval2)
+
+evalFac :: Integer -> Maybe Integer
+evalFac n = case (n>=0) of
+              False -> Nothing
+              True -> Just (realFac n)
+  where realFac 0 = 1
+        realFac x = x * realFac (x - 1)
+              
+
+generateRandEx :: Int -> ChoiceTree Expr
+generateRandEx i | i < 1
+ = Branch [ Branch [Node (Var varName) | varName <- ["n"]] -- add support for more variables
+          , Branch [Node (Const val) | val <- [2..10]]
+          ]
+generateRandEx i
+ = Branch [do {e1 <- generateRandEx i'
+              ;e2 <- generateRandEx (i - i' - 1)
+              ;opr <- nodes [Addition,Subtraction,Multiplication,Division,Exponentiation]
+              ;return (Op opr [e1,e2])
+              }
+          | i' <- [0..i-1]
+          ]
+
+-- eventually used to filter out expressions that have no variables in them whatsoever
+hasVar :: Expr -> Bool
+hasVar (Var _) = True
+hasVar (Const _) = False
+hasVar (Op _ [e1]) = hasVar e1
+hasVar (Op _ [e1,e2]) = hasVar e1 || hasVar e2
+
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 -- {- displaying the proofs -}
 
 -- permutations :: Int -> ChoiceTree [Int]
@@ -348,10 +505,14 @@ lookupInSubst _ [] = error "Substitution was not complete, or free variables exi
 --         step5 = [ FMath "=", FText "{ Multiplication by 1 }"
 --                 , FIndented 1 [FMath "(n + 1)! > n"] ]
 
+<<<<<<< HEAD
 -- this might work, but idk how to use things with Maybe
 stringsToLaw :: [String] -> [Law]
 stringsToLaw l = catMaybes $ map convert l
   where convert v = case parse parseLaw "" v of
                  Left _ -> Nothing
                  Right v -> Just v
+=======
+
+>>>>>>> 7f575c41b9c612cd05d4a73ccff3d52fbcd30ec7
 
