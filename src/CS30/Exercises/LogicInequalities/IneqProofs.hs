@@ -4,15 +4,69 @@ import           CS30.Exercises.Data
 import           Data.Maybe
 import           CS30.Exercises.LogicInequalities.IneqParser
 
-getDerivation :: [Law] -> Ineq -> Expr -> Proof
-getDerivation laws ineq e = Proof e (multiSteps e)
-  where multiSteps e'
-          = case [ (lawName law, res)
-                 | law <- laws
-                 , res <- getStep2 laws (lawEq law) ineq e'
-                 ] of
-            [] -> []
-            ((nm,e''):_) -> (nm,e'') : multiSteps e''
+{- some sample expressions -}
+expr1 :: Expr
+expr1 = Op Addition [Op Multiplication [Const 3,Var "n"], Const 6]
+expr2 :: Expr
+expr2 = Op Exponentiation [Var "n", Const 3]
+expr3 :: Expr
+expr3 = Op Factorial [Var "n"]
+expr4 :: Expr
+expr4 = Op Exponentiation [Op Addition [Var "n", Const 4], Const 2]
+
+
+{- laws to be used in our proofs -}
+
+-- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
+lawList :: [String]
+lawList = [ "Exponentiation: a ^ 0 = 1"
+          , "Exponentiation: a ^ 1 = a"
+          , "Exponentiation: a ^ 2 = a * a"
+          , "Exponentiation: a ^ b = a * (a ^ (b - 1))"
+          , "Additive Identity: a + 0 = a"
+          , "Additive Identity: 0 + a = a"
+          , "Additive Inverse: a - a = 0"
+          , "Multiplicative Identity: a * 1 = a"
+          , "Multiplicative Identity: 1 * a = a"
+          , "Multiplication Times 0: 0 * a = 0"
+          , "Multiplication Times 0: a * 0 = 0"
+          , "Dividing Zero: 0 / a = 0"
+          , "Multiplicative Inverse: a / a = 1"
+          , "Distributive Law: a - (b + c) = a - b - c"
+          , "Distributive Law: a - (b - c) = a - b + c"
+          , "Additive Association: a + (b + c) = (a + b) + c"
+          , "Multiplicative Association: a * (b * c) = (a * b) * c"
+          , "Commutative of Addition: a + b = b + a"
+          , "FOIL: (a + b) * (c + d) = a * c + a * d + b * c + b * d"
+          ]
+
+ineqLawList :: [String]
+ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"    -- hold off for now
+              --, "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"    -- hold off for now
+                "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"      -- done
+              , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"      -- done
+              , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"      -- done
+              , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x"      -- done
+              , "Addition: x > y \\Rightarrow x + z > y + z"
+              , "Division for x > 0 and z > 0: x < y \\Rightarrow z / x > z / y"
+              , "Division for x > 0 and z > 0: x > y \\Rightarrow z / x < z / y"
+              , "Division for x > 0 and z ≥ 0: x < y \\Rightarrow z / x ≥ z / y"
+              , "Division for x > 0 and z ≥ 0: x > y \\Rightarrow z / x ≤ z / y"
+              , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
+              ]
+
+lawBois = stringsToLaw lawList
+
+getDerivationLengthN :: [Law] -> Ineq -> Expr -> Integer -> Proof
+getDerivationLengthN laws ineq e i = Proof e (multiSteps e i) 
+  where multiSteps e' i' | i' <= 0 = []
+                         | otherwise = case [ (lawName law, res)
+                                            | law <- laws
+                                            , res <- getStep2 laws (lawEq law) ineq e'
+                                            , res /= e && res /= e'
+                                            ] of
+                                        [] -> []
+                                        ((nm,e''):_) -> (nm,e'') : multiSteps e'' (i' - 1)
 
 getStep :: Equation -> Expr -> [Expr]
 getStep (lhs, rhs) expr
@@ -26,6 +80,7 @@ getStep (lhs, rhs) expr
             [Op o [e1, e2'] | e2' <- getStep (lhs,rhs) e2]
         recurse (Op o [e1])
           = [Op o [e1'] | e1' <- getStep (lhs,rhs) e1]
+        recurse (Op _ _) = [] -- satisfy the compiler
 
 getStep2 :: [Law] -> (Expr, Expr) -> Ineq -> Expr -> [Expr]
 getStep2 laws (lhs, rhs) ineq e
@@ -39,10 +94,11 @@ getStep2 laws (lhs, rhs) ineq e
             [Op o [e1, e2'] | e2' <- getStep (lhs,rhs) e2, fst (checkFunc o) e1]
         recurse (Op o [e1])
           = [Op o [e1'] | e1' <- getStep (lhs,rhs) e1]
+        recurse (Op _ _) = [] -- satisfy the compiler
 
         --"Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"
-        isPositive e1 = provesGEQ 1 (getDerivation laws ineq e1)
-        isNonNeg e1   = provesGEQ 0 (getDerivation laws ineq e1)
+        isPositive e1 = provesGEQ 1 (getDerivationLengthN laws ineq e1 5)
+        isNonNeg e1   = provesGEQ 0 (getDerivationLengthN laws ineq e1 5)
         provesGEQ b (Proof e1 steps) = go b e1 steps
               where go b' (Const n) _ | n >= b'     = True
                                      | otherwise = False
@@ -57,6 +113,7 @@ getStep2 laws (lhs, rhs) ineq e
         checkFunc Addition       = (const True, const True)
         checkFunc Division       = (const False, snd (checkFunc Multiplication))
         checkFunc Subtraction    = (const False, const True)
+        -- add support for Exponentiation, Factorial, Negate
 
 -- I think we will need to change this function
 type Substitution = [(String, Expr)]
@@ -83,6 +140,7 @@ apply subst (Var nm) = lookupInSubst nm subst
 apply _ (Const i) = Const i
 apply subst (Op o [e]) = Op o [apply subst e]
 apply subst (Op o [e1,e2]) = Op o [(apply subst e1),(apply subst e2)]
+apply subst (Op _ _) = undefined
 
 lookupInSubst :: String -> [(String, p)] -> p
 lookupInSubst nm ((nm',v):rm)
@@ -98,24 +156,20 @@ evaluate :: Expr -> Expr -> Maybe (Ineq,Integer)
 evaluate one two = 
   let s = seeWhatWorks one two
   in findIneq (findSmallest s) s
-  where
-    seeWhatWorks left right = [ (leftVal,rightVal,tryNum)
-                              | tryNum <- [0..100]
-                              , let (l,r) = sub (left,right) "n" tryNum
-                              , let leftVal = compute l
-                              , let rightVal = compute r
-                              , isJust leftVal && isJust rightVal
-                              , leftVal >= rightVal]
-    findSmallest l = case last l of
-                    (_,_,100) -> Just (last (zipWith (\(_,_,x) y -> x - y) l [0..100]) + 1)
-                    (_,_,_) -> Nothing
 
-expr1 :: Expr
-expr1 = Op Addition [Op Multiplication [Const 3,Var "n"], Const 6]
-expr2 :: Expr
-expr2 = Op Exponentiation [Var "n", Const 2]
-expr3 :: Expr
-expr3 = Op Factorial [Var "n"]
+seeWhatWorks :: Expr -> Expr -> [(Maybe Integer, Maybe Integer, Integer)]
+seeWhatWorks left right = [ (leftVal,rightVal,tryNum)
+                          | tryNum <- [0..100]
+                          , let (l,r) = sub (left,right) "n" tryNum
+                          , let leftVal = compute l
+                          , let rightVal = compute r
+                          , isJust leftVal && isJust rightVal
+                          , leftVal >= rightVal]
+
+findSmallest :: [(Maybe Integer, Maybe Integer, Integer)] -> Maybe Integer
+findSmallest l = case last l of
+                (_,_,100) -> Just (last (zipWith (\(_,_,x) y -> x - y) l [0..100]))
+                (_,_,_) -> Nothing
 
 findIneq :: Maybe Integer -> [(Maybe Integer,Maybe Integer,Integer)] -> Maybe (Ineq,Integer)
 findIneq Nothing _ = Nothing
@@ -123,21 +177,19 @@ findIneq _ [] = Nothing
 findIneq (Just v) ((l,r,n):xs) | n == v = case (l>r) of
                                             True -> Just (GThan,n)
                                             False -> Just (GEq,n)
-                               | n == v + 1 = case (l>r) of
-                                                True -> Just (GThan,n)
-                                                False -> Just (GEq,n)
-                               | otherwise = findIneq (Just v) xs
+                               | otherwise = findIneq (Just (v+1)) xs
 
 sub :: (Expr,Expr) -> String -> Integer -> (Expr,Expr)
 sub (l,r) v n = (go l v n, go r v n)
   where go expr val num
           = case expr of
               Const someNum -> Const someNum
-              Var v -> case (v == val) of
-                        True -> Const n
-                        False -> Var v -- idk what to do about this particular line
+              Var thisVal -> case (thisVal == val) of
+                              True -> Const n
+                              False -> Var thisVal -- idk what to do about this particular line
               Op o [e1] -> Op o [go e1 val num]
               Op o [e1,e2] -> Op o [go e1 val num, go e2 val num]
+              Op _ _ -> undefined
 
 -- Does only integer math for now
 -- Would need to alter our datatype to do work with rationals/floats
@@ -150,7 +202,7 @@ compute (Op o [e1]) = case (compute e1, o) of
                           (Just eval1, Negate) -> Just (-1 * eval1)
 compute (Op o [e1,e2]) = case (compute e1, compute e2, o) of
                           (Nothing,_,_) -> Nothing
-                          (Just eval1, Nothing,_) -> Nothing
+                          (Just _, Nothing,_) -> Nothing
                           (Just eval1, Just eval2, Addition)-> Just (eval1 + eval2)
                           (Just eval1, Just eval2, Subtraction) -> Just (eval1 - eval2)
                           (Just eval1, Just eval2, Multiplication) -> Just (eval1 * eval2)
@@ -196,7 +248,7 @@ isNonEmpty (Branch []) = False
 isNonEmpty (Branch b) = or $ map isNonEmpty b
 
 nodeHasVar :: ChoiceTree Expr -> Bool
-nodeHasVar (Branch b) = False
+nodeHasVar (Branch _) = False
 nodeHasVar (Node n) = hasVar n
   where
     hasVar (Var _) = True

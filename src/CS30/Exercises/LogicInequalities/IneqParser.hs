@@ -92,40 +92,6 @@ showParens True s = showChar '(' . s . showChar ')'
 showParens False s = s
 
 
-{- laws to be used in our proofs -}
-
--- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
-lawList :: [String]
-lawList = [ "Commutative of Addition: a + b = b + a"
-          , "Additive Identity: a + 0 = a"
-          , "Additive Identity: 0 + a = a"
-          , "Additive Inverse: a - a = 0"
-          , "Additive Association: a + (b + c) = (a + b) + c"
-          , "Multiplicative Identity: a * 1 = a"
-          , "Multiplicative Identity: 1 * a = a"
-          , "Multiplicative Association: a * (b * c) = (a * b) * c"
-          , "Multiplication Times 0: 0 * a = 0"
-          , "Multiplication Times 0: a * 0 = 0"
-          , "Dividing Zero: 0 / a = 0"
-          , "Multiplicative Inverse: a / a = 1"
-          , "Distributive Law: a - (b + c) = a - b - c"
-          , "Distributive Law: a - (b - c) = a - b + c" ]
-
-ineqLawList :: [String]
-ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"    -- hold off for now
-              --, "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"    -- hold off for now
-                "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"      -- done
-              , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"      -- done
-              , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"      -- done
-              , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x"      -- done
-              , "Addition: x > y \\Rightarrow x + z > y + z"
-              , "Division for x > 0 and z > 0: x < y \\Rightarrow z / x > z / y"
-              , "Division for x > 0 and z > 0: x > y \\Rightarrow z / x < z / y"
-              , "Division for x > 0 and z ≥ 0: x < y \\Rightarrow z / x ≥ z / y"
-              , "Division for x > 0 and z ≥ 0: x > y \\Rightarrow z / x ≤ z / y"
-              , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
-              ]
-
 stringsToLaw :: [String] -> [Law]
 stringsToLaw lst = catMaybes $ map convert lst
   where convert v = case parse parseLaw "" v of
