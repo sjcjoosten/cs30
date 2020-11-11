@@ -7,10 +7,16 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char ( string )
 import qualified Text.Megaparsec.Char.Lexer as L
 
--- defining datas and types
+{- defining datas and types -}
 type Parser        = Parsec Void String
-
--- MathExpr for parsing, converted to Expr for everything else
+data Expr          = Var String | Const Integer | Op Opr [Expr] deriving (Eq)
+data Opr           = Multiplication | Division | Addition | Subtraction
+                   | Exponentiation | Factorial | Negate deriving (Eq,Show)
+data Law           = Law {lawName :: String, lawEq :: Equation}
+type Equation      = (Expr,Expr)
+data Proof         = Proof Expr [ProofStep] deriving Show
+type ProofStep     = (String, Expr)
+-- MathExpr for parsing, gets converted to Expr for everything else
 data MathExpr      = MathConst Integer 
                    | MathVar String
                    | Fact MathExpr             -- factorial
@@ -21,23 +27,15 @@ data MathExpr      = MathConst Integer
                    | Sub MathExpr MathExpr
                    | Neg MathExpr
                    deriving Show
-
-data Expr          = Var String | Const Integer | Op Opr [Expr] deriving (Eq)
-data Opr           = Multiplication | Division | Addition | Subtraction
-                   | Exponentiation | Factorial | Negate deriving (Eq,Show)
-  
-data Law           = Law {lawName :: String, lawEq :: Equation}
-type Equation      = (Expr,Expr)
-
+-- maybe we can ultimately get rid of these
 data IneqLaw       = IneqLaw {ineqName :: String, ineqEq :: Implies}
-data Proof         = Proof Expr [ProofStep] deriving Show
-type ProofStep     = (String, Expr)
 data IneqProof     = IneqProof Inequality [IneqProofStep]
 type IneqProofStep = (String, Inequality)
 type Inequality    = (Expr,Ineq,Expr)
 data Ineq          = GThan | GEq | EqEq deriving (Eq)
 type Implies       = (Inequality,Inequality)
 
+{- defining Show instances -}
 instance Show Law where 
   showsPrec _ (Law name (e1,e2))
     = showString name . 
@@ -60,14 +58,16 @@ instance Show Ineq where
   showsPrec _ EqEq  = showString " = "
 
 instance Show Expr where
-  showsPrec p (Var s) = showString (show s)
-  showsPrec p (Const n) = showString (show n)
+  showsPrec _ (Var s) = showString (show s)
+  showsPrec _ (Const n) = showString (show n)
   showsPrec p (Op o [e1]) = case o of
     Factorial -> showParens (p>q) (showsPrec q e1 . showString (symb Factorial))
     Negate -> showParens (p>q) (showString (symb Negate) . showsPrec q e1)
+    _ -> showParens (True) (showsPrec q e1)
     where q = prec o
   showsPrec p (Op o [e1,e2]) = showParens (p>q) (showsPrec q e1 . showString (symb o) . showsPrec (q+1) e2)
       where q = prec o
+  showsPrec _ (Op _ _) = showString "()"
 
 prec :: Opr -> Int
 prec Factorial = 3
@@ -90,6 +90,7 @@ symb Negate = "-"
 showParens :: Bool -> (String -> String) -> (String -> String)
 showParens True s = showChar '(' . s . showChar ')'
 showParens False s = s
+
 
 {- laws to be used in our proofs -}
 
@@ -130,6 +131,9 @@ stringsToLaw lst = catMaybes $ map convert lst
   where convert v = case parse parseLaw "" v of
                  Left _ -> Nothing
                  Right l -> Just l
+
+
+{- Our parser -}
 
 digit :: Parser Integer
 digit = do c <- satisfy inRange

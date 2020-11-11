@@ -143,7 +143,7 @@ sub (l,r) v n = (go l v n, go r v n)
 -- Would need to alter our datatype to do work with rationals/floats
 compute :: Expr -> Maybe Integer
 compute (Const c) = Just c
-compute (Var _) = Just 1 -- ??????
+compute (Var _) = Just 1 -- ?????? what to do about sneaky variables
 compute (Op o [e1]) = case (compute e1, o) of
                           (Nothing,_) -> Nothing
                           (Just eval1,Factorial) -> evalFac eval1
@@ -159,30 +159,48 @@ compute (Op o [e1,e2]) = case (compute e1, compute e2, o) of
                                                                       _ -> Just (eval1 `div` eval2)
                           (Just eval1, Just eval2, Exponentiation) -> Just (eval1 ^ eval2)
 
+-- Factorial function
 evalFac :: Integer -> Maybe Integer
 evalFac n = case (n>=0) of
               False -> Nothing
               True -> Just (realFac n)
   where realFac 0 = 1
         realFac x = x * realFac (x - 1)
-              
+
+
+-- return valid expressions, i.e. those that have a variable in them
+-- just calling generateRandEx i<1 may or may not generate a valid expression
+-- but calling generateRandEx i≥1 will filter out the invalid ones
 generateRandEx :: Int -> ChoiceTree Expr
 generateRandEx i | i < 1
  = Branch [ Branch [Node (Var varName) | varName <- ["n"]] -- add support for more variables
           , Branch [Node (Const val) | val <- [2..10]]
           ]
 generateRandEx i
- = Branch [do {e1 <- generateRandEx i'
-              ;e2 <- generateRandEx (i - i' - 1)
-              ;opr <- nodes [Addition,Subtraction,Multiplication,Division,Exponentiation]
-              ;return (Op opr [e1,e2])
-              }
-          | i' <- [0..i-1]
-          ]
+ = filterTree $ Branch [do {e1 <- generateRandEx i'
+                       ;e2 <- generateRandEx (i - i' - 1)
+                       ;opr <- nodes [Addition,Subtraction,Multiplication,Division,Exponentiation]
+                       ;return (Op opr [e1,e2])
+                       }
+                       | i' <- [0..i-1]
+                       ]
 
--- eventually used to filter out expressions that have no variables in them whatsoever
-hasVar :: Expr -> Bool
-hasVar (Var _) = True
-hasVar (Const _) = False
-hasVar (Op _ [e1]) = hasVar e1
-hasVar (Op _ [e1,e2]) = hasVar e1 || hasVar e2
+filterTree :: ChoiceTree Expr -> ChoiceTree Expr
+filterTree (Branch b@((Branch _):_)) = Branch $ filter isNonEmpty $ map filterTree b
+filterTree (Branch n@((Node _):_)) =  Branch $ filter nodeHasVar n
+filterTree n = n
+
+isNonEmpty :: ChoiceTree Expr -> Bool
+isNonEmpty (Node _) = True
+isNonEmpty (Branch []) = False
+isNonEmpty (Branch b) = or $ map isNonEmpty b
+
+nodeHasVar :: ChoiceTree Expr -> Bool
+nodeHasVar (Branch b) = False
+nodeHasVar (Node n) = hasVar n
+  where
+    hasVar (Var _) = True
+    hasVar (Const _) = False
+    hasVar (Op _ [e1]) = hasVar e1
+    hasVar (Op _ [e1,e2]) = hasVar e1 || hasVar e2
+    hasVar (Op _ _) = False
