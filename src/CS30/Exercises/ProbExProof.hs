@@ -34,8 +34,10 @@ type Step = (String, ExExpr)
 
 -- | TODO: put all laws here!
 laws :: [Law]
-laws = map parseL ["'Linearity of Expectation' E[X+Y]=E[X]+E[Y]"] ++
-       map parseL ["'Linearity of Expectation' E[X+Y] = E[X] + E[Y]"]
+laws = map parseL ["'Linearity of Expectation' E[X+Y]=E[X]+E[Y]", 
+                  "'Linearity of Expectation' E[X+Y] = E[X] + E[Y]",
+                  "'number' 123 = 123"
+                  ]
 
 latexLaws :: IO ()
 latexLaws = mapM_ f laws 
@@ -68,7 +70,7 @@ genRanEx i
 -- takes something pleasant to our eyes
 -- turns into our data types
 parseExExpr :: Parser ExExpr
-parseExExpr = makeExprParser term table <?> "expression"
+parseExExpr = (makeExprParser term table <?> "expression") <* spaces
                where table = [
                                [(binary "*" Times)]
                              , [(binary "+" Plus), (binary "-" Minus)] 
@@ -81,34 +83,41 @@ binary str op = InfixL
                     return (EbinOp op))
 
 term :: Parser ExExpr
-term = do string "("  
+term = do string "("
+          spaces
           res <- parseExExpr 
           string ")"
+          spaces
           return res
        <|> 
        do string "E["
+          spaces
           expr <- parseExExpr
           string "]"
+          spaces
           return (E expr)
        <|>
        do string "cov("
+          spaces
           expr1 <- parseExExpr
           string ","
+          spaces
           expr2 <- parseExExpr
           string ")"
+          spaces
           return (Ecov expr1 expr2)
        <|> 
-       do num <- some digit 
+       do num <- some digit
+          spaces
           return (Econst (read num))
        <|>
        do letter <- satisfy isLetter
+          spaces
           return (Eranvar [letter])
        <?> "term"
 
 digit :: Parser Char
 digit = satisfy isDigit
-            where isDigit x = elem x ['0'..'9']
-
 
 -- | Rachael's code: parse a law
 -- we want to do something like this:
@@ -120,7 +129,8 @@ parseLawExExpr :: Parser Law
 parseLawExExpr = do lawName <- between (string "'") (string "'") (many nonSingleQuote)
                     spaces
                     e1 <- parseExExpr
-                    _ <- string "=" <|> string " = "<|> string " =" <|> string "= " -- TODO: improve this poor way of making extra spaces work
+                    _ <- string "=" 
+                    spaces
                     e2 <- parseExExpr
                     return (Law lawName (e1,e2))
 
@@ -167,18 +177,22 @@ combine (x:xs) = [x, FText ", "] ++ combine xs
 
 -- | take an expression, generate latex string
 asLatex :: ExExpr -> String 
-asLatex expr = undefined -- latexHelper (words (show expr)) 0 []
+asLatex expr = latexHelper expr 0 []
 
-{-- stopped working on this because I know it's wrong and in the completely wrong direction
-latexHelper :: [String] -> Int -> String -> String
-latexHelper exprStr n res = if n > length exprStr - 1   then return (res ++ "]") else
-                            if exprStr !! n == "E"      then res ++ "E["         else
-                            if exprStr !! n == "EbinOp" then (let op = exprStr !! n+1
-                                                                  l  = exprStr !! n+2
-                                                                  r  = exprStr !! n+3 
-                                                                  n  = n+4
-                                                              in  res ++ l ++ op ++ r) else
---}
+latexHelper :: ExExpr -> Int -> String -> String -- int for precedence of operator
+latexHelper (E expr) _ str = "E[" ++ latexHelper expr 0 ("]" ++ str)
+latexHelper (Econst c) _ str = show c ++ str
+latexHelper (Eranvar m) _ str = m ++ str
+latexHelper (EbinOp op e1 e2) n str 
+   = showParen (n <= prec) (latexHelper e1 prec . (showOp op ++) . latexHelper e2 (prec+1) ) str
+      where prec = p op
+            p Plus  = 1
+            p Minus = 1
+            p Times = 2
+            showOp Plus  = "+"
+            showOp Minus = "-"
+            showOp Times = "\\cdot"
+latexHelper (Ecov e1 e2) _ str = "cov(" ++ latexHelper e1 0 (", " ++ latexHelper e2 0 (")" ++ str))
 
 -- randomSelect (Branch choiceTreeList)
 genQuestion :: ([Field], a) -> Exercise -> Exercise
