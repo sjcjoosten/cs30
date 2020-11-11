@@ -15,7 +15,7 @@ logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
                        logicQuer
                        logicFeedback
 
--- generate initial expressions to put through the proover
+-- generate initial expressions to put through the prover
 -- TODO: decide whether there is a better way to generate "good" expressions
 --   (e.g. do we want to have constants in the expression at all? 
 --    can we guarantee that at least one variable is in the expression?)

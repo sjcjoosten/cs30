@@ -21,7 +21,6 @@ data Expr = Var Char          -- variable like 'p' or 'q'
     deriving Eq
 
 -- display an Expr as a string (to be used with FMath)
--- TODO: display parentheses better
 instance Show Expr where
     -- showsPrec :: Int -> Expr -> ShowS
     showsPrec _ (Var v)         = showChar v
@@ -80,7 +79,7 @@ lawStrings = [
 laws :: [Law]
 laws = map prsLaw lawStrings
        where prsLaw x = case parse parseLaw "" x of
-                           Left _  -> error ""
+                           Left s  -> error (show s) 
                            Right l -> l
 
 -- just the (unique) names of the laws
@@ -126,7 +125,7 @@ parens = between (symbol "(") (symbol ")")
 -- operator table for makeExprParser
 operatorTable :: [[Operator Parser Expr]]
 operatorTable = 
-    [ [prefix "\\neg" Neg, prefix "~" Neg],
+    [ [prefix "\\neg" Neg, prefix "!" Neg],
       [binary "\\vee" Or, binary "||" Or, 
        binary "\\wedge" And, binary "&&" And,
        binary "\\Rightarrow" Implies, binary "=>" Implies]
