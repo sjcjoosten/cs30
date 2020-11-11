@@ -51,9 +51,7 @@ powerset :: [a] -> [[a]]
 powerset [] = [[]]
 powerset (x:xs) = [x:ps | ps <- powerset xs] ++ powerset xs
 
-
-example1, example2, example3, example4, example5, example6, example7 :: SetExpr
-
+example1, example2, example3, example4, example5, example6, example7, example8 :: SetExpr
 example1 = (Cap (Var "M") (Var "N"))
 example2 = (Cup (Var "X") (Var "Y"))
 example3 = (SetMinus (Var "P") (Var "Q"))
@@ -61,6 +59,7 @@ example4 = (Power (Var "K"))
 example5 = (In (SetBuilder (Var "p")))
 example6 = (Cap (Cap (Var "X") (Var "Y")) (Var "Z"))
 example7 = (Cap (Var "X") (Cap (Var "Y") (Var "Z")))
+example8 = (In (Var "p"))
 
 generateProof :: [Law] -> SetExpr -> Proof -- We need only one proof for our problem
 generateProof laws' e = Proof e (multiSteps e)
@@ -99,17 +98,25 @@ type Subst = [(String, SetExpr)]
 
 match :: SetExpr -> SetExpr -> [Subst]
 match (Var name) e                        = [[(name, e)]]
-match (SetBuilder e1) e2                  = match e1 e2
+match (SetBuilder e1) (SetBuilder e2)     = match e1 e2
 match (Power e1) (Power e2)               = match e1 e2
-match (Cap e1 e1') (Cap e2 e2')           = [concat ((match e1 e2) ++ (match e1' e2'))] 
-match (Cup e1 e1') (Cup e2 e2')           = [concat ((match e1 e2) ++ (match e1' e2'))]
-match (SetMinus e1 e1') (SetMinus e2 e2') = [concat ((match e1 e2) ++ (match e1' e2'))]
-match (Wedge e1 e1') (Wedge e2 e2')       = [concat ((match e1 e2) ++ (match e1' e2'))]
-match (Vee e1 e1') (Vee e2 e2')           = [concat ((match e1 e2) ++ (match e1' e2'))]
+match (Cap e1 e1') (Cap e2 e2')           = [sub1 ++ sub2 | sub1 <- match e1 e2, sub2 <- match e1' e2', compatible sub1 sub2]
+match (Cup e1 e1') (Cup e2 e2')           = [sub1 ++ sub2 | sub1 <- match e1 e2, sub2 <- match e1' e2', compatible sub1 sub2]
+match (SetMinus e1 e1') (SetMinus e2 e2') = [sub1 ++ sub2 | sub1 <- match e1 e2, sub2 <- match e1' e2', compatible sub1 sub2]
+match (Wedge e1 e1') (Wedge e2 e2')       = [sub1 ++ sub2 | sub1 <- match e1 e2, sub2 <- match e1' e2', compatible sub1 sub2]
+match (Vee e1 e1') (Vee e2 e2')           = [sub1 ++ sub2 | sub1 <- match e1 e2, sub2 <- match e1' e2', compatible sub1 sub2]
 match (In e1) (In e2)                     = match e1 e2
 match (NotIn e1) (NotIn e2)               = match e1 e2
 match (Subset e1) (Subset e2)             = match e1 e2  
 match _ _ = []
+
+
+compatible :: Subst -> Subst -> Bool
+compatible sub1 sub2 = and [e1==e2 | (v1, e1) <- sub1
+                                   , (v2, e2) <- sub2
+                                   , v1 == v2]
+
+
 
 apply :: Subst -> SetExpr -> SetExpr
 apply subst (Var name)       = lookupInSubst name subst
