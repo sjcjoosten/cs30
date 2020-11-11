@@ -21,12 +21,13 @@ proofStub :: ExerciseType
 proofStub = exerciseType "proofStub" "(testing)" "Displaying sortable proofs" 
               [permutations 5] genProof simpleFeedback
         where simpleFeedback sol rsp pr
-               = case Map.lookup "proof" rsp of
-                   Just str
-                     -> if map ((sol !!) . read) (breakUnderscore str) == [0..4]
-                        then markCorrect pr
-                        else markWrong pr{prFeedback=[FText "You answered: ",FText str]}
-                   Nothing -> error "Client response is missing 'proof' field"
+               = case (Map.lookup "proof" rsp,Map.lookup "choice" rsp) of
+                   (Just strOrder,Just strChoice)
+                     -> if map ((sol !!) . read) (breakUnderscore strOrder) == [0..4]
+                        then markCorrect pr{prFeedback=[ FText "The order is correct but the step wasn't checked really. Your answer was: ",FText strChoice]}
+                        else markWrong pr{prFeedback=[ FText "You answered: ",FText strOrder
+                                                     , FText " as the order and selected step ",FText strChoice]}
+                   _ -> error "Client response is missing 'proof' field"
 genProof :: [Int] -> Exercise -> Exercise
 genProof order def 
  = def{ eQuestion = [ FText $"Here is an example proof, can you put it in the right order?"
@@ -42,7 +43,10 @@ genProof order def
            , FIndented 1 [FMath "x \\cdot (x + y) + y \\cdot (x + y)"] ]
    step3 = [ FMath "=", FText "{ distributivity of multiplication over addition (applied twice) }"
            , FIndented 1 [FMath "x \\cdot x + x \\cdot y + y \\cdot x + y \\cdot y"] ]
-   step4 = [ FMath "=", FText "{ definition of taking a square }"
+   step4 = [ FMath "=", FChoice "choice" [ [FText "{ definition of taking a square }"]
+                                         , [FText "{ distributivity of multiplication over additon }"]
+                                         , [FText "{ combining equal values }"]
+                                         ]
            , FIndented 1 [FMath "x^2 + x \\cdot y + y \\cdot x + y^2"] ]
    step5 = [ FMath "=", FText "{ combining equal values }"
            , FIndented 1 [FMath "x^2 + 2xy + y^2"] ]
