@@ -1,4 +1,4 @@
-module CS30.Exercises.LogicInequalities.InecProofs where
+module CS30.Exercises.LogicInequalities.IneqProofs where
 
 import           CS30.Exercises.Data
 import           Data.Maybe
