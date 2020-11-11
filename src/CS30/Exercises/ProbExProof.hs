@@ -35,8 +35,10 @@ type Step = (String, ExExpr)
 -- | TODO: put all laws here!
 laws :: [Law]
 laws = map parseL ["'Linearity of Expectation' E[X+Y]=E[X]+E[Y]", 
-                  "'Linearity of Expectation' E[X+Y] = E[X] + E[Y]",
-                  "'number' 123 = 123"
+                  "'Linearity of Expectation' E[X-Y]=E[X]-E[Y]",
+                  "'Expectation of Constant' E[c]=c",
+                  "'Expectation with Multiplied Constant' E[cX]=cE[X]",
+                  "'Expectation Multiplication' E[XY]=E[X]E[Y]+cov(X,Y)"
                   ]
 
 latexLaws :: IO ()
