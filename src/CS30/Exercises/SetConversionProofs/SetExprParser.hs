@@ -23,9 +23,9 @@ data SetExpr = Var String -- single variable
               | SetMinus  SetExpr SetExpr  -- set difference
               | Wedge SetExpr SetExpr   -- and, intersection
               | Vee SetExpr SetExpr     -- or, union
-              | In SetExpr SetExpr      -- element of 
-              | NotIn SetExpr SetExpr   -- not an element of
-              | Subset SetExpr SetExpr -- subset of
+              | In  SetExpr      -- element of 
+              | NotIn SetExpr   -- not an element of
+              | Subset SetExpr -- subset of
               deriving (Show, Eq)
 
 type Parser = ParsecT Void String Identity
@@ -78,9 +78,9 @@ parseConstant = do
 --   ]
 operatorTable :: [[Operator Parser SetExpr]] -- order matters! 
 operatorTable =
-  [ [binary "\\in" In, binary "\\notin" NotIn], 
+  [ [binary "\\in" (const In), binary "\\notin" (const NotIn)], 
     [prefix "\\P" Power], 
-    [binary "\\subseteq" Subset],
+    [binary "\\subseteq" (const Subset)],
     [binary "\\cap" Cap, binary "\\cup" Cup], 
     [binary "\\setminus" SetMinus],
     [binary "\\wedge" Wedge, binary "\\vee" Vee] 

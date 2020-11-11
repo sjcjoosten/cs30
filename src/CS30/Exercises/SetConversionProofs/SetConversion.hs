@@ -66,21 +66,63 @@ generateRandEx i
         ;e1 <- generateRandEx i'
         ;e2 <- generateRandEx (i - i' - 1)
         ;opr <- nodes [Cap, Cup, SetMinus]
-        ;return (opr e1 e2)
+        ;return (opr e1 e2) 
        }
+ 
+ 
+-- assignVar definition to go over the final expression by replacing all variables from left to right.
+-- creative element; ensures that there is no duplication of variables in the random expr generated as the problem
+assignVar :: SetExpr -> [String] -> (SetExpr, [String]) 
+assignVar (Var _) (x:xs) = (Var x, xs)
+assignVar (Cup e1 e2) lst 
+  = let (e1', lst') = assignVar e1 lst 
+        (e2', lst'') = assignVar e2 lst'
+    in (Cup e1' e2', lst'')
+assignVar (Cap e1 e2) lst 
+  = let (e1', lst') = assignVar e1 lst 
+        (e2', lst'') = assignVar e2 lst'
+    in (Cap e1' e2', lst'')
+assignVar (SetMinus e1 e2) lst 
+  = let (e1', lst') = assignVar e1 lst 
+        (e2', lst'') = assignVar e2 lst'
+    in (SetMinus e1' e2', lst'')
+assignVar (Vee e1 e2) lst 
+  = let (e1', lst') = assignVar e1 lst 
+        (e2', lst'') = assignVar e2 lst'
+    in (Vee e1' e2', lst'')
+assignVar (Wedge e1 e2) lst 
+  = let (e1', lst') = assignVar e1 lst 
+        (e2', lst'') = assignVar e2 lst'
+    in (Wedge e1' e2', lst'')
+assignVar (SetBuilder e) lst 
+  = let (e', lst') = assignVar e lst 
+    in (SetBuilder e', lst')
+assignVar (In e) lst 
+  = let (e', lst') = assignVar e lst 
+    in (In e', lst')
+assignVar (NotIn e) lst 
+  = let (e', lst') = assignVar e lst 
+    in (NotIn e', lst')
+assignVar (Subset e) lst 
+  = let (e', lst') = assignVar e lst 
+    in (Subset e', lst')
+assignVar (Power e) lst 
+  = let (e', lst') = assignVar e lst 
+    in (Power e', lst')
 
--- TODO - assignVar definition to go over the final expression by replacing all variables from left to right.
--- assignVar :: SetExpr -> SetExpr -- function to iterate on a setexpr and replace variable names
--- assignVar = foldl
+-- could change the laws based on level
+-- first case, diff var names
+-- last case allow duplicates
 
 -- creating the choice tree for problems, 3 levels in terms of degree of nested expr
 setConversion :: [ChoiceTree ([Field], [Int])] 
 setConversion
  = [do { expr <- generateRandEx i
-         ; let (Proof _expr steps) = generateProof parsedLaws expr
+         ; let expr' = fst (assignVar expr ["A", "B", "C"]) 
+         ; let (Proof _expr steps) = generateProof parsedLaws expr'
          ; order <- permutations (length steps)
-         ; return ([FIndented 1 [FMath (myShow expr)], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
-    } | i <- [1..3]]
+         ; return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
+    } | i <- [2..4]]
 
 
 -- generating the proof question
@@ -105,11 +147,11 @@ prec :: SetExpr -> Int
 prec (Var _) = 0
 prec (Power _) = 1
 prec (SetBuilder _) = 1
-prec (Subset _ _) = 1
+prec (Subset _) = 1
 prec (Vee _ _) = 2 
 prec (Wedge _ _) = 2 
-prec (In _ _) = 3
-prec (NotIn _ _) = 3 
+prec (In  _) = 5
+prec (NotIn _) = 5
 prec (Cap _ _) = 4
 prec (Cup _ _) = 4
 prec (SetMinus _ _) = 4
@@ -130,38 +172,38 @@ showParen' p x = if p then
 
 showsPrec' :: Int -> SetExpr -> String
 showsPrec' _p (Var n) = n
+showsPrec' p (In e) 
+  = showParen' (p > q) ("e \\in" ++ showSpace ++ showsPrec' (q+1) e)
+    where q = 5
+showsPrec' p (NotIn e)
+  = showParen' (p > q) ( "e \\notin" ++ showSpace ++ showsPrec' (q+1) e)
+    where q = 5
 showsPrec' p (Cap e1 e2)
-  = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
-        "\\cap" ++ showSpace ++ showsPrec' (q-1) e2)
+  = showParen' (p > q) (showsPrec' q e1 ++ showSpace ++ 
+        "\\cap" ++ showSpace ++ showsPrec' (q+1) e2)
     where q = 4
 showsPrec' p (Cup e1 e2)
-  = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
-        "\\cup" ++ showSpace ++ showsPrec' (q-1) e2)
+  = showParen' (p > q) (showsPrec' q e1 ++ showSpace ++ 
+        "\\cup" ++ showSpace ++ showsPrec' (q+1) e2)
     where q = 4
 showsPrec' p (SetMinus e1 e2)
-  = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
-        "\\setminus" ++ showSpace ++ showsPrec' (q-1) e2)
+  = showParen' (p > q) (showsPrec' q e1 ++ showSpace ++ 
+        "\\setminus" ++ showSpace ++ showsPrec' (q+1) e2)
     where q = 4
 showsPrec' p (Wedge e1 e2)
-  = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
-        "\\wedge" ++ showSpace ++ showsPrec' (q-1) e2)
+  = showParen' (p > q) (showsPrec' q e1 ++ showSpace ++ 
+        "\\wedge" ++ showSpace ++ showsPrec' (q+1) e2)
     where q = 2
 showsPrec' p (Vee e1 e2)
-  = showParen' (p < q) (showsPrec' q e1 ++ showSpace ++ 
-         "\\vee" ++ showSpace ++ showsPrec' (q-1) e2)
+  = showParen' (p > q) (showsPrec' q e1 ++ showSpace ++ 
+         "\\vee" ++ showSpace ++ showsPrec' (q+1) e2)
     where q = 2
-showsPrec' _p (In _e1 e2) -- removing showParen maybe works, but honestly I don't know enough about set builder notation to be able to say
-  =  ("e \\in" ++ showSpace ++ showsPrec' (q-1) e2)
-    where q = 3
-showsPrec' _p (NotIn _e1 e2)
-  =( "e \\notin" ++ showSpace ++ showsPrec' (q-1) e2)
-    where q = 3
-showsPrec' _p (Subset _e1 e2)
-  =  ( "e \\subseteq" ++ showSpace ++ showsPrec' (q-1) e2)
+showsPrec' p (Subset e)
+  =  showParen' (p > q) ( "e \\subseteq" ++ showSpace ++ showsPrec' (q+1) e)
     where q = 1
 showsPrec' p (Power e)
-  = showParen' (p < q) ( "\\P" ++ showsPrec' (0) e)
+  = showParen' (p > q) ( "\\P" ++ showsPrec' (0) e)
     where q = 1
 showsPrec' p (SetBuilder e) 
-  = showParen' (p < q) ( "\\left\\{ e | " ++ myShow e ++ "\\right\\}")
+  = showParen' (p > q) ( "\\left\\{ e | " ++ myShow e ++ "\\right\\}")
     where q = 1
