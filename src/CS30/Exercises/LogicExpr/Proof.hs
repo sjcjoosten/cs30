@@ -3,7 +3,6 @@
 module CS30.Exercises.LogicExpr.Proof where
 import CS30.Exercises.LogicExpr.Parser hiding (law)
 import Data.Maybe ( fromJust )
-import CS30.Exercises.Data
 
 type Substitution = [(VarName,LogicExpr)]
 type VarName = Char
@@ -14,30 +13,61 @@ type Step = (LawName, LogicExpr)
 
 input_laws :: [String]
 input_laws = [
-    "Law1:¬(¬p)≡p"
-    , "Law2:p∧p≡p"
-    , "Law3:p∧true≡p"
-    , "Law4:p∨true≡true"
-    , "Law5:p∨p≡p"
-    , "Law6:(p ⇒ q) ≡ ¬p ∨ q"
-    , "Law7:p∨false≡p"
-    , "Law8:p∧false≡false"
-    , "Law9:¬(p∨q)≡¬p∧¬q"
-    , "Law10:¬(p∧q)≡¬p∨¬q"
-    , "Law11:p∧¬p≡false"
-    , "Law12:p∨¬p≡true"
+    "Negation of Negation:¬(¬p)≡p"
+    , "Idempotence:p∧p≡p"
+    , "Operation with true,false:p∧true≡p"
+    , "Operation with true,false:p∨true≡true"
+    , "Idempotence:p∨p≡p"
+    , "Implications as an OR:(p ⇒ q) ≡ ¬p ∨ q"
+    -- Easy challenge done right??
+    -- , "Implications as an OR:¬(p⇒q)≡p∧q"
+    , "Operation with true,false:p∨false≡p"
+    , "Operation with true,false:p∧false≡false"
+    , "DeMorgan's Law:¬(p∨q)≡¬p∧¬q"
+    , "DeMorgan's Law:¬(p∧q)≡¬p∨¬q"
+    , "Operation with Negation:p∧¬p≡false"
+    , "Operation with Negation:p∨¬p≡true"
+    -- Below are not in the given law list 
     , "Redundancy law: (p∨q)∧(p∨¬q)≡p"
     , "Redundancy law: p∨(¬p∧q)≡p∨q"
-    , "true/false: ¬true≡false"
-    , "true/false: ¬false≡true"
-    , "Assoc: (p∨q)∨r≡p∨q∨r"
-    , "Assoc: p∨(q∨r)≡p∨q∨r"    
-    , "Assoc: (p∧q)∧r≡p∧q∧r"
-    , "Assoc: p∧(q∧r)≡p∧q∧r"
+    , "____: ¬true≡false"
+    , "____: ¬false≡true"
+    , "Associativity1: (p∨q)∨r≡p∨(q∨r)"
+    , "Associativity2: p∨(q∨r)≡(p∨q)∨r"    
+    , "Associativity3: (p∧q)∧r≡p∧(q∧r)"
+    , "Associativity4: p∧(q∧r)≡(p∧q)∧r"
     -- Commutative laws give potentially verbose proof
-    -- , "Commute: p∧q≡q∧p"
-    -- , "Commute: p∨q≡q∨p"
+    , "Commutativity: p∧q≡q∧p"
+    , "Commutativity: p∨q≡q∨p"
     ]
+
+fake_laws :: [String]
+fake_laws = [
+    "FAKELAW: ¬(p ⇒ q) ≡ ¬p ⇒ ¬q"
+    , "FAKELAW: p∨(q∧r)≡(p∨q)∧r"
+  ]
+
+data FaultyProof = FaultyProof LogicExpr [BoolStep] deriving (Show)
+type BoolStep = (Bool, LogicExpr)
+
+-- try to generate a faulty proof for an expr
+-- return Nothing if a faulty proof not found (eg, fake laws not applied), otherwise return the FaultyProof
+genFaultyProof :: LogicExpr -> Maybe FaultyProof
+genFaultyProof e = if and $ map fst boolsteps then Nothing else Just (FaultyProof e boolsteps)
+  where 
+    laws = map parseLaw (fake_laws ++ input_laws )            
+    (Proof _e steps) = getDerivation laws e
+    boolsteps :: [BoolStep]
+    boolsteps = map (\((_, e1), (_, e2)) -> (equivalenceCheck e1 e2, e2)) $ zip (("", e):steps) steps
+
+
+-- Check if a list of laws are all true
+checkLaws :: [String] -> Bool
+checkLaws laws = and lawsTruth
+  where
+    laws' = map parseLaw laws
+    lawsTruth = [equivalenceCheck lhs rhs| (Law _ (lhs, rhs)) <- laws']    
+
 
 simplify :: [String] -> String -> Proof
 simplify strings str = getDerivation laws e
@@ -81,20 +111,20 @@ matchE (Var nm) expr = Just [(nm,expr)]
 matchE (Con i) (Con j) | i == j = Just []
 matchE (Con _) _ = Nothing
 
--- matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2 
---  = case (matchE e1 e3, matchE e2 e4) of
---     (Just s1, Just s2) -> combineTwoSubsts s1 s2
---     _ -> Nothing
-
 matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2 
- = case tryMatch e1 e2 e3 e4 of -- And and Or operators are commutative, so check for reversed match
-          Nothing -> if op1 == And || op1 == Or then tryMatch e1 e2 e4 e3 else Nothing
-          res -> res
-   where 
-     tryMatch e1' e2' e3' e4'= do
-          s1 <- matchE e1' e3'
-          s2 <- matchE e2' e4'
-          combineTwoSubsts s1 s2 
+ = case (matchE e1 e3, matchE e2 e4) of
+    (Just s1, Just s2) -> combineTwoSubsts s1 s2
+    _ -> Nothing
+
+-- matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2 
+--  = case tryMatch e1 e2 e3 e4 of -- And and Or operators are commutative, so check for reversed match
+--           Nothing -> if op1 == And || op1 == Or then tryMatch e1 e2 e4 e3 else Nothing
+--           res -> res
+--    where 
+--      tryMatch e1' e2' e3' e4'= do
+--           s1 <- matchE e1' e3'
+--           s2 <- matchE e2' e4'
+--           combineTwoSubsts s1 s2 
 
 matchE (Bin _ _ _) _ = Nothing
 matchE (Neg e1) (Neg e2) = matchE e1 e2

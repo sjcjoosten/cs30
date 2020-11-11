@@ -26,6 +26,28 @@ data LogicOp
 $(deriveJSON defaultOptions ''LogicOp)
 $(deriveJSON defaultOptions ''LogicExpr)
 
+equivalenceCheck :: LogicExpr -> LogicExpr -> Bool
+equivalenceCheck lhs rhs = and (
+    do 
+        p <- [('p', True), ('p', False)]
+        q <- [('q', True), ('q', False)]
+        r <- [('r', True), ('r', False)]
+        let assoc = [p, q, r]
+            lv = evaluate' lhs assoc
+            rv = evaluate' rhs assoc        
+        return (lv == rv)
+    )    
+
+
+evaluate' :: LogicExpr -> [(Char, Bool)] -> Bool
+evaluate' (Con b) _assoc = b
+evaluate' (Var v) assoc = case lookup v assoc of  Just v' -> v'; Nothing -> error "Var not in assoc table"
+evaluate' (Neg e) assoc = not $ evaluate' e assoc
+evaluate' (Bin And e1 e2) assoc = evaluate' e1 assoc && evaluate' e2 assoc
+evaluate' (Bin Or e1 e2) assoc = evaluate' e1 assoc || evaluate' e2 assoc
+evaluate' (Bin Imply e1 e2) assoc = not (evaluate' e1 assoc) || evaluate' e2 assoc
+
+
 prec :: LogicOp -> Int
 prec And = 2
 prec Or =  2
@@ -112,8 +134,6 @@ law = do
     return (Law name (e1,e2))
 
 
--- runParser logicExpr "" "pVq^true"
--- runParser law "" "fei  : -(-p) ≡ p"
 parseUntil :: MonadParsec e s f => Token s -> f [Token s]
 parseUntil c = 
     do 
