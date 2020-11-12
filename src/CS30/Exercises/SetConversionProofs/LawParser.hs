@@ -80,6 +80,7 @@ evaluate :: SetExpr -> [Int]
 evaluate (Var "A") = [0,1,2,3]
 evaluate (Var "B") = [0,2,4,6]
 evaluate (Var "C") = [0,1,4,5]
+evaluate (Var "D") = [2,3,5,6] 
 evaluate (Var _v) = [] -- should never reach this case if var assignment happens correctly 
 evaluate (Cup e1 e2) = (evaluate e1) `union` (evaluate e2)
 evaluate (Vee e1 e2) = (evaluate e1) `union` (evaluate e2)

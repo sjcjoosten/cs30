@@ -83,14 +83,42 @@ generateRandEx i
  = do { i' <- nodes [0..i-1]
         ;e1 <- generateRandEx i'
         ;e2 <- generateRandEx (i - i' - 1)
-        ;opr <- nodes [Cap, Cup, SetMinus] -- how to add in Power? type errors :( 
+        ;opr <- nodes [Cap, Cup, SetMinus]
         ;return (opr e1 e2) 
        }
+       
+binExprs :: (SetExpr -> SetExpr -> SetExpr) -> Int -> ChoiceTree SetExpr
+binExprs operator i
+ = do i' <- nodes [0..i-1]
+      e1 <- genRand i'
+      e2 <- genRand (i' - 1)
+      return (operator e1 e2)
+
+unaryExprs :: (SetExpr -> SetExpr) -> Int -> ChoiceTree SetExpr
+unaryExprs operator i
+ = do i' <- nodes [0..i-1]
+      e1 <- genRand i'
+      return (operator e1)
+
+genRand :: Int -> ChoiceTree SetExpr
+genRand i | i < 1
+ = Branch [ Branch [Node (Var varName) | varName <- ["A"]] 
+          ]
+genRand i
+ = do result <- nodes [binExprs Cap i, binExprs Cup i, binExprs SetMinus i, 
+                       unaryExprs Power i] 
+      result
+-- join combines two trees together 
+-- same as 
+-- genRand i
+--  = join (nodes [binExprs Cap, binExprs Cup, binExprs SetMinus, 
+--                        unaryExprs Power] )
  
  
 -- assignVar definition to go over the final expression by replacing all variables from left to right.
 -- creative element; ensures that there is no duplication of variables in the random expr generated as the problem
 assignVar :: SetExpr -> [String] -> (SetExpr, [String]) 
+-- assignVar (Var _) [] = () -- TODO: how to define this
 assignVar (Var _) (x:xs) = (Var x, xs)
 assignVar (Cup e1 e2) lst 
   = let (e1', lst') = assignVar e1 lst 
@@ -135,12 +163,12 @@ assignVar (Power e) lst
 -- creating the choice tree for problems, 3 levels in terms of degree of nested expr
 setConversion :: [ChoiceTree ([Field], [Int])] 
 setConversion
- = [do { expr <- generateRandEx i
-         ; let expr' = fst (assignVar expr ["A", "B", "C"]) 
+ = [do { expr <- genRand i
+         ; let expr' = fst (assignVar expr ["A", "B", "C", "D", "E"]) 
          ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
          ; order <- permutations (length steps)
          ; return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
-    } | i <- [2..4]]
+    } | i <- [2..3]]
 
 
 -- generating the proof question
@@ -163,7 +191,7 @@ prec :: SetExpr -> Int
 -- I ended up keeping this because it was used in myShow, in which I don't enumerate all the various 
 -- setexpr cases, but if there is a way to get rid of it without having to entirely rewrite that function, I can do that
 prec (Var _) = 0
-prec (Power _) = 1
+prec (Power _) = 0
 prec (SetBuilder _) = 1
 prec (Subset _) = 1
 prec (Vee _ _) = 2 
@@ -219,9 +247,8 @@ showsPrec' p (Vee e1 e2)
 showsPrec' p (Subset e)
   =  showParen' (p > q) ( "e \\subseteq" ++ showSpace ++ showsPrec' (q+1) e)
     where q = 1
-showsPrec' p (Power e)
-  = showParen' (p > q) ( "\\P" ++ showsPrec' (0) e)
-    where q = 1
+showsPrec' _p (Power e)
+  = "\\P\\left("  ++ showsPrec' (0) e ++ "\\right)"
 showsPrec' p (SetBuilder e) 
   = showParen' (p > q) ( "\\left\\{ e | " ++ myShow e ++ "\\right\\}")
     where q = 1
