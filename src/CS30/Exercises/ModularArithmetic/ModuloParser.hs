@@ -2,6 +2,7 @@
 
 module CS30.Exercises.ModularArithmetic.ModuloParser where
 
+import Data.List
 import Data.Void
 import Data.Functor.Identity
 
@@ -16,7 +17,7 @@ import Control.Monad.Combinators.Expr
 type Parser = ParsecT Void String Identity
 type ParseError = ParseErrorBundle String Void
 
-data Proof = Proof Expression [ProofStep] | ProofError deriving (Show, Eq)
+data Proof = Proof Expression [ProofStep] | ProofError deriving (Eq)
 type ProofStep = (String, Expression)
 type Substitution = [(String, Expression)] -- [ProofStep]
 
@@ -36,11 +37,10 @@ data Op = Neg | Pow | Mul | Sub | Add | ModEq deriving (Eq, Ord) -- TODO : Add s
 --------------------------------------Characters-------------------------------------------
 
 -- TODO : Replace with special characters wherever applicable
-charNeg, charAdd, charSub, charMul, charPow :: Char
+charNeg, charAdd, charSub, charPow :: Char
 charNeg = '-'
 charAdd = '+'
 charSub = '-'
-charMul = '*'
 charPow = '^'
 
 charOpen, charClose, charEquals, charColon :: Char
@@ -49,10 +49,11 @@ charClose = ')'
 charEquals = '='
 charColon = ':'
 
-stringMod, stringImplies, stringCongruent :: String
+stringMod, stringImplies, stringCongruent, stringMul :: String
 stringMod = "mod"
 stringImplies = "implies"
 stringCongruent = "\\equiv_p" -- ≡
+stringMul = "\\cdot"
 
 --------------------------------------Parser Functions-------------------------------------------
 
@@ -89,7 +90,7 @@ operatorTable =
   [ 
     [Prefix (UnOp Neg <$ char charNeg)],
     [InfixL (BinOp Pow <$ char charPow)],
-    [InfixL (BinOp Mul <$ char charMul)],
+    [InfixL (BinOp Mul <$ string stringMul)],
     [InfixL (BinOp Sub <$ char charSub)],
     [InfixL (BinOp Add <$ char charAdd)],
     [InfixL (BinOp ModEq <$ string stringCongruent)]
@@ -114,7 +115,7 @@ showOp = showString . symb
 symb :: Op -> String
 symb Neg = [charNeg]
 symb Pow = [charPow]
-symb Mul = [charMul]
+symb Mul = stringMul
 symb Sub = [charSub]
 symb Add = [charAdd]
 symb ModEq = stringCongruent
@@ -133,13 +134,5 @@ instance Show Expression where
 instance Show Op where
     show op = symb op
 
--- instance Show ProofStep where
---     show (nm, e) = showString ("\n" ++ nm ++ " : " ++ show e)
-
--- instance Show Proof where
---     show (Proof e steps) = showString ("Expression : " ++ show e ++ "\nProof : " ++ intercalate "\n" (map show steps) )
-
--------------------------------------Tests----------------------------------------
-
-exp1 :: Expression
-exp1 = parseExpression True "d * (-(a ^ b)) + (a * -c)"
+instance Show Proof where
+    show (Proof e steps) = "Expression:\n" ++ show e ++ "\n\nProof:\n " ++ intercalate "\n" (map show steps)

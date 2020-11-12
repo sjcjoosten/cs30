@@ -1,18 +1,8 @@
 {-# OPTIONS_GHC -Wall #-}
 module CS30.Exercises.ModuloProof where
 
-
-import CS30.Data
-import CS30.Exercises.Data
 import CS30.Exercises.ModularArithmetic.ModuloParser
 
-import Control.Monad.IO.Class (MonadIO(liftIO))
-import System.Random (randomRIO)
-import System.Random
-import Control.Monad
-import Control.Monad.ST
-import Data.STRef
-import Data.List
 ------------------------------------------Implicit Laws----------------------------------------
 
 -- modulo_laws :: [Law]
@@ -22,28 +12,27 @@ import Data.List
 --                "Law1 : x ^ (p-1) \\equiv_p 1 (mod p)"
 --               ]
 
--- TODO : add artihmetic laws, 0 ,1 , mul, add, power, handle 0 ^ 0
-arithmetic_laws :: [Law]
-arithmetic_laws = map (parseLaw False)
+-- TODO : 0 ^ 0
+_arithmetic_laws :: [Law]
+_arithmetic_laws = map (parseLaw False)
                   [
-                   "Law1 : x * 0 = 0"
-                   ,"Law16 : 0 * x = 0"
-                   ,"Law2 : x + 0 = x"
-                   ,"Law3 : x * 1 = x"
-                   ,"Law4 : x * -1 = -x"
-                   ,"Law5 : x ^ 0 = 1"
-                   ,"Law6 : 1 ^ x = 1"
-                  -- ,  "Law7 : x + y = y + x"
-                  -- ,  "Law8 : x * y = y * x"
-                  -- ,  "Law9 : (x + y) + z = x + (y + z)"
-                  -- ,  "Law10 : (x * y) * z = x * (y * z)"
-                   ,"Law11 : x * (y + z) = x * y + x * z"
-                   ,"Law12 : x * (y - z) = x * y - x * z"
-                   ,"Law14 : (x + y) * z = x * z + y * z"
-                   ,"Law15 : (x - y) * z = x * z - y * z"
-                   ,"Law13 : x ^ (y + z) = x ^ y * x ^ z"
-
-                  --  ,"Law99 : a \\equiv_p b = a + c \\equiv_p b + c"
+                     "Law1 : x \\cdot 0 = 0"
+                    ,"Law2 : x + 0 = x"
+                    ,"Law3 : x \\cdot 1 = x"
+                    ,"Law4 : x \\cdot -1 = -x"
+                    ,"Law5 : x ^ 0 = 1"
+                    ,"Law6 : 1 ^ x = 1"
+                    ,"Law7 : x \\cdot (y + z) = x \\cdot y + x \\cdot z"
+                    ,"Law8 : x \\cdot (y - z) = x \\cdot y - x \\cdot z"
+                    ,"Law9 : (x + y) \\cdot z = x \\cdot z + y \\cdot z"
+                    ,"Law10 : (x - y) \\cdot z = x \\cdot z - y \\cdot z"
+                    ,"Law11 : x ^ (y + z) = x ^ y \\cdot x ^ z"
+                    ,"Law12 : (x \\cdot y) ^ z = x ^ z \\cdot y ^ z"
+                    -- Least priority
+                    ,"Law13 : x + y = y + x"
+                    ,"Law14 : x \\cdot y = y \\cdot x"
+                    ,"Law15 : (x + y) + z = x + (y + z)"
+                    ,"Law16 : (x \\cdot y) \\cdot z = x \\cdot (y \\cdot z)"
                   ]
                   
 -------------------------------------Proofs----------------------------------------
@@ -63,8 +52,8 @@ getDerivation steps laws e
 -- would go into rewrite function
 -- Law1 : a = b (mod p) implies a + c = b + c (mod p)
 -- Law2 : a = b (mod p) implies c + a = c + b (mod p)
--- Law3 : a = b (mod p) implies a * c = b * c (mod p)
--- Law4 : a = b (mod p) implies c * a = c * b (mod p)
+-- Law3 : a = b (mod p) implies a \\cdot c = b \\cdot c (mod p)
+-- Law4 : a = b (mod p) implies c \\cdot a = c \\cdot b (mod p)
 -- Law5 : a = b (mod p) implies a ^ c = b ^ c (mod p)
 getStep :: Equation -> Expression -> [Expression]
 getStep (lhs, rhs) expr
@@ -85,8 +74,8 @@ matchE :: Expression -> Expression -> Maybe Substitution
 matchE (Var nm) expr = Just [([nm],expr)]
 matchE (Con i) (Con j) | i == j = Just []
 matchE (Con _) _ = Nothing
-matchE (Fixed i) (Fixed j) | i == j = Just [] -- TODO : Confirm
-matchE (Fixed _) _ = Nothing -- TODO : Confirm
+matchE (Fixed i) (Fixed j) | i == j = Just [] -- TODO : Is this similar to Var or Con?
+matchE (Fixed _) _ = Nothing -- TODO : Is this similar to Var or Con?
 matchE (BinOp op1 e1 e2) (BinOp op2 e3 e4) | op1 == op2
  = case (matchE e1 e3, matchE e2 e4) of
     (Just s1, Just s2) -> combineTwoSubsts s1 s2
@@ -96,6 +85,7 @@ matchE (UnOp Neg e1) (UnOp Neg e2) = matchE e1 e2
 matchE (UnOp _ _) _ = Nothing
 matchE ExpressionError _ = Nothing
 
+-- For common var, the val should match
 combineTwoSubsts :: Substitution -> Substitution -> Maybe Substitution
 combineTwoSubsts s1 s2
   = case and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2] of
@@ -105,7 +95,7 @@ combineTwoSubsts s1 s2
 apply :: Substitution -> Expression -> Expression
 apply subst (Var nm) = lookupInSubst [nm] subst
 apply _ (Con i) = Con i
-apply _ (Fixed i) = Fixed i -- TODO : definitely not, change
+apply subst (Fixed nm) = lookupInSubst [nm] subst -- TODO : Confirm
 apply subst (UnOp op e) = UnOp op (apply subst e)
 apply subst (BinOp op e1 e2) = BinOp op (apply subst e1) (apply subst e2)
 apply _ ExpressionError = ExpressionError
@@ -116,20 +106,48 @@ lookupInSubst nm ((nm',v):rm)
  | otherwise = lookupInSubst nm rm
 lookupInSubst _ [] = error "Substitution was not complete, or free variables existed in the rhs of some equality"
 
-isPrime :: Int -> Bool -- TODO : Replace
-isPrime k = elem k [2,3,5,7,11,13,17,19,23,29,31]
+-------------------------------------Evaluation----------------------------------------
+
+evalExpression :: Substitution -> Int -> Expression -> Maybe Int
+evalExpression s p = evalExpression' p . apply s
+
+evalExpression' :: Int -> Expression -> Maybe Int
+evalExpression' p (Con i) = modulo p (Just i)
+evalExpression' p (UnOp op e) = modulo p (fnOp op (evalExpression' p e) Nothing)
+evalExpression' p (BinOp op e1 e2) = modulo p (fnOp op (evalExpression' p e1) (evalExpression' p e2))
+evalExpression' _ _ = Nothing
+
+fnOp :: Op -> Maybe Int -> Maybe Int -> Maybe Int
+fnOp Neg (Just x) _ = Just (-x)
+fnOp op (Just i1) (Just i2) = Just (opVal i1 i2)
+                              where opVal = case op of {Pow -> (^); Mul -> (*); Sub -> (-); Add -> (+); _ -> (+)}
+fnOp _ _ _ = Nothing
+
+modulo :: Int -> Maybe Int -> Maybe Int
+modulo p (Just i) = Just (i `mod` p)
+modulo _ _ = Nothing
+
+getVariables :: Expression -> [Char]
+getVariables (Var v) = [v]
+getVariables (Fixed f) = [f]
+getVariables (Con _) = []
+getVariables (UnOp _ e) = getVariables e
+getVariables (BinOp _ e1 e2) = getVariables e1 ++ getVariables e2
+getVariables _ = []
 
 -------------------------------------Tests----------------------------------------
 
-exp2 :: Expression
-exp2 = parseExpression True "(a + b) * (a + c)"
+_exp :: Expression
+_exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
 
-given1 :: Law
-given1 = parseLaw True "given1 : a = b + c"
+_subst :: Substitution
+_subst = [("a", Con 3), ("b", Con 2), ("c", Con 1), ("d", Con 4)]
 
-prf1 :: Proof
-prf1 = getDerivation 10 arithmetic_laws exp2
+_eval :: Maybe Int
+_eval = evalExpression _subst 10 _exp
 
--- -- lawsStr :: String
--- -- lawsStr = intercalate "\n" (map showLaw arithmetic_laws) ++ "\n" ++ 
--- --           intercalate "\n" (map showLaw modulo_laws) ++ "\n"
+_given :: Law
+_given = parseLaw True "given1 : a = b + c"
+
+_prf :: Proof
+_prf = getDerivation 5 _arithmetic_laws _exp
