@@ -20,9 +20,9 @@ data Symb = Add
          | Cartesian
          | Expon
          | Setminus 
-         deriving (Show, Eq)
+         deriving (Show, Eq, Ord)
 
-data Expr = Val Integer | Var Char | Op Symb [Expr] deriving (Show, Eq)
+data Expr = Val Integer | Var Char | Op Symb [Expr] deriving (Show, Eq, Ord)
 
 data Law = Law {lawName :: String, lawEquation :: Equation} deriving (Show)
 
