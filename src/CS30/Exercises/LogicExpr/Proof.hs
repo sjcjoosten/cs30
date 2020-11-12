@@ -7,9 +7,9 @@ import Data.Maybe ( fromJust )
 type Substitution = [(VarName,LogicExpr)]
 type VarName = Char
 
-data Proof = Proof LogicExpr [Step] deriving (Show)
+data Proof a = Proof LogicExpr [Step a] deriving (Show)
 
-type Step = (LawName, LogicExpr)
+type Step a= (a, LogicExpr)
 
 input_laws :: [String]
 input_laws = [
@@ -18,64 +18,85 @@ input_laws = [
     , "Operation with true,false:p∧true≡p"
     , "Operation with true,false:p∨true≡true"
     , "Idempotence:p∨p≡p"
-    , "Implications as an OR:(p ⇒ q) ≡ ¬p ∨ q"
-    -- Easy challenge done right??
-    -- , "Implications as an OR:¬(p⇒q)≡p∧q"
+    -- , "Implications as an OR:(p ⇒ q) ≡ ¬p ∨ q"
+    -- Easy challenge: only apply law when a negation before it    
+    , "Implications as an OR:¬(p⇒q)≡¬(¬p∨q)"    
     , "Operation with true,false:p∨false≡p"
     , "Operation with true,false:p∧false≡false"
     , "DeMorgan's Law:¬(p∨q)≡¬p∧¬q"
     , "DeMorgan's Law:¬(p∧q)≡¬p∨¬q"
     , "Operation with Negation:p∧¬p≡false"
     , "Operation with Negation:p∨¬p≡true"
+
+    -- Optional Distributivity    
+    -- , "Distributivity:p∨(q∧r)≡(p∨q)∧(p∨r)"
+    -- , "Distributivity:(q∧r)∨p≡(q∨p)∧(r∨p)"
     -- Below are not in the given law list 
-    , "Redundancy law: (p∨q)∧(p∨¬q)≡p"
-    , "Redundancy law: p∨(¬p∧q)≡p∨q"
-    , "____: ¬true≡false"
-    , "____: ¬false≡true"
-    , "Associativity1: (p∨q)∨r≡p∨(q∨r)"
-    , "Associativity2: p∨(q∨r)≡(p∨q)∨r"    
-    , "Associativity3: (p∧q)∧r≡p∧(q∧r)"
-    , "Associativity4: p∧(q∧r)≡(p∧q)∧r"
+    -- , "Redundancy law: (p∨q)∧(p∨¬q)≡p"
+    -- , "Redundancy law: p∨(¬p∧q)≡p∨q"
+    -- , "____: ¬true≡false"
+    -- , "____: ¬false≡true"
+    -- , "Associativity: (p∨q)∨r≡p∨(q∨r)"
+    -- , "Associativity: p∨(q∨r)≡(p∨q)∨r"    
+    -- , "Associativity: (p∧q)∧r≡p∧(q∧r)"
+    -- , "Associativity: p∧(q∧r)≡(p∧q)∧r"
     -- Commutative laws give potentially verbose proof
-    , "Commutativity: p∧q≡q∧p"
-    , "Commutativity: p∨q≡q∨p"
+    -- , "Commutativity: p∧q≡q∧p"
+    -- , "Commutativity: p∨q≡q∨p"    
     ]
 
 fake_laws :: [String]
 fake_laws = [
     "FAKELAW: ¬(p ⇒ q) ≡ ¬p ⇒ ¬q"
     , "FAKELAW: p∨(q∧r)≡(p∨q)∧r"
+    , "FAKELAW: (p∧q)∨r≡p∧(q∨r)"
+    , "FAKELAW: ¬(p∧q)≡(p∨q)"
+    , "FAKELAW: ¬(p∧q)≡(¬p∧¬q)"
+    , "FAKELAW: ¬(p⇒q)≡(¬p⇒¬q)"
+    , "FAKELAW: ¬(p⇒q)≡(q⇒p)"
+    , "FAKELAW: ¬(p⇒q)≡(¬q⇒¬p)"
+    , "FAKELAW: false⇒q≡¬q"
   ]
 
-data FaultyProof = FaultyProof LogicExpr [BoolStep] deriving (Show)
-type BoolStep = (Bool, LogicExpr)
+renameLaw :: (a -> b) -> Law a -> Law b
+renameLaw f law = law {lawName=f (lawName law)}
 
 -- try to generate a faulty proof for an expr
--- return Nothing if a faulty proof not found (eg, fake laws not applied), otherwise return the FaultyProof
-genFaultyProof :: LogicExpr -> Maybe FaultyProof
-genFaultyProof e = if and $ map fst boolsteps then Nothing else Just (FaultyProof e boolsteps)
+genFaultyProof :: LogicExpr -> Proof Bool
+genFaultyProof e = getWrongDerivation true_laws false_laws e
   where 
-    laws = map parseLaw (fake_laws ++ input_laws )            
-    (Proof _e steps) = getDerivation laws e
-    boolsteps :: [BoolStep]
-    boolsteps = map (\((_, e1), (_, e2)) -> (equivalenceCheck e1 e2, e2)) $ zip (("", e):steps) steps
-
+    true_laws = map (renameLaw (const True) . parseLaw) input_laws
+    false_laws = map (renameLaw (const False) . parseLaw) fake_laws
 
 -- Check if a list of laws are all true
 checkLaws :: [String] -> Bool
-checkLaws laws = and lawsTruth
-  where
-    laws' = map parseLaw laws
-    lawsTruth = [equivalenceCheck lhs rhs| (Law _ (lhs, rhs)) <- laws']    
+checkLaws laws = all checkLaw laws 
+checkLaw :: String -> Bool
+checkLaw law = case parseLaw law of
+                 (Law _ (lhs, rhs)) -> equivalenceCheck lhs rhs
 
-
-simplify :: [String] -> String -> Proof
+-- Simlify an expr with given laws
+simplify :: [String] -> String -> Proof LawName
 simplify strings str = getDerivation laws e
   where
     laws = map parseLaw strings
     e = parseExpr str
 
-getDerivation :: [Law] -> LogicExpr -> Proof
+getWrongDerivation :: [Law Bool] -> [Law Bool] -> LogicExpr -> Proof Bool
+getWrongDerivation true_laws false_laws e
+ = Proof e (multiSteps e 0)
+ where multiSteps :: LogicExpr -> Int -> [Step Bool] 
+       multiSteps e' stepNum
+        = case [ (lawName law, res)
+               | law <- if even stepNum then (true_laws++false_laws) else (false_laws ++ true_laws) -- true_laws and false_laws in alternatining order of appearance
+               , res <- getStep (lawEq law) e'               
+               , if lawName law then True else not $ equivalenceCheck e' res
+               ] of
+            [] -> []
+            (x:_xs) -> x:multiSteps (snd x) (stepNum+1)
+
+
+getDerivation :: [Law a] -> LogicExpr -> Proof a
 getDerivation laws e
  = Proof e (multiSteps e []) -- Give multiSteps an accumulater param, for the use of commutative law;
  where multiSteps e' acc
@@ -111,20 +132,20 @@ matchE (Var nm) expr = Just [(nm,expr)]
 matchE (Con i) (Con j) | i == j = Just []
 matchE (Con _) _ = Nothing
 
-matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2 
- = case (matchE e1 e3, matchE e2 e4) of
-    (Just s1, Just s2) -> combineTwoSubsts s1 s2
-    _ -> Nothing
-
 -- matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2 
---  = case tryMatch e1 e2 e3 e4 of -- And and Or operators are commutative, so check for reversed match
---           Nothing -> if op1 == And || op1 == Or then tryMatch e1 e2 e4 e3 else Nothing
---           res -> res
---    where 
---      tryMatch e1' e2' e3' e4'= do
---           s1 <- matchE e1' e3'
---           s2 <- matchE e2' e4'
---           combineTwoSubsts s1 s2 
+--  = case (matchE e1 e3, matchE e2 e4) of
+--     (Just s1, Just s2) -> combineTwoSubsts s1 s2
+--     _ -> Nothing
+
+matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2 
+ = case tryMatch e1 e2 e3 e4 of -- And and Or operators are commutative, so check for reversed match
+          Nothing -> if op1 == And || op1 == Or then tryMatch e1 e2 e4 e3 else Nothing
+          res -> res
+   where 
+     tryMatch e1' e2' e3' e4'= do
+          s1 <- matchE e1' e3'
+          s2 <- matchE e2' e4'
+          combineTwoSubsts s1 s2 
 
 matchE (Bin _ _ _) _ = Nothing
 matchE (Neg e1) (Neg e2) = matchE e1 e2
