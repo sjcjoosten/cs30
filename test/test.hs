@@ -3,17 +3,26 @@ import           CS30.Exercises (pages)
 import           CS30.Exercises.Data
 import qualified Data.Text as Text
 import qualified Test.QuickCheck.Property as QCP
--- import Test.Tasty.HUnit
+import Test.Tasty.HUnit
 import           Test.Tasty
 -- import Test.Tasty.SmallCheck as SC
 import           Test.Tasty.QuickCheck as QC
 import           Text.TeXMath.Readers.TeX (readTeX)
+import           CS30.Exercises.LogicExpr.Proof (checkLaw, input_laws, fake_laws)
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [pagesStandardTests]
+tests = testGroup "Tests" [pagesStandardTests, lawTests]
+
+lawTests :: TestTree
+lawTests
+ = testGroup "LogicExpr laws" ([testLaw True l | l <- input_laws] ++
+                               [testLaw False l | l <- fake_laws])
+ where testLaw b l
+          = testCase l $ assertBool ("This law should have been "++show b ++" but was not evaluated as such.")
+                                    (b == checkLaw l)
 
 pagesStandardTests :: TestTree
 pagesStandardTests
@@ -36,6 +45,7 @@ pagesStandardTests
 checkField :: Field -> Property
 checkField = property . validField
 
+resultAll :: [QCP.Result] -> QCP.Result
 resultAll = foldr preferFail QCP.succeeded
  where preferFail r1 r2
         = case QCP.ok r1 of
@@ -50,7 +60,7 @@ validField (FFieldMath str) = validHTMLName "The Field with constructor FFieldMa
 validField (FText str) = seq str QCP.succeeded
 validField (FNote str) = seq str QCP.succeeded
 validField (FIndented n lst) | n >= 0 = resultAll (map validField lst)
-validField (FIndented n lst) = QCP.failed{QCP.reason = "Indentation cannot be negative."}
+                             | otherwise = QCP.failed{QCP.reason = "Indentation cannot be negative."}
 validField (FChoice{}) = QCP.succeeded
 validField (FReorder nm lst)
  = resultAll (validHTMLName "The Field with constructor FValue" nm:concatMap (map validField) lst)
