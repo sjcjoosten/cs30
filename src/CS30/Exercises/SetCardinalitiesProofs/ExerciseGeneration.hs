@@ -3,12 +3,18 @@ import CS30.Data
 import CS30.Exercises.Data
 import Data.List
 import Data.Char
+import           CS30.Exercises.Util
 import CS30.Exercises.SetCardinalitiesProofs.Proof
 import CS30.Exercises.SetCardinalitiesProofs.RuleParser
 import qualified Data.Map as Map
 import GHC.Stack
 import Debug.Trace
 import Data.List.Extra
+import           Data.Char
+import qualified Data.Map as Map
+import           Data.Void(Void)
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 
 setExercises :: [ChoiceTree ([Field], Integer)] -- first thing in field will be expression, rest its equivalencies
@@ -26,6 +32,7 @@ setExercises = [fullExercise 3, fullExercise 5, fullExercise 7]
           = [FText "Given that "] 
             ++ combine [FMath (exprToLatex e ++ "=" ++ show (getVal e)) | e <- exprs]
             ++ [FText ". Compute ", FMath (exprToLatex lhs)]
+            ++ [FFieldMath "Answer"]
 
 
 -- taken from Raechel and Mahas Project
@@ -41,28 +48,31 @@ combine (x:xs) = [x, FText ", "] ++ combine xs
 -- if union,  only union
 -- intersection in cardinality will necessitate lookup
 
-generateRandSetExpr :: [Symb] -> Int -> ChoiceTree Expr
-generateRandSetExpr lstOfOps n 
-    | n < 2 = Branch [ Node (Var varName) | varName <- ['A' .. 'F']]
-generateRandSetExpr n = do {
+generateRandSetExpr i = generateRandSetExpr_helper [Union, Powerset, Cartesian, Setminus] i
+
+generateRandSetExpr_helper :: [Symb] -> Int -> ChoiceTree Expr
+generateRandSetExpr_helper lstOfOps n 
+    | n < 2 = Branch [ Node (Var varName) 
+    | varName <- ['A' .. 'F']]
+generateRandSetExpr_helper lstOfOps n = do {
                             symb <- nodes lstOfOps; -- [Union, Powerset, Cartesian, Setminus];
                             if symb == Union then
                                 do {
                                     n' <- nodes [1 .. n-1];
-                                    expr1 <- generateRandSetExpr [Union] n';
-                                    expr2 <- generateRandSetExpr [Union] (n - n' - 2);
+                                    expr1 <- generateRandSetExpr_helper [Union] n';
+                                    expr2 <- generateRandSetExpr_helper [Union] (n - n' - 2);
                                     return (Op symb [expr1, expr2])
                                 }
                             else if symb == Powerset then
                                 do {
-                                    expr <- generateRandSetExpr lstOfOps (n-1);
+                                    expr <- generateRandSetExpr_helper lstOfOps (n-1);
                                     return (Op symb [expr])
                                 }
                             else 
                                 do {
                                     n' <- nodes [1 .. n-1];
-                                    expr1 <- generateRandSetExpr lstOfOps n';
-                                    expr2 <- generateRandSetExpr lstOfOps (n - n' - 2);
+                                    expr1 <- generateRandSetExpr_helper lstOfOps n';
+                                    expr2 <- generateRandSetExpr_helper lstOfOps (n - n' - 2);
                                     return (Op symb [expr1, expr2])
                                 }
 } 
@@ -74,7 +84,38 @@ generateQuestion (myProblem,sol) def
 
 
 generateFeedback :: ([Field], Integer) -> Map.Map String String -> ProblemResponse -> ProblemResponse
-generateFeedback _ _ rsp = rsp
+generateFeedback (question, answer) usrRsp pr 
+      = reTime$ case answer' of
+                  Nothing -> wrong{prFeedback= rsp++(FText " Your answer was "):rspwa} -- Error when parsing. 
+                  Just v -> if (v == fromIntegral answer) 
+                              then correct{prFeedback=rsp} -- Correct answer.
+                              else wrong{prFeedback=rsp++[FText " Your answer was "]++[FMath (show v), FText "."]} -- Incorrect answer.
+      where ans = Map.lookup "Answer" usrRsp -- Raw user input. 
+            answer' :: Maybe Int
+            answer' = case ans of
+                  Nothing -> Nothing
+                  Just v -> case parse parseAnswer "" v of -- Parses the user input to look for an integer. 
+                        Left _ -> Nothing
+                        Right st -> Just st
+            wrong = markWrong pr
+            correct = markCorrect pr
+            rsp :: [Field]
+            rsp = [FText $ "The cardinality of ", head question, FText " is ", FMath (show (answer)), FText "."] -- Displays the correct answer.
+            rspwa = case ans of -- Displays the raw user input. 
+                Nothing -> [FText "??? (perhaps report this as a bug?)"]
+                Just v -> [FMath v, FText "."]
+
+
+-- From IncExcCardinalities
+parseAnswer :: Parser Int
+parseAnswer = unspace digits
+  where 
+      digits = do ds <- some digit
+                  return (foldl1 shiftl ds)
+      shiftl m n = 10*m+n
+      digit = cvt <$> satisfy isDigit
+      cvt d = fromEnum d - fromEnum '0'
+
 
 cardinalityProofExer :: ExerciseType
 cardinalityProofExer = exerciseType "Set Cardinality" "L?.?" "Sets: Cardinalities"
