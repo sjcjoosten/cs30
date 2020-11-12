@@ -30,18 +30,18 @@ modProofs
     randomProof (exprOfSize 9),
     randomProof (exprOfSize 11)
   ]
- where
-       aCon = nodes (map Con [0..4])
-       aFixed = nodes [Fixed nm | nm <- ['a', 'b', 'c', 'd']]
-       aConstantOrVariable
-          = case (aCon,aFixed) of
-              (Branch l1,Branch l2) -> Branch [Branch l1, Branch l2]
-              _ -> error "This shouldn't happen since aConstant and aVariable should always return multiple items"
-       exprOfSize :: Int -> ChoiceTree Expression
-       exprOfSize 1 = aConstantOrVariable
-       exprOfSize n
-         = Branch [Branch [BinOp op <$> exprOfSize i <*> exprOfSize (n - i - 1)
-                  | i <- [1..(n-2)], i `mod` 2 == 1] | op <- [Pow, Mul, Sub, Add]]
+       
+exprOfSize :: Int -> ChoiceTree Expression
+exprOfSize 1 = case (aCon,aFixed) of
+                (Branch l1,Branch l2) -> Branch [Branch l1, Branch l2]
+                _ -> error "This shouldn't happen since aConstant and aVariable should always return multiple items"
+               where 
+                 aCon = nodes (map Con [0..4])
+                 aFixed = nodes [Fixed nm | nm <- ['a', 'b', 'c', 'd']]
+exprOfSize n
+ = Branch [Branch [BinOp op <$> exprOfSize i <*> exprOfSize (n - i - 1)
+          | i <- [1..(n-2)], i `mod` 2 == 1] | op <- [Pow, Mul, Sub, Add]]
+
 
 randomProof :: ChoiceTree Expression -> ChoiceTree ([Field], [Int])
 randomProof (Node a)
@@ -54,7 +54,6 @@ randomProof (Node a)
     structurize = map (\(x,y) -> ([FText $"Can you put it in the right order?",
                                    FIndented 1 [FMath (show a)], FReorder "proof" x], y))
 randomProof (Branch lst) = Branch [randomProof (lst !! i)| i <- [0..((length lst)-1)]]
-
 
 proofToField :: Proof -> [[Field]]
 proofToField ProofError = [[FText "No Proof was found for this expression"]]
