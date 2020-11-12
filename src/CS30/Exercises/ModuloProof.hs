@@ -22,28 +22,27 @@ import Data.List
 --                "Law1 : x ^ (p-1) \\equiv_p 1 (mod p)"
 --               ]
 
--- TODO : add artihmetic laws, 0 ,1 , mul, add, power, handle 0 ^ 0
-arithmetic_laws :: [Law]
-arithmetic_laws = map (parseLaw False)
+-- TODO : 0 ^ 0
+_arithmetic_laws :: [Law]
+_arithmetic_laws = map (parseLaw False)
                   [
-                   "Law1 : x * 0 = 0"
-                   ,"Law16 : 0 * x = 0"
-                   ,"Law2 : x + 0 = x"
-                   ,"Law3 : x * 1 = x"
-                   ,"Law4 : x * -1 = -x"
-                   ,"Law5 : x ^ 0 = 1"
-                   ,"Law6 : 1 ^ x = 1"
-                  -- ,  "Law7 : x + y = y + x"
-                  -- ,  "Law8 : x * y = y * x"
-                  -- ,  "Law9 : (x + y) + z = x + (y + z)"
-                  -- ,  "Law10 : (x * y) * z = x * (y * z)"
-                   ,"Law11 : x * (y + z) = x * y + x * z"
-                   ,"Law12 : x * (y - z) = x * y - x * z"
-                   ,"Law14 : (x + y) * z = x * z + y * z"
-                   ,"Law15 : (x - y) * z = x * z - y * z"
-                   ,"Law13 : x ^ (y + z) = x ^ y * x ^ z"
-
-                  --  ,"Law99 : a \\equiv_p b = a + c \\equiv_p b + c"
+                     "Law1 : x \\cdot 0 = 0"
+                    ,"Law2 : x + 0 = x"
+                    ,"Law3 : x \\cdot 1 = x"
+                    ,"Law4 : x \\cdot -1 = -x"
+                    ,"Law5 : x ^ 0 = 1"
+                    ,"Law6 : 1 ^ x = 1"
+                    ,"Law7 : x \\cdot (y + z) = x \\cdot y + x \\cdot z"
+                    ,"Law8 : x \\cdot (y - z) = x \\cdot y - x \\cdot z"
+                    ,"Law9 : (x + y) \\cdot z = x \\cdot z + y \\cdot z"
+                    ,"Law10 : (x - y) \\cdot z = x \\cdot z - y \\cdot z"
+                    ,"Law11 : x ^ (y + z) = x ^ y \\cdot x ^ z"
+                    ,"Law12 : (x \\cdot y) ^ z = x ^ z \\cdot y ^ z"
+                    -- Least priority
+                    ,"Law13 : x + y = y + x"
+                    ,"Law14 : x \\cdot y = y \\cdot x"
+                    ,"Law15 : (x + y) + z = x + (y + z)"
+                    ,"Law16 : (x \\cdot y) \\cdot z = x \\cdot (y \\cdot z)"
                   ]
                   
 -------------------------------------Proofs----------------------------------------
@@ -63,8 +62,8 @@ getDerivation steps laws e
 -- would go into rewrite function
 -- Law1 : a = b (mod p) implies a + c = b + c (mod p)
 -- Law2 : a = b (mod p) implies c + a = c + b (mod p)
--- Law3 : a = b (mod p) implies a * c = b * c (mod p)
--- Law4 : a = b (mod p) implies c * a = c * b (mod p)
+-- Law3 : a = b (mod p) implies a \\cdot c = b \\cdot c (mod p)
+-- Law4 : a = b (mod p) implies c \\cdot a = c \\cdot b (mod p)
 -- Law5 : a = b (mod p) implies a ^ c = b ^ c (mod p)
 getStep :: Equation -> Expression -> [Expression]
 getStep (lhs, rhs) expr
@@ -116,20 +115,36 @@ lookupInSubst nm ((nm',v):rm)
  | otherwise = lookupInSubst nm rm
 lookupInSubst _ [] = error "Substitution was not complete, or free variables existed in the rhs of some equality"
 
-isPrime :: Int -> Bool -- TODO : Replace
-isPrime k = elem k [2,3,5,7,11,13,17,19,23,29,31]
+-------------------------------------Evaluation----------------------------------------
+
+evalExpression :: Expression -> Int -> Maybe Int
+evalExpression (Con i) m = modulo (Just i) m
+evalExpression (UnOp op e) m = modulo (fnOp op (evalExpression e m) Nothing) m
+evalExpression (BinOp op e1 e2) m = modulo (fnOp op (evalExpression e1 m) (evalExpression e2 m)) m
+evalExpression _ _ = Nothing
+
+modulo :: Maybe Int -> Int -> Maybe Int
+modulo (Just i) m = Just (i `mod` m)
+modulo _ _ = Nothing
+
+fnOp :: Op -> Maybe Int -> Maybe Int -> Maybe Int
+fnOp Neg (Just x) _ = Just (-x)
+fnOp op (Just i1) (Just i2) 
+  = Just (opVal i1 i2)
+    where opVal = case op of
+                  Pow -> (^)
+                  Mul -> (*)
+                  Sub -> (-)
+                  Add -> (+)
+fnOp _ _ _ = Nothing
 
 -------------------------------------Tests----------------------------------------
 
-exp2 :: Expression
-exp2 = parseExpression True "(a + b) * (a + c)"
+_exp :: Expression
+_exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
 
-given1 :: Law
-given1 = parseLaw True "given1 : a = b + c"
+_given :: Law
+_given = parseLaw True "given1 : a = b + c"
 
-prf1 :: Proof
-prf1 = getDerivation 10 arithmetic_laws exp2
-
--- -- lawsStr :: String
--- -- lawsStr = intercalate "\n" (map showLaw arithmetic_laws) ++ "\n" ++ 
--- --           intercalate "\n" (map showLaw modulo_laws) ++ "\n"
+_prf :: Proof
+_prf = getDerivation 10 (_arithmetic_laws) _exp

@@ -48,7 +48,7 @@ randomProof (Node a)
   | length (getPrfStep prf) == 0 = nodes (structurize (getProofPermuts (proofToField ProofError)))
   |otherwise = nodes (structurize (getProofPermuts (proofToField prf)))
   where
-    prf = getDerivation 5 arithmetic_laws a -- limit permutations
+    prf = getDerivation 5 _arithmetic_laws a -- limit permutations
     getPrfStep (Proof _ lst) = lst
     getPrfStep ProofError = []
     structurize = map (\(x,y) -> ([FText $"Can you put it in the right order?",
@@ -60,7 +60,7 @@ proofToField :: Proof -> [[Field]]
 proofToField ProofError = [[FText "No Proof was found for this expression"]]
 proofToField (Proof exp steps) = [ wrapField st | st <- steps]
   where
-    wrapField (a,b) = [FMath "=", FText a, FIndented 1 [FMath (show b)]]
+    wrapField (a,b) = [FMath "equiv_{p}", FText a, FIndented 1 [FMath (show b)]]
 
 
 getProofPermuts :: [[Field]] -> [([[Field]], [Int])]
