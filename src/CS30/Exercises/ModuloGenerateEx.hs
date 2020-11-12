@@ -24,23 +24,50 @@ modProofEx = exerciseType "ModuloProof" "L??.?????"
             genFeedback -- handle response as 'ProblemResponse'
 
 modProofs :: [ChoiceTree ([Field], [Int])]
-modProofs = [nodes (concat [map (\(x,y) -> ([FText $"Can you put it in the right order?",
-                                             FIndented 1 [FMath (show exp)], FReorder "proof" x], y))
-                            (prPermuts exp) | exp <- gen_expressions [charAdd,
-                                                                      charMul,
-                                                                      charSub,
-                                                                      charPow]]) -- level 1
-              -- [ | exp <- gen_expressions (charAdd, charMul, charSub)],
-              -- [ | exp <- gen_expressions (charAdd, charMul, charSub, charPow)]
-            ]
-            where
-              parsing x = parseExpression True x
-              derive y  = getDerivation 5 arithmetic_laws (parsing y)
-              prPermuts e = getProofPermuts (proofToField (derive e))
+modProofs
+ = [
+    randomProof (exprOfSize 7),
+    randomProof (exprOfSize 9),
+    randomProof (exprOfSize 11)
+  ]
+ where
+       aCon = nodes (map Con [0..4])
+       aFixed = nodes [Fixed nm | nm <- ['a', 'b', 'c', 'd']]
+       aConstantOrVariable
+          = case (aCon,aFixed) of
+              (Branch l1,Branch l2) -> Branch [Branch l1, Branch l2]
+              _ -> error "This shouldn't happen since aConstant and aVariable should always return multiple items"
+       exprOfSize :: Int -> ChoiceTree Expression
+       exprOfSize 1 = aConstantOrVariable
+       exprOfSize n
+         = Branch [Branch [BinOp op <$> exprOfSize i <*> exprOfSize (n - i - 1)
+                  | i <- [1..(n-2)], i `mod` 2 == 1] | op <- [Pow, Mul, Sub, Add]]
+
+randomProof :: ChoiceTree Expression -> ChoiceTree ([Field], [Int])
+randomProof (Node a) = Branch (concat (map (map Node) (map structurize (map getProofPermuts (map proofToField prf)))))
+  where
+    prf = filter (\x -> length (getPrfStep x) > 3) [getDerivation 5 al a | al <- getLawPermuts arithmetic_laws] -- limit permutations
+    getPrfStep (Proof _ lst) = lst
+    getPrfStep ProofError = []
+    structurize = map (\(x,y) -> ([FText $"Can you put it in the right order?",
+                                   FIndented 1 [FMath (show a)], FReorder "proof" x], y))
+randomProof (Branch lst) = Branch [randomProof (lst !! i)| i <- [0..((length lst)-1)]]
+
+
+proofToField :: Proof -> [[Field]]
+proofToField ProofError = [[FText "No Proof was found for this expression"]]
+proofToField (Proof exp steps) = [ wrapField st | st <- steps]
+  where
+    wrapField (a,b) = [FMath "=", FText a, FIndented 1 [FMath (show b)]]
+
 
 getProofPermuts :: [[Field]] -> [([[Field]], [Int])]
 getProofPermuts [] = []
 getProofPermuts x = [(map (x !!) p, p) | p <- permutations [0..((length x)-1)]]
+
+getLawPermuts :: [Law] -> [[Law]]
+getLawPermuts [] = []
+getLawPermuts x = [map (x !!) p | p <- permutations [0..((length x)-1)]]
 
 genProof :: ([Field], [Int]) -> Exercise -> Exercise
 genProof (quer, _solution) ex = trace ("Solution = " ++ (show _solution)) $  ex{eQuestion=quer, eBroughtBy = ["Sanket S. Joshi", "Anmol Chachra"] }
@@ -60,11 +87,6 @@ breakUnderscore s
        "" -> []
        s' -> w : breakUnderscore s''
              where (w, s'') = break (=='_') s'
-
-proofToField :: Proof -> [[Field]]
-proofToField (Proof exp steps) = [ wrapField st | st <- steps]
-  where
-    wrapField (a,b) = [FMath "=", FText a, FIndented 1 [FMath (show b)]]
 
 --------------------------------------Random Expression Generation-------------------------------
 

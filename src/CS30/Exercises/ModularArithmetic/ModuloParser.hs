@@ -18,7 +18,7 @@ type ParseError = ParseErrorBundle String Void
 
 data Proof = Proof Expression [ProofStep] | ProofError deriving (Show, Eq)
 type ProofStep = (String, Expression)
-type Substitution = [(String, Expression)]
+type Substitution = [(String, Expression)] -- [ProofStep]
 
 data Law = Law {lawName :: String, lawEq :: Equation} | LawError deriving (Show, Eq)
 type Equation = (Expression, Expression)

@@ -1,6 +1,9 @@
 {-# OPTIONS_GHC -Wall #-}
 module CS30.Exercises.ModuloProof where
 
+
+import CS30.Data
+import CS30.Exercises.Data
 import CS30.Exercises.ModularArithmetic.ModuloParser
 
 import Control.Monad.IO.Class (MonadIO(liftIO))
@@ -9,7 +12,7 @@ import System.Random
 import Control.Monad
 import Control.Monad.ST
 import Data.STRef
-
+import Data.List
 ------------------------------------------Implicit Laws----------------------------------------
 
 -- modulo_laws :: [Law]
@@ -23,21 +26,23 @@ import Data.STRef
 arithmetic_laws :: [Law]
 arithmetic_laws = map (parseLaw False)
                   [
-                   "Law1 : x * 0 = 0"
-                   ,"Law2 : x + 0 = x"
-                   ,"Law3 : x * 1 = x"
-                   ,"Law4 : x * -1 = -x"
-                   ,"Law5 : x ^ 0 = 1"
-                   ,"Law6 : 1 ^ x = 1"
-                  ,  "Law7 : x + y = y + x"
-                  ,  "Law8 : x * y = y * x"
-                  ,  "Law9 : (x + y) + z = x + (y + z)"
-                  ,  "Law10 : (x * y) * z = x * (y * z)"
-                   ,"Law11 : x * (y + z) = x * y + x * z"
+                   -- "Law1 : x * 0 = 0"
+                   -- ,"Law16 : 0 * x = 0"
+                   -- ,"Law2 : x + 0 = x"
+                   -- ,"Law3 : x * 1 = x"
+                   -- ,"Law4 : x * -1 = -x"
+                   -- ,"Law5 : x ^ 0 = 1"
+                   -- ,"Law6 : 1 ^ x = 1"
+                  -- ,  "Law7 : x + y = y + x"
+                  -- ,  "Law8 : x * y = y * x"
+                  -- ,  "Law9 : (x + y) + z = x + (y + z)"
+                  -- ,  "Law10 : (x * y) * z = x * (y * z)"
+                   "Law11 : x * (y + z) = x * y + x * z"
                    ,"Law12 : x * (y - z) = x * y - x * z"
                    ,"Law14 : (x + y) * z = x * z + y * z"
-                   ,"Law15 : (x - y) * z = x * z - y * z"
-                   ,"Law13 : x ^ (y + z) = x ^ y * x ^ z"
+                   -- ,"Law15 : (x - y) * z = x * z - y * z"
+                   -- ,"Law13 : x ^ (y + z) = x ^ y * x ^ z"
+
                   --  ,"Law99 : a \\equiv_p b = a + c \\equiv_p b + c"
                   ]
                   
@@ -46,11 +51,11 @@ arithmetic_laws = map (parseLaw False)
 getDerivation :: Int -> [Law] -> Expression -> Proof
 getDerivation steps laws e
  = Proof e (multiSteps steps e)
- where multiSteps 0 _ = []
+ where multiSteps 0 _ = [] -- [proofSteps]
        multiSteps steps' e'
-        = case [ (lawName law, res)
-               | law <- laws
-               , res <- getStep (lawEq law) e'
+        = case [ (lawName law, res) -- proofStep
+               | law <- laws -- Law
+               , res <- getStep (lawEq law) e' -- getStep
                ] of
                    [] -> []
                    ((nm,e''):_) -> (nm,e'') : multiSteps (steps'-1) e''
@@ -123,7 +128,7 @@ given1 :: Law
 given1 = parseLaw True "given1 : a = b + c"
 
 prf1 :: Proof
-prf1 = getDerivation 10 (given1:arithmetic_laws) exp2
+prf1 = getDerivation 10 arithmetic_laws exp2
 
 -- -- lawsStr :: String
 -- -- lawsStr = intercalate "\n" (map showLaw arithmetic_laws) ++ "\n" ++ 
