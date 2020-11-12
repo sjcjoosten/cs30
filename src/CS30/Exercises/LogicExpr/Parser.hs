@@ -49,9 +49,12 @@ evaluate' (Bin Imply e1 e2) assoc = not (evaluate' e1 assoc) || evaluate' e2 ass
 
 
 prec :: LogicOp -> Int
-prec And = 2
+prec And = 3
 prec Or =  2
 prec Imply = 1  
+
+negPrec :: Int
+negPrec = 4
 
 showSpace :: ShowS
 showSpace = showChar ' '
@@ -64,23 +67,29 @@ symb Or = orStr
 symb Imply = implyStr
 
 instance Show LogicExpr where
-    showsPrec _ (Con b) = showString (show b)
-    showsPrec _ (Var v) = showString [v]    
-    showsPrec p (Neg e) = showParen (p > 3) (showString negStr . showsPrec (4) e)
+    show e = showsPrec 0 e ""
+    showsPrec _ (Con b) = showString (if b then "true" else "false")
+    showsPrec _ (Var v) = showString [v]       
+    showsPrec _p (Neg e) = showString negStr . showsPrec negPrec e
+    showsPrec p (Bin Imply e1 e2)
+        = showParen (p /= 0) (showsPrec q e1 . showSpace . showOp Imply . showSpace . showsPrec q e2) 
+        where q = (prec Imply)
     showsPrec p (Bin op e1 e2)
-        = showParen (p >= q) (showsPrec q e1 . showSpace . showOp op . showSpace . showsPrec (q+1) e2) 
-        where q = prec op    
+        = showParen (p /= 0 && p /= q) (showsPrec q e1 . showSpace . showOp op . showSpace . showsPrec q e2) 
+        where q = prec op
 
 instance Show LogicOp where
     show And = andStr
     show Or = orStr
     show Imply = implyStr
 
-data Law = Law {lawName :: LawName, lawEq :: Equation} deriving (Show)
+data Law a = Law {lawName :: a, lawEq :: Equation} deriving (Show)
 type LawName = String
 type Equation = (LogicExpr,LogicExpr)
 
-parseLaw :: String -> Law
+
+
+parseLaw :: String -> Law LawName
 parseLaw s =
     case parse law "" s of
     Left m -> error $ show m
@@ -125,7 +134,7 @@ logicExpr = space' *> makeExprParser term ops <* space'
         infixL str op = InfixL (return (Bin op) <* string str <* space')
 
 
-law :: Parser Law
+law :: Parser (Law LawName)
 law = do
     name <- parseUntil ':' <* space    
     e1 <- logicExpr <* space
