@@ -26,22 +26,22 @@ import Data.List
 arithmetic_laws :: [Law]
 arithmetic_laws = map (parseLaw False)
                   [
-                   -- "Law1 : x * 0 = 0"
-                   -- ,"Law16 : 0 * x = 0"
-                   -- ,"Law2 : x + 0 = x"
-                   -- ,"Law3 : x * 1 = x"
-                   -- ,"Law4 : x * -1 = -x"
-                   -- ,"Law5 : x ^ 0 = 1"
-                   -- ,"Law6 : 1 ^ x = 1"
+                   "Law1 : x * 0 = 0"
+                   ,"Law16 : 0 * x = 0"
+                   ,"Law2 : x + 0 = x"
+                   ,"Law3 : x * 1 = x"
+                   ,"Law4 : x * -1 = -x"
+                   ,"Law5 : x ^ 0 = 1"
+                   ,"Law6 : 1 ^ x = 1"
                   -- ,  "Law7 : x + y = y + x"
                   -- ,  "Law8 : x * y = y * x"
                   -- ,  "Law9 : (x + y) + z = x + (y + z)"
                   -- ,  "Law10 : (x * y) * z = x * (y * z)"
-                   "Law11 : x * (y + z) = x * y + x * z"
+                   ,"Law11 : x * (y + z) = x * y + x * z"
                    ,"Law12 : x * (y - z) = x * y - x * z"
                    ,"Law14 : (x + y) * z = x * z + y * z"
-                   -- ,"Law15 : (x - y) * z = x * z - y * z"
-                   -- ,"Law13 : x ^ (y + z) = x ^ y * x ^ z"
+                   ,"Law15 : (x - y) * z = x * z - y * z"
+                   ,"Law13 : x ^ (y + z) = x ^ y * x ^ z"
 
                   --  ,"Law99 : a \\equiv_p b = a + c \\equiv_p b + c"
                   ]

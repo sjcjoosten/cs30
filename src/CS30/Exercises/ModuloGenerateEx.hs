@@ -44,9 +44,11 @@ modProofs
                   | i <- [1..(n-2)], i `mod` 2 == 1] | op <- [Pow, Mul, Sub, Add]]
 
 randomProof :: ChoiceTree Expression -> ChoiceTree ([Field], [Int])
-randomProof (Node a) = Branch (concat (map (map Node) (map structurize (map getProofPermuts (map proofToField prf)))))
+randomProof (Node a)
+  | length (getPrfStep prf) == 0 = nodes (structurize (getProofPermuts (proofToField ProofError)))
+  |otherwise = nodes (structurize (getProofPermuts (proofToField prf)))
   where
-    prf = filter (\x -> length (getPrfStep x) > 3) [getDerivation 5 al a | al <- getLawPermuts arithmetic_laws] -- limit permutations
+    prf = getDerivation 5 arithmetic_laws a -- limit permutations
     getPrfStep (Proof _ lst) = lst
     getPrfStep ProofError = []
     structurize = map (\(x,y) -> ([FText $"Can you put it in the right order?",
