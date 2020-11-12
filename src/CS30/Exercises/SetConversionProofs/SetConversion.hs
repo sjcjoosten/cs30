@@ -12,7 +12,7 @@ import           CS30.Exercises.Data
 import CS30.Exercises.Util ( reTime )
 import qualified Data.Map as Map
 import CS30.Exercises.SetConversionProofs.SetExprParser
-import CS30.Exercises.SetConversionProofs.LawParser (parsedLaws)
+import CS30.Exercises.SetConversionProofs.LawParser (parsedBasicLaws, parsedAdvancedLaws)
 import CS30.Exercises.SetConversionProofs.GenerateProof (Proof(..), generateProof)
 
 
@@ -28,17 +28,35 @@ simpleFeedback :: ([Field],[Int]) -> Map.Map [Char] String -> ProblemResponse ->
 simpleFeedback (_problem, sol) rsp pr
                = reTime $ case Map.lookup "proof" rsp of
                    Just str
-                     -> if isSucc (map ((sol !!) . read) (breakUnderscore str) )
+                     -> if numWrong == 0 
                         then markCorrect pr
-                        else markWrong pr{prFeedback=[FText "You answered: ",FText str]}
+                        else markWrong pr{prFeedback=[FText "You answered with the steps in the order: ",
+                                                      FText str, 
+                                                      FText". You had ",
+                                                      FText (show numWrong),  -- creative element: gives the user a bit more information on their incorrect answer
+                                                      FText " steps in the wrong order :("]}
+                        where numWrong = wrongOrd (map ((sol !!) . read) (breakUnderscore str) ) 
                    Nothing -> error "Client response is missing 'proof' field"
 
--- fxn for determining if a list is comprised of directly successive numbers
-isSucc :: (Enum a, Eq a) => [a] -> Bool
-isSucc [] = True
-isSucc (_x:[]) = True
-isSucc (x:y:zs) | y == succ x = isSucc $ y:zs
-isSucc _ = False
+-- fxn for determining if a list is comprised of directly successive numbers for super simple response checking 
+-- isSucc :: (Enum a, Eq a) => [a] -> Bool
+-- isSucc [] = True
+-- isSucc (_x:[]) = True
+-- isSucc (x:y:zs) | y == succ x = isSucc $ y:zs
+
+-- fxn for counting how many steps were in the wrong order
+wrongOrd :: (Enum a, Num a, Eq a) => [a] -> Int
+wrongOrd [] = 0
+wrongOrd lst = length ( filter (\(x, y) -> x /= y) (zip lst [0..]) ) 
+
+
+
+-- wrongOrd :: (Enum a, Num a, Eq a) => [a] -> Int -> Int
+-- wrongOrd [] _ = 0
+-- wrongOrd [_x] n = n  
+-- wrongOrd (x:xs) n = if (x + 1) == head xs 
+--                     then wrongOrd xs n  
+--                     else wrongOrd xs (n + 1)
 
 -- from ProofStub.hs
 permutations :: Int -> ChoiceTree [Int]
@@ -59,13 +77,13 @@ breakUnderscore s
 -- fxn for generating a random expression, using \cap, \cup, and \setminus operators (as specified in the assignment sheet)
 generateRandEx :: Int -> ChoiceTree SetExpr
 generateRandEx i | i < 1
- = Branch [ Branch [Node (Var varName) | varName <- ["A"]] -- should I have options like (Cap (Var "A") (Var "A") ? (do this and document in comments, as a creative)
+ = Branch [ Branch [Node (Var varName) | varName <- ["A"]] 
           ]
 generateRandEx i
  = do { i' <- nodes [0..i-1]
         ;e1 <- generateRandEx i'
         ;e2 <- generateRandEx (i - i' - 1)
-        ;opr <- nodes [Cap, Cup, SetMinus]
+        ;opr <- nodes [Cap, Cup, SetMinus] -- how to add in Power? type errors :( 
         ;return (opr e1 e2) 
        }
  
@@ -119,7 +137,7 @@ setConversion :: [ChoiceTree ([Field], [Int])]
 setConversion
  = [do { expr <- generateRandEx i
          ; let expr' = fst (assignVar expr ["A", "B", "C"]) 
-         ; let (Proof _expr steps) = generateProof parsedLaws expr'
+         ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
          ; order <- permutations (length steps)
          ; return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
     } | i <- [2..4]]
