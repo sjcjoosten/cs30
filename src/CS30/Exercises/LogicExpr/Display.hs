@@ -1,12 +1,11 @@
 {-# OPTIONS_GHC -Wall #-}
 
-module CS30.Exercises.LogicExpr.Display (logicProof) where
+module CS30.Exercises.LogicExpr.Display (logicProof, genRandEx) where
 import CS30.Exercises.LogicExpr.Parser
 import CS30.Exercises.LogicExpr.Proof
 import CS30.Data
 import CS30.Exercises.Data
 import qualified Data.Map as Map
-import Debug.Trace
 
 logicProof :: ExerciseType
 logicProof
@@ -23,26 +22,29 @@ breakUnderscore s
        s' -> w : breakUnderscore s''
              where (w, s'') = break (=='_') s'
 
--- Function for generating a random logic expression from p, q, r, ^, ∨, ¬, true, and false.
+-- Function for generating a random logic expression and proof steps from p, q, r, ^, ∨, ¬, true, and false.
 generateRandEx :: Int -> ChoiceTree (LogicExpr, [[Field]], [Int])
 generateRandEx n 
-  = do expr <- genRandEx n
+  = do e <- genRandEx n
+       let expr = Neg e
        let proof = getDerivation (map parseLaw input_laws) expr
        perms <- permutations (getSize proof)
        return (expr, (shuffle proof perms), perms)
-    where 
-      genRandEx i | i < 1
-        = Branch [ Branch [Branch [Node (Var varName), Node (Neg $ Var varName)] | varName <- ['p','q','r']]
-                  , Branch [Node (Con True), Node (Con False)]
-                 ]
-      genRandEx i
-        = Branch [do { e1 <- genRandEx i'
-                      ;e2 <- genRandEx (i - i' - 1)
-                      ;opr <- nodes [And,Or,Imply]
-                      ;return (if n == i then (Neg $ Bin opr e1 e2) else (Bin opr e1 e2))
-                    }
-                  | i' <- [0..i-1]
-                ]
+
+-- Helper function for generateRandEx, generates a ChoiceTree of logic expressions of a certain size.
+genRandEx :: Int -> ChoiceTree LogicExpr
+genRandEx i | i < 1
+  = Branch [ Branch [Branch [Node (Var varName), Node (Neg $ Var varName)] | varName <- ['p','q','r']]
+            , Branch [Node (Con True), Node (Con False)]
+            ]
+genRandEx i
+  = Branch [do { e1 <- genRandEx i'
+                ;e2 <- genRandEx (i - i' - 1)
+                ;opr <- nodes [And,Or,Imply]
+                ;return (Bin opr e1 e2)
+              }
+            | i' <- [0..i-1]
+          ]
 
 permutations :: Int -> ChoiceTree [Int]
 permutations 0 = Node []
