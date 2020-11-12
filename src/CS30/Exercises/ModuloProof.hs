@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
-module CS30.Exercises.ModuloProof where
+module CS30.Exercises.ModularArithmetic.ModuloProof where
 
 import CS30.Exercises.ModularArithmetic.ModuloParser
 
@@ -12,7 +12,6 @@ import CS30.Exercises.ModularArithmetic.ModuloParser
 --                "Law1 : x ^ (p-1) \\equiv_p 1 (mod p)"
 --               ]
 
--- TODO : 0 ^ 0
 _arithmetic_laws :: [Law]
 _arithmetic_laws = map (parseLaw False)
                   [
@@ -95,12 +94,12 @@ combineTwoSubsts s1 s2
 apply :: Substitution -> Expression -> Expression
 apply subst (Var nm) = lookupInSubst [nm] subst
 apply _ (Con i) = Con i
-apply subst (Fixed nm) = lookupInSubst [nm] subst -- TODO : Confirm
+apply _ (Fixed i) = Fixed i
 apply subst (UnOp op e) = UnOp op (apply subst e)
 apply subst (BinOp op e1 e2) = BinOp op (apply subst e1) (apply subst e2)
 apply _ ExpressionError = ExpressionError
 
-lookupInSubst :: String -> [(String, p)] -> p
+lookupInSubst :: String -> [(String, Expression)] -> Expression
 lookupInSubst nm ((nm',v):rm)
  | nm == nm' = v
  | otherwise = lookupInSubst nm rm
@@ -109,7 +108,7 @@ lookupInSubst _ [] = error "Substitution was not complete, or free variables exi
 -------------------------------------Evaluation----------------------------------------
 
 evalExpression :: Substitution -> Int -> Expression -> Maybe Int
-evalExpression s p = evalExpression' p . apply s
+evalExpression s p = evalExpression' p . evalApply s
 
 evalExpression' :: Int -> Expression -> Maybe Int
 evalExpression' p (Con i) = modulo p (Just i)
@@ -117,6 +116,7 @@ evalExpression' p (UnOp op e) = modulo p (fnOp op (evalExpression' p e) Nothing)
 evalExpression' p (BinOp op e1 e2) = modulo p (fnOp op (evalExpression' p e1) (evalExpression' p e2))
 evalExpression' _ _ = Nothing
 
+-- TODO : Handle 0 ^ 0
 fnOp :: Op -> Maybe Int -> Maybe Int -> Maybe Int
 fnOp Neg (Just x) _ = Just (-x)
 fnOp op (Just i1) (Just i2) = Just (opVal i1 i2)
@@ -126,6 +126,14 @@ fnOp _ _ _ = Nothing
 modulo :: Int -> Maybe Int -> Maybe Int
 modulo p (Just i) = Just (i `mod` p)
 modulo _ _ = Nothing
+
+evalApply :: Substitution -> Expression -> Expression
+evalApply subst (Var nm) = lookupInSubst [nm] subst
+evalApply _ (Con i) = Con i
+evalApply subst (Fixed nm) = lookupInSubst [nm] subst
+evalApply subst (UnOp op e) = UnOp op (evalApply subst e)
+evalApply subst (BinOp op e1 e2) = BinOp op (evalApply subst e1) (evalApply subst e2)
+evalApply _ _ = ExpressionError
 
 getVariables :: Expression -> [Char]
 getVariables (Var v) = [v]
@@ -139,6 +147,7 @@ getVariables _ = []
 
 _exp :: Expression
 _exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
+-- _exp = parseExpression True "(a + b) \\cdot (c + d)"
 
 _subst :: Substitution
 _subst = [("a", Con 3), ("b", Con 2), ("c", Con 1), ("d", Con 4)]
