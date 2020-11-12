@@ -136,3 +136,4 @@ instance Show Op where
 
 instance Show Proof where
     show (Proof e steps) = "Expression:\n" ++ show e ++ "\n\nProof:\n " ++ intercalate "\n" (map show steps)
+    show ProofError = "ProofError"

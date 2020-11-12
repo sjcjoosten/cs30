@@ -146,8 +146,8 @@ getVariables _ = []
 -------------------------------------Tests----------------------------------------
 
 _exp :: Expression
-_exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
--- _exp = parseExpression True "(a + b) \\cdot (c + d)"
+-- _exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
+_exp = parseExpression True "(a + b) \\cdot (c + d)"
 
 _subst :: Substitution
 _subst = [("a", Con 3), ("b", Con 2), ("c", Con 1), ("d", Con 4)]
@@ -159,4 +159,4 @@ _given :: Law
 _given = parseLaw True "given1 : a = b + c"
 
 _prf :: Proof
-_prf = getDerivation 5 _arithmetic_laws _exp
+_prf = getDerivation 5 (_given:_arithmetic_laws) _exp
