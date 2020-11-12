@@ -11,7 +11,7 @@ import Debug.Trace
 
 logicWrongStepEx :: ExerciseType
 logicWrongStepEx
-  = exerciseType "RewritingExpressions" "L?.?"
+  = exerciseType "RewritingExpressionsHarder" "L?.?"
                  "Logic: rewriting expressions (harder version)" 
                  [(generateRandFaultyEx 3), (generateRandFaultyEx 5)]
                  generateExercise 

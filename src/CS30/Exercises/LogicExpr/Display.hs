@@ -78,6 +78,7 @@ generateFeedback (_, _, sol) rsp pr
       (Just userOrder) 
         -> if map ((sol !!) . read) (breakUnderscore userOrder) == [0..((length sol) - 1)]
            then markCorrect pr{prFeedback=[ FText "The order is correct. Your answer was: ",FText (display userOrder)]}
-           else markWrong pr{prFeedback=[ FText "The order is incorrect. Your answer was: ",FText (display userOrder)]}
+           else markWrong pr{prFeedback=[ FText "The order is incorrect. The correct order was: ",FText displayCorrect]}
       _ -> error "Response is missing 'proof' field"
   where display x = map (\c -> if c=='_' then ','; else c) x
+        displayCorrect = foldl (\a b -> a ++ " " ++ show b) "" sol
