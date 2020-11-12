@@ -70,10 +70,10 @@ genFaultyProof e = getWrongDerivation true_laws false_laws e
 
 -- Check if a list of laws are all true
 checkLaws :: [String] -> Bool
-checkLaws laws = and lawsTruth
-  where
-    laws' = map parseLaw laws
-    lawsTruth = [equivalenceCheck lhs rhs| (Law _ (lhs, rhs)) <- laws']    
+checkLaws laws = all checkLaw laws 
+checkLaw :: String -> Bool
+checkLaw law = case parseLaw law of
+                 (Law _ (lhs, rhs)) -> equivalenceCheck lhs rhs
 
 -- Simlify an expr with given laws
 simplify :: [String] -> String -> Proof LawName
