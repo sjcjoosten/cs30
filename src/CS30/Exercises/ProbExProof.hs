@@ -8,12 +8,15 @@ import Data.Char
 import Data.Ratio
 import Data.Void
 import Data.List.Extra
+import qualified Data.Map as Map
 import Text.Megaparsec
 import Text.Megaparsec.Char
+import qualified CS30.Exercises.Cardinality as Card
 
 data ExExpr =
             Econst Integer
             | Eranvar String
+            | Econstvar String
             | EbinOp Eop ExExpr ExExpr 
             | Ecov ExExpr ExExpr
             | E ExExpr 
@@ -37,9 +40,11 @@ laws :: [Law]
 laws = map parseL ["'Linearity of Expectation' E[X+Y]=E[X]+E[Y]", 
                   "'Linearity of Expectation' E[X-Y]=E[X]-E[Y]",
                   "'Expectation of Constant' E[c]=c",
-                  "'Expectation with Multiplied Constant' E[c*X]=cE[X]",
-                  "'Expectation Multiplication' E[X*Y]=E[X]E[Y]+cov(X,Y)"
-                  ]
+                  "'Expectation with Multiplied Constant' E[c*X]=c*E[X]",
+                  "'Expectation Multiplication' E[X*Y]=E[X]*E[Y]+cov(X,Y)",
+                  "'' X*(Y+Z)=X*Y+X*Z", -- no name means don't display this step
+                  "'' (Y+Z)*X=Y*X+Z*X"
+                  ] 
 
 latexLaws :: IO ()
 latexLaws = mapM_ f laws 
@@ -52,21 +57,24 @@ parseL str = case (parse parseLawExExpr "" str) of
 
 -- | Rachael's code: generate a random expression
 -- followed lecture
-genRanEx :: Int -> ChoiceTree ExExpr
-genRanEx i | i < 1 
+genRanEx :: Bool -> Int -> ChoiceTree ExExpr
+genRanEx True i | i < 1 
+   =  Branch [Node (Eranvar varName) | varName <- ["X","Y","Z"]]
+
+genRanEx False i | i < 1 
    = Branch [ Branch [Node (Eranvar varName) | varName <- ["X","Y","Z"]]
             , Branch [Node (Econst val) | val <- [2..10]]
             ]
-genRanEx i 
-   = Branch [do e <- genRanEx (i-1)
-                return (E e)
-            , Branch [ do e1 <- genRanEx i'
-                          e2 <- genRanEx (i - i' - 1)
-                          op <- nodes [Plus, Minus, Times] 
-                          return (EbinOp op e1 e2)
-                     | i' <- [0..i-1] -- ensures e1 and e2 will sum to i
-                     ]
+genRanEx _ i
+   -- creative: make sure there is always a random variable in generated expression
+   = Branch [ do b' <- nodes [True,False]
+                 e1 <- genRanEx b' i'
+                 e2 <- genRanEx (not b') (i - i' - 1)
+                 op <- nodes [Plus, Minus, Times] 
+                 return (EbinOp op e1 e2)
+            | i' <- [0..i-1] -- ensures e1 and e2 will sum to i
             ]
+          
 
 -- | Rachael's code: parse an expression
 -- takes something pleasant to our eyes
@@ -80,32 +88,32 @@ parseExExpr = (makeExprParser term table <?> "expression") <* spaces
 
 binary :: String -> Eop -> Operator (Parser) ExExpr
 binary str op = InfixL
-                (do string str 
+                (do symbol str 
                     spaces
                     return (EbinOp op))
 
 term :: Parser ExExpr
-term = do string "("
+term = do symbol "("
           spaces
           res <- parseExExpr 
-          string ")"
+          symbol ")"
           spaces
           return res
        <|> 
-       do string "E["
+       do symbol "E["
           spaces
           expr <- parseExExpr
-          string "]"
+          symbol "]"
           spaces
           return (E expr)
        <|>
-       do string "cov("
+       do symbol "cov("
           spaces
           expr1 <- parseExExpr
-          string ","
+          symbol ","
           spaces
           expr2 <- parseExExpr
-          string ")"
+          symbol ")"
           spaces
           return (Ecov expr1 expr2)
        <|> 
@@ -115,8 +123,11 @@ term = do string "("
        <|>
        do letter <- satisfy isLetter
           spaces
-          return (Eranvar [letter])
+          return $ (if isUpper letter then Eranvar else Econstvar) [letter]
        <?> "term"
+
+symbol :: String -> Parser ()
+symbol s = string s *> return ()
 
 digit :: Parser Char
 digit = satisfy isDigit
@@ -149,26 +160,67 @@ probExProof :: ExerciseType
 probExProof = exerciseType "ProbExProof" "L?.?" "Probability : Expected Value"
             probExercises --choiceTreeList
             genQuestion
-            undefined -- genFeedback
+            check -- genFeedback
 -- | Joint code: three levels of exercises
 --   TODO: after getting the completed proof,
 --         randomly move terms from the result to the lhs and ask the user to compute the lhs.
-probExercises :: [ChoiceTree ([Field], Integer)] -- first thing in field will be expression, rest its equivalencies
+probExercises :: [ChoiceTree ([Field], ([Field], Integer))] -- first thing in field will be expression, rest its equivalencies
 probExercises = [fullExercise 3, fullExercise 5, fullExercise 7]
-  where fullExercise i = do ex <- genRanEx i
-                            let Proof lhs steps = genProof laws ex
-                                rhs = last (ex : map snd steps)
+  where fullExercise i = do ex <- genRanEx True i
+                            let Proof _ steps = genProof laws ex
+                                terms = getTerms (last (ex : map snd steps))
+                            (termSubset,remaining) <- getSubset terms
+                            let rhs = foldr1 (EbinOp Plus) remaining 
+                            let lhs = foldr (EbinOp Plus . exNegate) ex termSubset
                             asgn <- assignRanVal rhs 
                             let answer = head (evaluate asgn rhs)
                             let exprs = nubSort (getExprs rhs)
+                            -- creative: makes proof a lot nicer
+                            let newLaws = [Law "Given in exercise" (e, Econst (numerator (head (evaluate asgn e)))) | e <- exprs]
+                            let proof = genProof (newLaws ++ laws) lhs
+                            let explanation = latexProof proof
                             if denominator answer == 1 then return () else error "Resulting answer in the generated puzzle is a fraction, that shouldn't have happened! (Error stems from Sebastiaan's code)" 
-                            return (genFields lhs (evaluate asgn) exprs, numerator answer)
+                            return (genFields lhs (evaluate asgn) exprs, (explanation,numerator answer))
         showFrac ans | denominator ans == 1 = show (numerator ans)
         showFrac _ = error "Got a fraction in the generated puzzle, that shouldn't have happened! (Error stems from Sebastiaan's code)"
         genFields lhs getVal exprs
           = [FText "Given that "] 
             ++ combine [FMath (asLatex e ++ "=" ++ showFrac ans) | e <- exprs, ans <- getVal e]
             ++ [FText ". Compute ", FMath (asLatex lhs)] 
+
+exNegate :: ExExpr -> ExExpr
+exNegate (EbinOp Times (Econst (-1)) e) = e 
+exNegate e = EbinOp Times (Econst (-1)) e
+
+getTerms :: ExExpr -> [ExExpr]
+getTerms (EbinOp Plus e1 e2) = getTerms e1 ++ getTerms e2 
+getTerms (EbinOp Minus e1 e2) = getTerms e1 ++ map exNegate (getTerms e2)
+getTerms e = [e]
+
+getSubset :: [a] -> ChoiceTree ([a],[a])
+getSubset [] = Node ([],[])
+getSubset (x:xs) = do (lhs,rhs) <- getSubset xs
+                      nodes [(lhs,x:rhs), (x:lhs,rhs)]
+
+getSubsetNE :: [a] -> ChoiceTree ([a],[a])
+getSubsetNE lst = Branch [do (lhs,rhs) <- getSubset (take i lst ++ drop (i+1) lst)
+                             return (lhs,e:rhs)
+                         | (e,i) <- zip lst [0..]]
+
+latexProof :: Proof -> [Field]
+latexProof (Proof e steps) 
+  = FIndented 1 [FMath (asLatex e)] :
+    concat [[FIndented 0 [FMath "=", FText ("{" ++ lawName ++ "}")]
+            , FIndented 1 [FMath (asLatex expr)]] | (lawName, expr) <- steps, not (null lawName)]
+                                                                              -- creative: have laws without names
+                                                                              -- (don't display distribution)
+
+check :: (a,([Field],Integer)) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+check (_,(explanation,solution)) mp rsp =
+   case parse (Card.parseExpr <* eof) "" <$> Map.lookup "answer" mp of
+      Just (Right e) -> if Card.evalExpr e == Just solution then markCorrect rsp {prFeedback = [FText "Well done!"], prTimeToRead = 5} 
+                        else markWrong rsp {prFeedback = explanation, prTimeToRead = 30} 
+      _ -> tryAgain rsp {prFeedback = [FText "Please type a number or calculation. We couldn't understand what you typed."], prTimeToRead = 10}
 
 combine :: [Field] -> [Field]
 combine [] = []
@@ -185,6 +237,7 @@ latexHelper :: ExExpr -> Int -> String -> String -- int for precedence of operat
 latexHelper (E expr) _ str = "E[" ++ latexHelper expr 0 ("]" ++ str)
 latexHelper (Econst c) _ str = show c ++ str
 latexHelper (Eranvar m) _ str = m ++ str
+latexHelper (Econstvar m) _ str = m ++ str
 latexHelper (EbinOp op e1 e2) n str 
    = showParen (n <= prec) (latexHelper e1 prec . (showOp op ++) . latexHelper e2 (prec+1) ) str
       where prec = p op
@@ -193,7 +246,7 @@ latexHelper (EbinOp op e1 e2) n str
             p Times = 2
             showOp Plus  = "+"
             showOp Minus = "-"
-            showOp Times = "\\cdot"
+            showOp Times = "\\cdot "
 latexHelper (Ecov e1 e2) _ str = "cov(" ++ latexHelper e1 0 (", " ++ latexHelper e2 0 (")" ++ str))
 
 -- randomSelect (Branch choiceTreeList)
@@ -225,9 +278,13 @@ getStep (lhs, rhs) expr
         [E e1' | e1' <- getStep (lhs,rhs) e1]
      (Econst _) -> []
      (Eranvar _) -> []
+     (Econstvar _) -> []
+
 
 matchE :: ExExpr -> ExExpr -> [Subst]
 matchE (Eranvar nm) expr = [[(nm,expr)]]
+matchE (Econstvar nm) expr@(Econst _) = [[(nm,expr)]]
+matchE (Econstvar _) _ = []
 matchE (Econst i) (Econst j) | i == j = [[]]
 matchE (Econst _i) _ = []
 matchE (EbinOp o e1 e2) (EbinOp o' e1' e2') | o == o' 
@@ -256,6 +313,10 @@ apply lst = go
           = case lookup nm lst of
               Just v -> v
               _ -> error "Couldn't find key in lookup"
+        go (Econstvar nm)
+          = case lookup nm lst of
+              Just v -> v
+              _ -> error "Couldn't find key in lookup"
         go (Econst i) = Econst i
         go (EbinOp o e1 e2)
          = EbinOp o (go e1) (go e2)
@@ -272,6 +333,10 @@ type RanVals = [(String,[Rational])] -- For each variable, mention the value it 
 -- If the function is deterministic, this will return the sum value as a singleton list.
 evaluate :: RanVals -> ExExpr -> [Rational]
 evaluate lkp (Eranvar nm)
+  = case lookup nm lkp of
+        Nothing -> error "Evaluate was called with its first argument incomplete.."
+        Just v -> v
+evaluate lkp (Econstvar nm)
   = case lookup nm lkp of
         Nothing -> error "Evaluate was called with its first argument incomplete.."
         Just v -> v
@@ -297,6 +362,7 @@ avg lst = s / l
 -- | Generate a list of things of which we need to tell the user what the value is, based on what the expression was
 getExprs :: ExExpr -> [ExExpr]
 getExprs (Eranvar _) = error "Question is ill-phrased: a random variable is not a value"
+getExprs e@(Econstvar _) = [e]
 getExprs (Econst _) = []
 getExprs (EbinOp _ e1 e2) = getExprs e1 ++ getExprs e2
 getExprs e@(E _) = [e]
@@ -307,6 +373,7 @@ assignRanVal :: ExExpr -> ChoiceTree RanVals
 assignRanVal expr
   = go (nubSort $ variables expr)
   where variables (Eranvar nm) = [nm]
+        variables (Econstvar _) = error "constant variable should not occur in user-generated expression"
         variables (Econst _) = []
         variables (EbinOp _ e1 e2) = variables e1 ++ variables e2
         variables (Ecov e1 e2) = variables e1 ++ variables e2
@@ -316,6 +383,7 @@ assignRanVal expr
                       | otherwise -> 10
         getNumvals (E e) = getNumvals e
         getNumvals (Eranvar _) = 1
+        getNumvals (Econstvar _) = 1
         getNumvals (Econst _) = 0
         getNumvals (EbinOp op e1 e2)
            = (case op of
