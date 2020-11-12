@@ -1,18 +1,8 @@
 {-# OPTIONS_GHC -Wall #-}
 module CS30.Exercises.ModuloProof where
 
-
-import CS30.Data
-import CS30.Exercises.Data
 import CS30.Exercises.ModularArithmetic.ModuloParser
 
-import Control.Monad.IO.Class (MonadIO(liftIO))
-import System.Random (randomRIO)
-import System.Random
-import Control.Monad
-import Control.Monad.ST
-import Data.STRef
-import Data.List
 ------------------------------------------Implicit Laws----------------------------------------
 
 -- modulo_laws :: [Law]
@@ -84,8 +74,8 @@ matchE :: Expression -> Expression -> Maybe Substitution
 matchE (Var nm) expr = Just [([nm],expr)]
 matchE (Con i) (Con j) | i == j = Just []
 matchE (Con _) _ = Nothing
-matchE (Fixed i) (Fixed j) | i == j = Just [] -- TODO : Confirm
-matchE (Fixed _) _ = Nothing -- TODO : Confirm
+matchE (Fixed i) (Fixed j) | i == j = Just [] -- TODO : Is this similar to Var or Con?
+matchE (Fixed _) _ = Nothing -- TODO : Is this similar to Var or Con?
 matchE (BinOp op1 e1 e2) (BinOp op2 e3 e4) | op1 == op2
  = case (matchE e1 e3, matchE e2 e4) of
     (Just s1, Just s2) -> combineTwoSubsts s1 s2
@@ -95,6 +85,7 @@ matchE (UnOp Neg e1) (UnOp Neg e2) = matchE e1 e2
 matchE (UnOp _ _) _ = Nothing
 matchE ExpressionError _ = Nothing
 
+-- For common var, the val should match
 combineTwoSubsts :: Substitution -> Substitution -> Maybe Substitution
 combineTwoSubsts s1 s2
   = case and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2] of
@@ -104,7 +95,7 @@ combineTwoSubsts s1 s2
 apply :: Substitution -> Expression -> Expression
 apply subst (Var nm) = lookupInSubst [nm] subst
 apply _ (Con i) = Con i
-apply _ (Fixed i) = Fixed i -- TODO : definitely not, change
+apply subst (Fixed nm) = lookupInSubst [nm] subst -- TODO : Confirm
 apply subst (UnOp op e) = UnOp op (apply subst e)
 apply subst (BinOp op e1 e2) = BinOp op (apply subst e1) (apply subst e2)
 apply _ ExpressionError = ExpressionError
@@ -117,34 +108,46 @@ lookupInSubst _ [] = error "Substitution was not complete, or free variables exi
 
 -------------------------------------Evaluation----------------------------------------
 
-evalExpression :: Expression -> Int -> Maybe Int
-evalExpression (Con i) m = modulo (Just i) m
-evalExpression (UnOp op e) m = modulo (fnOp op (evalExpression e m) Nothing) m
-evalExpression (BinOp op e1 e2) m = modulo (fnOp op (evalExpression e1 m) (evalExpression e2 m)) m
-evalExpression _ _ = Nothing
+evalExpression :: Substitution -> Int -> Expression -> Maybe Int
+evalExpression s p = evalExpression' p . apply s
 
-modulo :: Maybe Int -> Int -> Maybe Int
-modulo (Just i) m = Just (i `mod` m)
-modulo _ _ = Nothing
+evalExpression' :: Int -> Expression -> Maybe Int
+evalExpression' p (Con i) = modulo p (Just i)
+evalExpression' p (UnOp op e) = modulo p (fnOp op (evalExpression' p e) Nothing)
+evalExpression' p (BinOp op e1 e2) = modulo p (fnOp op (evalExpression' p e1) (evalExpression' p e2))
+evalExpression' _ _ = Nothing
 
 fnOp :: Op -> Maybe Int -> Maybe Int -> Maybe Int
 fnOp Neg (Just x) _ = Just (-x)
-fnOp op (Just i1) (Just i2) 
-  = Just (opVal i1 i2)
-    where opVal = case op of
-                  Pow -> (^)
-                  Mul -> (*)
-                  Sub -> (-)
-                  Add -> (+)
+fnOp op (Just i1) (Just i2) = Just (opVal i1 i2)
+                              where opVal = case op of {Pow -> (^); Mul -> (*); Sub -> (-); Add -> (+); _ -> (+)}
 fnOp _ _ _ = Nothing
+
+modulo :: Int -> Maybe Int -> Maybe Int
+modulo p (Just i) = Just (i `mod` p)
+modulo _ _ = Nothing
+
+getVariables :: Expression -> [Char]
+getVariables (Var v) = [v]
+getVariables (Fixed f) = [f]
+getVariables (Con _) = []
+getVariables (UnOp _ e) = getVariables e
+getVariables (BinOp _ e1 e2) = getVariables e1 ++ getVariables e2
+getVariables _ = []
 
 -------------------------------------Tests----------------------------------------
 
 _exp :: Expression
 _exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
 
+_subst :: Substitution
+_subst = [("a", Con 3), ("b", Con 2), ("c", Con 1), ("d", Con 4)]
+
+_eval :: Maybe Int
+_eval = evalExpression _subst 10 _exp
+
 _given :: Law
 _given = parseLaw True "given1 : a = b + c"
 
 _prf :: Proof
-_prf = getDerivation 10 (_arithmetic_laws) _exp
+_prf = getDerivation 5 _arithmetic_laws _exp
