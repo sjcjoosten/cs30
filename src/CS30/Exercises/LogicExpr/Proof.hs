@@ -18,9 +18,10 @@ input_laws = [
     , "Operation with true,false:p∧true≡p"
     , "Operation with true,false:p∨true≡true"
     , "Idempotence:p∨p≡p"
-    -- , "Implications as an OR:(p ⇒ q) ≡ ¬p ∨ q"
-    -- Easy challenge: only apply law when a negation before it    
-    , "Implications as an OR:¬(p⇒q)≡¬(¬p∨q)"    
+    , "Implications as an OR:(p ⇒ q) ≡ ¬p ∨ q"    
+    -- Easy challenge: only apply law when a negation before it; 
+    -- Not sure if this makes proof more interesting, so commented out for now
+    -- , "Implications as an OR:¬(p⇒q)≡¬(¬p∨q)"    
     , "Operation with true,false:p∨false≡p"
     , "Operation with true,false:p∧false≡false"
     , "DeMorgan's Law:¬(p∨q)≡¬p∧¬q"
@@ -28,14 +29,16 @@ input_laws = [
     , "Operation with Negation:p∧¬p≡false"
     , "Operation with Negation:p∨¬p≡true"
 
+    -- Below are not in the given law list 
+    , "Redundancy law: (p∨q)∧(p∨¬q)≡p"
+    , "Redundancy law: p∨(¬p∧q)≡p∨q"
+    , "Complement Law: ¬true≡false"
+    , "Complement Law: ¬false≡true"
+    
     -- Optional Distributivity    
     -- , "Distributivity:p∨(q∧r)≡(p∨q)∧(p∨r)"
     -- , "Distributivity:(q∧r)∨p≡(q∨p)∧(r∨p)"
-    -- Below are not in the given law list 
-    -- , "Redundancy law: (p∨q)∧(p∨¬q)≡p"
-    -- , "Redundancy law: p∨(¬p∧q)≡p∨q"
-    -- , "____: ¬true≡false"
-    -- , "____: ¬false≡true"
+
     -- , "Associativity: (p∨q)∨r≡p∨(q∨r)"
     -- , "Associativity: p∨(q∨r)≡(p∨q)∨r"    
     -- , "Associativity: (p∧q)∧r≡p∧(q∧r)"
