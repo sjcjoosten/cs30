@@ -6,7 +6,7 @@ import           CS30.Exercises.Util
 import qualified Data.Map as Map
 import           Data.List
 import           CS30.Exercises.LogicRewriting.Parsing (laws, lawNames, Expr (..))
-import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, Proof (..))
+import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, Proof (..), apply)
 
 -- final exercise type
 logicRewritingEx :: ExerciseType
@@ -44,36 +44,21 @@ getVars (Implies e1 e2) = getVars e1 ++ getVars e2
 
 -- assigns random expressions to the variables
 -- of constant size 4. TODO: vary the size of the expression generated
-assignRandExprs :: [Char] -> [(Char, ChoiceTree Expr)]
-assignRandExprs [] = []
-assignRandExprs (x:xs) = (x, exprOfSize 4) : assignRandExprs xs
-
--- substitutes generated expressions for the variables
-apply :: [(Char, ChoiceTree Expr)] -> Expr -> ChoiceTree Expr
-apply assignments (Var v) = [e' | (v, e') <- assignments] !! 0 
-apply _ (Const a) = Node (Const a)
-apply assignments (Neg e) = Neg <$> apply assignments e
-apply assignments (And e1 e2) = do e1' <- apply assignments e1
-                                   e2' <- apply assignments e2
-                                   return (And e1' e2')
-apply assignments (Or e1 e2) = do e1' <- apply assignments e1
-                                  e2' <- apply assignments e2
-                                  return (Or e1' e2')
-apply assignments (Implies e1 e2) = do e1' <- apply assignments e1
-                                       e2' <- apply assignments e2
-                                       return (Implies e1' e2')                                                                     
+assignRandExprs :: [Char] -> ChoiceTree [(Char, Expr)]
+assignRandExprs xs = do expr <- exprOfSize 4 
+                        return [(x, expr) | x <- xs]                                                                
 
 -- generate an expression to fit the law given by the expression
 forceLaw :: Expr -> ChoiceTree Expr
-forceLaw e = let vars = nub $ getVars e
-                 assignments = assignRandExprs vars
-             in apply assignments e
+forceLaw e = do let vars = nub $ getVars e
+                assignments <- assignRandExprs vars
+                return (apply assignments e)
 
 
 -- contains all the exercises: the list of Fields is what we display
 -- and the String is the solution (actually just the index of the right choice)
 logicExercises :: [ChoiceTree ([Field], String)]
-logicExercises = [do e <- randomExpr
+logicExercises = [do e <- Neg <$> forceLaw (And (Var 'p') (Var 'p')) -- TODO: do this for all laws...
                      let (Proof e' steps) = getDerivation laws e
                      remStep <- nodes [0..(length steps - 1)]
                      let (stepName, _) = steps!!remStep
