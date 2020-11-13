@@ -25,7 +25,7 @@ instance Show Expr where
     -- showsPrec :: Int -> Expr -> ShowS
     showsPrec _ (Var v)         = showChar v
     showsPrec _ (Const b)       = if b then showString "\\text{true}" 
-                                 else showString "\\text{false}"
+                                  else showString "\\text{false}"
     showsPrec p (Neg e)         = showParenLATEX (p >= 4) (showString "\\neg " . showsPrec 4 e)
     showsPrec p (And e1 e2)     = showParenLATEX (p > 3)
                                    (showsPrec 3 e1 . showString "\\ \\wedge\\ " . showsPrec 3 e2)
@@ -67,10 +67,10 @@ lawStrings = [
         "Idempotent Law: p || p = p",
         "Idempotent Law: p && p = p",
         "Implication Law: p => q = !p || q",
-        "De Morgan's Law: !(p && q) = !p || !q",
-        "De Morgan's Law: !(p || q) = !p && !q",
         "Negation Law: p || !p = true",
         "Negation Law: p && !p = false",
+        "De Morgan's Law: !(p && q) = !p || !q",
+        "De Morgan's Law: !(p || q) = !p && !q",
         "Definition of True: !false = true",
         "Definition of False: !true = false"
     ]

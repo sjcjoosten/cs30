@@ -5,7 +5,7 @@ import           CS30.Exercises.Data
 import           CS30.Exercises.Util
 import qualified Data.Map as Map
 import           Data.List
-import           CS30.Exercises.LogicRewriting.Parsing (laws, lawNames, Expr (..))
+import           CS30.Exercises.LogicRewriting.Parsing (laws, lawNames, Expr (..), Law (..))
 import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, Proof (..), apply)
 
 -- final exercise type
@@ -16,9 +16,6 @@ logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
                        logicFeedback
 
 -- generate initial expressions to put through the prover
--- TODO: decide whether there is a better way to generate "good" expressions
---   (e.g. do we want to have constants in the expression at all? 
---    can we guarantee that at least one variable is in the expression?)
 randomExpr :: ChoiceTree Expr
 randomExpr = Neg <$> exprOfSize 6
 
@@ -54,19 +51,22 @@ forceLaw e = do let vars = nub $ getVars e
                 assignments <- assignRandExprs vars
                 return (apply assignments e)
 
+getLawsByName :: String -> ChoiceTree Law
+getLawsByName name = nodes [(Law nm eq) | (Law nm eq) <- laws, nm == name]
 
 -- contains all the exercises: the list of Fields is what we display
 -- and the String is the solution (actually just the index of the right choice)
 logicExercises :: [ChoiceTree ([Field], String)]
-logicExercises = [do e <- Neg <$> forceLaw (And (Var 'p') (Var 'p')) -- TODO: do this for all laws...
+logicExercises = [do (Law testName (expr, _)) <- getLawsByName name
+                     e <- Neg <$> forceLaw expr
                      let (Proof e' steps) = getDerivation laws e
-                     remStep <- nodes [0..(length steps - 1)]
+                     remStep <- nodes $ findIndices ((== testName) . fst) steps
                      let (stepName, _) = steps!!remStep
                      choices <- (getOrderedSubset (delete stepName lawNames) 2)
                      correctN <- nodes [0..2]
                      let shuffChoices = putElemIn stepName correctN choices 
                      return (showExer (Proof e' steps) remStep shuffChoices, show correctN)
-                  ]
+                  | name <- lawNames]
                  where putElemIn :: a -> Int -> [a] -> [a]
                        putElemIn y 0 xs = y:xs
                        putElemIn y _ [] = y:[]
@@ -95,4 +95,4 @@ logicFeedback (_, sol) mStrs defaultRsp
                        else markWrong $ defaultRsp{prFeedback = [FText "Incorrect"]} 
         Nothing -> markWrong $ defaultRsp{prFeedback = [FText "We could not understand your answer"]}
         -- ^ TODO: give better feedback (probably need to change the solution data structure to show the correct answer)
-    where rsp = Map.lookup "choice" mStrs
+      where rsp = Map.lookup "choice" mStrs
