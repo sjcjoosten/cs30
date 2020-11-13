@@ -20,17 +20,55 @@ logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
 --   (e.g. do we want to have constants in the expression at all? 
 --    can we guarantee that at least one variable is in the expression?)
 randomExpr :: ChoiceTree Expr
-randomExpr = Neg <$> exprOfSize 5
-    where exprOfSize :: Int -> ChoiceTree Expr
-          exprOfSize 1 = Branch [nodes (map Const [True,False]), 
-                                 nodes (map Var ['p','q','r'])]
-          exprOfSize 2 = Branch [Neg <$> exprOfSize 1]
-          exprOfSize n = Branch ([And <$> exprOfSize i <*> exprOfSize (n-i-1)
-                                | i <- [1..(n-2)]] ++ 
-                                [Or <$> exprOfSize i <*> exprOfSize (n-i-1)
-                                | i <- [1..(n-2)]] ++ 
-                                [Implies <$> exprOfSize i <*> exprOfSize (n-i-1)
-                                | i <- [1..(n-2)]])
+randomExpr = Neg <$> exprOfSize 6
+
+exprOfSize :: Int -> ChoiceTree Expr
+exprOfSize 1 = Branch [nodes (map Const [True,False]), 
+                        nodes (map Var ['p','q','r'])]
+exprOfSize 2 = Branch [Neg <$> exprOfSize 1]
+exprOfSize n = Branch ([And <$> exprOfSize i <*> exprOfSize (n-i-1)
+                    | i <- [1..(n-2)]] ++ 
+                    [Or <$> exprOfSize i <*> exprOfSize (n-i-1)
+                    | i <- [1..(n-2)]] ++
+                    [Implies <$> exprOfSize i <*> exprOfSize (n-i-1)
+                    | i <- [1..(n-2)]])
+
+-- extracts all the variables from an expression
+getVars :: Expr -> [Char]
+getVars (Var v) = [v]
+getVars (Const _) = []
+getVars (Neg e) = getVars e
+getVars (And e1 e2) = getVars e1 ++ getVars e2
+getVars (Or e1 e2) = getVars e1 ++ getVars e2
+getVars (Implies e1 e2) = getVars e1 ++ getVars e2
+
+-- assigns random expressions to the variables
+-- of constant size 4. TODO: vary the size of the expression generated
+assignRandExprs :: [Char] -> [(Char, ChoiceTree Expr)]
+assignRandExprs [] = []
+assignRandExprs (x:xs) = (x, exprOfSize 4) : assignRandExprs xs
+
+-- substitutes generated expressions for the variables
+apply :: [(Char, ChoiceTree Expr)] -> Expr -> ChoiceTree Expr
+apply assignments (Var v) = [e' | (v, e') <- assignments] !! 0 
+apply _ (Const a) = Node (Const a)
+apply assignments (Neg e) = Neg <$> apply assignments e
+apply assignments (And e1 e2) = do e1' <- apply assignments e1
+                                   e2' <- apply assignments e2
+                                   return (And e1' e2')
+apply assignments (Or e1 e2) = do e1' <- apply assignments e1
+                                  e2' <- apply assignments e2
+                                  return (Or e1' e2')
+apply assignments (Implies e1 e2) = do e1' <- apply assignments e1
+                                       e2' <- apply assignments e2
+                                       return (Implies e1' e2')                                                                     
+
+-- generate an expression to fit the law given by the expression
+forceLaw :: Expr -> ChoiceTree Expr
+forceLaw e = let vars = nub $ getVars e
+                 assignments = assignRandExprs vars
+             in apply assignments e
+
 
 -- contains all the exercises: the list of Fields is what we display
 -- and the String is the solution (actually just the index of the right choice)
