@@ -42,8 +42,12 @@ getVars (Implies e1 e2) = getVars e1 ++ getVars e2
 -- assigns random expressions to the variables
 -- of constant size 4. TODO: vary the size of the expression generated
 assignRandExprs :: [Char] -> ChoiceTree [(Char, Expr)]
-assignRandExprs xs = do expr <- exprOfSize 4 
-                        return [(x, expr) | x <- xs]                                                                
+assignRandExprs [] = return []
+assignRandExprs (x:xs) = do varExpPair <- genPair x
+                            remPairs <- assignRandExprs xs
+                            return (varExpPair:remPairs)
+                         where genPair :: Char -> ChoiceTree (Char, Expr)
+                               genPair c = (exprOfSize 4) >>= (\expr -> return (c, expr))                                                              
 
 -- generate an expression to fit the law given by the expression
 forceLaw :: Expr -> ChoiceTree Expr
