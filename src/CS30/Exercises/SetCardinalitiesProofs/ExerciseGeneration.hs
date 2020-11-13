@@ -1,8 +1,8 @@
 module CS30.Exercises.SetCardinalitiesProofs.ExerciseGeneration where
 import CS30.Data
 import CS30.Exercises.Data
-import Data.List
-import Data.Char
+-- import Data.List
+-- import Data.Char
 import           CS30.Exercises.Util
 import CS30.Exercises.SetCardinalitiesProofs.Proof
 import CS30.Exercises.SetCardinalitiesProofs.RuleParser
@@ -11,10 +11,10 @@ import GHC.Stack
 import Debug.Trace
 import Data.List.Extra
 import           Data.Char
-import qualified Data.Map as Map
-import           Data.Void(Void)
+-- import qualified Data.Map as Map
+-- import           Data.Void(Void)
 import           Text.Megaparsec
-import           Text.Megaparsec.Char
+-- import           Text.Megaparsec.Char
 
 
 setExercises :: [ChoiceTree ([Field], Integer)] -- first thing in field will be expression, rest its equivalencies
@@ -48,10 +48,11 @@ combine (x:xs) = [x, FText ", "] ++ combine xs
 -- if union,  only union
 -- intersection in cardinality will necessitate lookup
 
+generateRandSetExpr :: Int -> ChoiceTree Expr
 generateRandSetExpr i = generateRandSetExpr_helper [Union, Powerset, Cartesian, Setminus] i
 
 generateRandSetExpr_helper :: [Symb] -> Int -> ChoiceTree Expr
-generateRandSetExpr_helper lstOfOps n 
+generateRandSetExpr_helper _ n 
     | n < 2 = Branch [ Node (Var varName) 
     | varName <- ['A' .. 'F']]
 generateRandSetExpr_helper lstOfOps n = do {
@@ -110,10 +111,10 @@ generateFeedback (question, answer) usrRsp pr
 parseAnswer :: Parser Int
 parseAnswer = unspace digits
   where 
-      digits = do ds <- some digit
+      digits = do ds <- some digitP
                   return (foldl1 shiftl ds)
       shiftl m n = 10*m+n
-      digit = cvt <$> satisfy isDigit
+      digitP = cvt <$> satisfy isDigit
       cvt d = fromEnum d - fromEnum '0'
 
 
@@ -133,7 +134,9 @@ genAllPossibleValues expr = assignAll toAssign
         assignAll (x:xs) = do {
             possibleVal <- nodes [2 .. 20];
             xs' <- assignAll xs;
-            return ((x, possibleVal):xs')
+            case (x) of
+                Val (x') -> return ((x, x'):xs');
+                _ -> return ((x, possibleVal):xs');
         }
 
 
@@ -157,4 +160,5 @@ evaluate _ expr = error ("Cannot evaluate expression: " ++ exprToLatex expr)
 getExprs :: Expr -> [Expr]
 getExprs e@(Op Cardinality [_]) = [e]
 getExprs (Op _ exprs) = concatMap getExprs exprs
+getExprs (Val v) = [Val v]
 getExprs (Var _) = error "Question is poorly phrased, a set is not a valid variable" -- If we have a set on its own in the expression, we throw an error

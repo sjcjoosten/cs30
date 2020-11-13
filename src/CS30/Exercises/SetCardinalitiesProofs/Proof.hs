@@ -13,7 +13,7 @@ data Proof = Proof Expr Steps deriving (Show,Eq)
 proofToString :: Proof -> String
 proofToString (Proof expr steps) = "Proof: " ++ exprToLatex expr ++ "\n" ++ helper steps
     where 
-        helper ((s,expr):xs) = s ++ ":  " ++ exprToLatex expr ++ "\n" ++ helper xs
+        helper ((s,expression):xs) = s ++ ":  " ++ exprToLatex expression ++ "\n" ++ helper xs
         helper [] = ""
 
 -- Sebastians Code
