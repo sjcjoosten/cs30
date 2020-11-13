@@ -1,25 +1,21 @@
-{-# LANGUAGE TemplateHaskell #-}
 module CS30.Exercises.SetCardinalitiesProofs.ExerciseGeneration where
 import CS30.Data
 import CS30.Exercises.Data
-import Data.List
+-- import Data.List
 import Data.Char
 import CS30.Exercises.Util
 import CS30.Exercises.SetCardinalitiesProofs.Proof
 import CS30.Exercises.SetCardinalitiesProofs.RuleParser
 import qualified Data.Map as Map
-import Data.Aeson as JSON -- used for 'deriveJSON' line
-import Data.Aeson.TH
 import GHC.Stack
 import Debug.Trace
 import Data.List.Extra
-import qualified Data.Map as Map
-import Data.Void(Void)
+-- import qualified Data.Map as Map
+-- import Data.Void(Void)
 import Text.Megaparsec
-import Text.Megaparsec.Char
+-- import Text.Megaparsec.Char
 
 type SetCardinalityProblem = ([Field], Proof, Integer)
-$(deriveJSON defaultOptions ''Proof)
 type PossibleVals = [(Expr, Integer)] -- Stores (expression, possible values) for each expression found in the equation
 
 
@@ -56,6 +52,8 @@ generateQuestion (myProblem, proof, sol) def
           , eBroughtBy = ["Paul Gralla","Joseph Hajjar","Roberto Brito"] }
 
 
+-- Just noticed a bit of a visual bug. When the answer is correct,
+-- a text box appears alongside the answer.
 generateFeedback :: SetCardinalityProblem -> Map.Map String String -> ProblemResponse -> ProblemResponse
 generateFeedback (question, (Proof proofExpr proofSteps), answer) usrRsp pr 
       = reTime$ case answer' of
@@ -151,12 +149,12 @@ genAllPossibleValues expr = assignAll toAssign
             possibleVal <- nodes [2 .. 20];
             xs' <- assignAll xs;
             case (x) of
-                Val (x') -> return ((x, x'):xs');
+                Val (x') -> return ((x, x'):xs'); -- Only possible value for a constant is itself
                 _ -> return ((x, possibleVal):xs');
         }
 
 
--- evaluate will assign values from genAllpossiblevalues to the cardinaliteis in the rhs of the expression
+-- evaluate will assign values from genAllpossiblevalues to the cardinalities in the rhs of the expression
 -- then it will compute
 
 --minus/plus/mult
@@ -176,5 +174,6 @@ evaluate _ expr = error ("Cannot evaluate expression: " ++ exprToLatex expr)
 getExprs :: Expr -> [Expr]
 getExprs e@(Op Cardinality [_]) = [e]
 getExprs (Op _ exprs) = concatMap getExprs exprs 
+getExprs (Val v) = [Val v]
 getExprs (Var _) = error "Question is poorly phrased, a set is not a valid variable" -- If we have a set on its own in the expression, we throw an error
-getExprs e = error ("invalid expression: " ++ exprToLatex e)
+-- getExprs e = error ("invalid expression: " ++ exprToLatex e)

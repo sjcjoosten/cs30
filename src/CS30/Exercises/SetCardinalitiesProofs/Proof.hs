@@ -1,5 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
 module CS30.Exercises.SetCardinalitiesProofs.Proof where
 import CS30.Exercises.SetCardinalitiesProofs.RuleParser
+import Data.Aeson as JSON -- used for 'deriveJSON' line
+import Data.Aeson.TH
 
 type Step = (String, Expr)
 type Steps = [Step]
@@ -9,6 +12,7 @@ type Expressions = [Expr]
 type Substitution = [(Char, Expr)]
 
 data Proof = Proof Expr Steps deriving (Show,Eq)
+$(deriveJSON defaultOptions ''Proof)
 
 proofToString :: Proof -> String
 proofToString (Proof expr steps) = "Proof: " ++ exprToLatex expr ++ "\n" ++ helper steps
