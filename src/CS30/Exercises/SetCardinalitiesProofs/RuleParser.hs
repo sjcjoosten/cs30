@@ -169,50 +169,28 @@ exprToLatex :: Expr -> String
 exprToLatex (Var v) = [v]
 exprToLatex (Val v) = show v
 -- unary operators
-exprToLatex (Op Cardinality [e]) = "|" ++ exprToLatex e ++ "|"
+exprToLatex (Op Cardinality [e]) = "\\left|" ++ exprToLatex e ++ "\\right|"
 exprToLatex (Op Powerset [e]) = "\\P(" ++ exprToLatex e ++")"
 -- binary operators with brackets
 exprToLatex (Op Expon [e1,e2]) = "(" ++ exprToLatex e1 ++ ")^{" ++ exprToLatex e2 ++ "}"
 -- binary operators without brackets
-exprToLatex (Op symb [e1,e2]) = exprToLatex e1 ++ " " ++ symbLookup symb ++ " " ++ exprToLatex e2
+exprToLatex (Op symb [e1,e2]) = parens e1 ++ " " ++ symbLookupAlt symb ++ " " ++ parens e2
 exprToLatex e = error ("Invalid expression: " ++ show e)
 
-symbLookup :: Symb -> String
-symbLookup Add           = "+"
-symbLookup Sub           = "-"
-symbLookup Mult          = "*"
-symbLookup Intersection  = "\\cap"
-symbLookup Union         = "\\cup"
-symbLookup Cartesian     = "\\times"
-symbLookup Expon         = "^"
-symbLookup Setminus      = "\\setminus"
-symbLookup _             = "error"
+parens :: Expr -> [Char]
+parens e = case (e) of 
+            Var _                -> exprToLatex e
+            Op Cardinality _     -> exprToLatex e
+            _                    -> "\\left(" ++ exprToLatex e ++ "\\right)"
 
--- These functions do the same thing as the exprToLatex and symbLookup functions from above
--- They just incorporate some of the feedback we got in the parser section
 
-exprToLatexAlt :: Expr -> String
-exprToLatexAlt expr =
-   case expr of
-      Var v -> [v]
-      Val v -> show v
-      -- Unary expressions: Cardinality and Powerset are the only valid operations
-      Op symb [e] -> case symb of
-                        Cardinality -> "|" ++ exprToLatexAlt e ++ "|"
-                        Powerset -> "\\P(" ++ exprToLatexAlt e ++")"
-                        _ -> "Invalid operator for unary expression"
-      -- Binary expressions: Expon is treated in a special manner. The rest rely on symbLookupAlt
-      Op symb [e1, e2] -> case symb of
-                              Expon -> "(" ++ exprToLatexAlt e1 ++ ")^{" ++ exprToLatexAlt e2 ++ "}"
-                              _ -> exprToLatexAlt e1 ++ " " ++ symbLookupAlt symb ++ " " ++ exprToLatexAlt e2
-      _ -> error ("Invalid expression: " ++ show expr)
+   -- if e1 === Var or Card then s otherwise brackets ++ symbLookupAlt symb ++ if e2 === Var or Card then s otherwise brackets
+   --                         case (e1,e2) of
+   --                               (Var _, Var _) -> exprToLatex e1 ++ " " ++ symbLookupAlt symb ++ " " ++ exprToLatex e2
+   --                               (Var _, _ )    -> exprToLatex e1 ++ " " ++ symbLookupAlt symb ++ " \\left(" ++ exprToLatex e2 ++ "\\right)"
+   --                               (_, Var _ )    -> "\\left(" ++ exprToLatex e1 ++ "\\right) " ++ symbLookupAlt symb ++ " " ++ exprToLatex e2
+   --                               (_, _)         -> "\\left(" ++ exprToLatex e1 ++ "\\right) " ++ symbLookupAlt symb ++ " \\left(" ++ exprToLatex e2 ++ "\\right)"
 
--- This function matches the operation to the latex string
--- It is only used in the case when you have a binary expression and a symbol
--- other than Expon. Because Expon needs brackets to be syntactically valid,
--- this function isn't used in that case. Realistically, it should also never
--- meet the "Cardinality" and "Powerset" cases, since binary expressions shouldn't
--- have those.
 symbLookupAlt :: Symb -> String
 symbLookupAlt s =
     case s of
@@ -226,3 +204,29 @@ symbLookupAlt s =
        Cardinality -> "|"
        Powerset -> "\\P"
        Expon -> "^"
+-- These functions do the same thing as the exprToLatex and symbLookup functions from above
+-- They just incorporate some of the feedback we got in the parser section
+
+-- exprToLatex :: Expr -> String
+-- exprToLatex expr =
+--    case expr of
+--       Var v -> [v]
+--       Val v -> show v
+--       -- Unary expressions: Cardinality and Powerset are the only valid operations
+--       Op symb [e] -> case symb of
+--                         Cardinality -> "|" ++ exprToLatex e ++ "|"
+--                         Powerset -> "\\P(" ++ exprToLatex e ++")"
+--                         _ -> "Invalid operator for unary expression"
+--       -- Binary expressions: Expon is treated in a special manner. The rest rely on symbLookupAlt
+--       Op symb [e1, e2] -> case symb of
+--                               Expon -> "(" ++ exprToLatex e1 ++ ")^{" ++ exprToLatex e2 ++ "}"
+--                               _ -> "\\left(" ++ exprToLatex e1 ++ "\\right) " ++ symbLookupAlt symb ++ " \\left(" ++ exprToLatex e2 ++ "\\right)"
+--       _ -> error ("Invalid expression: " ++ show expr)
+
+-- This function matches the operation to the latex string
+-- It is only used in the case when you have a binary expression and a symbol
+-- other than Expon. Because Expon needs brackets to be syntactically valid,
+-- this function isn't used in that case. Realistically, it should also never
+-- meet the "Cardinality" and "Powerset" cases, since binary expressions shouldn't
+-- have those.
+

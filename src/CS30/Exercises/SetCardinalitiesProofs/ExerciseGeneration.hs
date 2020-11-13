@@ -71,7 +71,7 @@ generateFeedback (question, (Proof proofExpr proofSteps), answer) usrRsp pr
             wrong = markWrong pr
             correct = markCorrect pr
 
-            correctRsp = [FText $ "The cardinality of "] ++ question ++ [ FText " is ", FMath (show (answer)), FText "."] -- Displays the correct answer.
+            correctRsp = [FText $ "Correct! The cardinality is", FMath (show (answer)), FText "."] -- Displays the correct answer.
             rspwa = case ans of -- Displays the raw user input. 
                 Nothing -> [FText "??? (perhaps report this as a bug?)"]
                 Just v -> [FMath v, FText "."]
@@ -102,8 +102,7 @@ generateRandSetExpr i = generateRandSetExpr_helper [Union, Powerset, Cartesian, 
 
 generateRandSetExpr_helper :: [Symb] -> Int -> ChoiceTree Expr
 generateRandSetExpr_helper _ n 
-    | n < 2 = Branch [ Node (Var varName) 
-    | varName <- ['A' .. 'F']]
+    | n < 2 = Branch [ Node (Var varName) | varName <- ['A' .. 'F']]
 generateRandSetExpr_helper lstOfOps n = do {
                             symb <- nodes lstOfOps; -- [Union, Powerset, Cartesian, Setminus];
                             if symb == Union then
@@ -111,18 +110,19 @@ generateRandSetExpr_helper lstOfOps n = do {
                                     n' <- nodes [1 .. n-1];
                                     expr1 <- generateRandSetExpr_helper [Union] n';
                                     expr2 <- generateRandSetExpr_helper [Union] (n - n' - 2);
+
                                     return (Op symb [expr1, expr2])
                                 }
                             else if symb == Powerset then
                                 do {
-                                    expr <- generateRandSetExpr_helper lstOfOps (n-1);
+                                    expr <- generateRandSetExpr_helper [Union, Setminus] (n-1);
                                     return (Op symb [expr])
                                 }
                             else 
                                 do {
                                     n' <- nodes [1 .. n-1];
-                                    expr1 <- generateRandSetExpr_helper lstOfOps n';
-                                    expr2 <- generateRandSetExpr_helper lstOfOps (n - n' - 2);
+                                    expr1 <- generateRandSetExpr_helper [Union, Setminus] n';
+                                    expr2 <- generateRandSetExpr_helper [Union, Setminus] (n - n' - 2);
                                     return (Op symb [expr1, expr2])                                }
 } 
            
@@ -143,14 +143,19 @@ parseAnswer = unspace digits
 genAllPossibleValues :: Expr -> ChoiceTree PossibleVals
 genAllPossibleValues expr = assignAll toAssign
     where
-        toAssign = nubSort (getExprs expr)
+        toAssign = nubSort (getExprs expr)  -- List of all expression (e.g. Var A, Op Intersection [Var A, Var C], Op Intersection [Var B,Var C] ] )
+
         assignAll [] = Node []
         assignAll (x:xs) = do {
-            possibleVal <- nodes [2 .. 20];
+            intersectionPossibleVal <- nodes [2 .. 20];
+            varPossibleVal <- nodes [20 .. 40];
+            genericPossibleVal <- nodes [20 .. 40];
             xs' <- assignAll xs;
             case (x) of
-                Val (x') -> return ((x, x'):xs'); -- Only possible value for a constant is itself
-                _ -> return ((x, possibleVal):xs');
+                Val (x')            -> return ((x, x'):xs'); -- Only possible value for a constant is itself
+                Var _               -> return ((x, varPossibleVal):xs');
+                Op Intersection [_] -> return ((x, intersectionPossibleVal):xs');
+                _                   -> return ((x, genericPossibleVal):xs');
         }
 
 
@@ -168,6 +173,7 @@ evaluate pV expr@(Op Cardinality [_])
 evaluate pV (Op Mult [e1,e2]) = (evaluate pV e1) * (evaluate pV e2)
 evaluate pV (Op Add [e1,e2]) = (evaluate pV e1) + (evaluate pV e2)
 evaluate pV (Op Sub [e1,e2]) = (evaluate pV e1) - (evaluate pV e2)
+evaluate pV (Op Expon [(Val i), e]) = i^(evaluate pV e)
 evaluate _ expr = error ("Cannot evaluate expression: " ++ exprToLatex expr)
                             
 
