@@ -181,6 +181,9 @@ parens :: Expr -> [Char]
 parens e = case (e) of 
             Var _                -> exprToLatex e
             Op Cardinality _     -> exprToLatex e
+            Op Add _             -> exprToLatex e 
+            Op Sub _             -> exprToLatex e
+            Op Mult _            -> exprToLatex e
             _                    -> "\\left(" ++ exprToLatex e ++ "\\right)"
 
 

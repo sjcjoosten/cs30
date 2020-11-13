@@ -1,7 +1,6 @@
 module CS30.Exercises.SetCardinalitiesProofs.ExerciseGeneration where
 import CS30.Data
 import CS30.Exercises.Data
--- import Data.List
 import Data.Char
 import CS30.Exercises.Util
 import CS30.Exercises.SetCardinalitiesProofs.Proof
@@ -10,10 +9,7 @@ import qualified Data.Map as Map
 import GHC.Stack
 import Debug.Trace
 import Data.List.Extra
--- import qualified Data.Map as Map
--- import Data.Void(Void)
 import Text.Megaparsec
--- import Text.Megaparsec.Char
 
 type SetCardinalityProblem = ([Field], Proof, Integer)
 type PossibleVals = [(Expr, Integer)] -- Stores (expression, possible values) for each expression found in the equation
@@ -76,10 +72,11 @@ generateFeedback (question, (Proof proofExpr proofSteps), answer) usrRsp pr
                 Nothing -> [FText "??? (perhaps report this as a bug?)"]
                 Just v -> [FMath v, FText "."]
 
-            wrongRsp = [FText ("incorrect response, these are the steps to get calculate"), FMath (exprToLatex proofExpr), FText "with the given values",
+            wrongRsp = [FText ("incorrect response, these are the steps to calculate"), FMath (exprToLatex proofExpr ++ "=" ++ show answer), FText "with the given values",
                         FTable (
                             [headerRow] ++           
-                            [[Cell (FText rule) , Cell (FMath (exprToLatex step))] | (rule, step) <- proofSteps]                                                                          -- add header row to the table                        
+                            [[Cell (FText "") , Cell (FMath (exprToLatex proofExpr))]] ++
+                            [[Cell (FText rule) , Cell (FMath ("= " ++ exprToLatex step))] | (rule, step) <- proofSteps]                                                                          -- add header row to the table                        
                         )
                     ]
             headerRow = [Header (FText "Rule"), Header (FText "Deduction Step")]
@@ -147,15 +144,16 @@ genAllPossibleValues expr = assignAll toAssign
 
         assignAll [] = Node []
         assignAll (x:xs) = do {
-            intersectionPossibleVal <- nodes [2 .. 20];
-            varPossibleVal <- nodes [20 .. 40];
-            genericPossibleVal <- nodes [20 .. 40];
+            intersectionPossibleVal <- nodes [2 .. 10];
+            varPossibleVal <- nodes [11 .. 20];
+            genericPossibleVal <- nodes [11 .. 20];
             xs' <- assignAll xs;
             case (x) of
-                Val (x')            -> return ((x, x'):xs'); -- Only possible value for a constant is itself
-                Var _               -> return ((x, varPossibleVal):xs');
-                Op Intersection [_] -> return ((x, intersectionPossibleVal):xs');
-                _                   -> return ((x, genericPossibleVal):xs');
+                Val (x')                            -> return ((x, x'):xs'); -- Only possible value for a constant is itself
+                Op Cardinality [(Var _)]            -> return ((x, varPossibleVal):xs');
+                Op Cardinality [(Op Intersection _)]-> return ((x, intersectionPossibleVal):xs');
+                Op Cardinality [(Op Setminus _)]    -> return ((x, intersectionPossibleVal):xs');
+                _                                   -> return ((x, genericPossibleVal):xs');
         }
 
 
