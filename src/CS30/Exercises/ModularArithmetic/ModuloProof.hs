@@ -160,3 +160,14 @@ _given = parseLaw True "given1 : a = b + c"
 
 _prf :: Proof
 _prf = getDerivation 5 (_given:_arithmetic_laws) _exp
+
+--------------------------------
+
+testLaw :: Law -> Bool
+testLaw (Law _ (lhs, rhs)) = and [ evalExpression subst 101 lhs == evalExpression subst 101 rhs 
+                                  | x <- [2,3,4],
+                                    y <- [2,3,4],
+                                    z <- [2,3,4],
+                                  let subst = [("x", Con x), ("y", Con y), ("z", Con z)]]
+       
+

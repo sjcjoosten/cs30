@@ -2,7 +2,7 @@
 
 module CS30.Exercises.ModuloGenerateEx where
 
-import Data.List
+
 import qualified Data.Map as Map
 
 import CS30.Data
@@ -25,35 +25,46 @@ modProofEx = exerciseType "ModuloProof" "L??.?????"
 
 modProofs :: [ChoiceTree ([Field], [Int])]
 modProofs
- = [
-    randomProof (exprOfSize 7),
-    randomProof (exprOfSize 9),
-    randomProof (exprOfSize 11)
-  ]
+ = [ do e <- (exprOfSize i)
+        l <- getLawPermuts _arithmetic_laws
+        -- g <- f -- ChoiceTree Law
+        randomProof' e l
+    | i <- [7,9,11]]
        
 exprOfSize :: Int -> ChoiceTree Expression
-exprOfSize 1 = case (aCon,aFixed) of
-                (Branch l1,Branch l2) -> Branch [Branch l1, Branch l2]
-                _ -> error "This shouldn't happen since aConstant and aVariable should always return multiple items"
+exprOfSize 1 = Branch [aCon,aFixed]
                where 
                  aCon = nodes (map Con [0..4])
                  aFixed = nodes [Fixed nm | nm <- ['a', 'b', 'c', 'd']]
 exprOfSize n
  = Branch [Branch [BinOp op <$> exprOfSize i <*> exprOfSize (n - i - 1)
-          | i <- [1..(n-2)], i `mod` 2 == 1] | op <- [Pow, Mul, Sub, Add]]
+                    | i <- [1..(n-2)], i `mod` 2 == 1] 
+            | op <- [Pow, Mul, Sub, Add]]
 
 
-randomProof :: ChoiceTree Expression -> ChoiceTree ([Field], [Int])
-randomProof (Node a)
-  | length (getPrfStep prf) == 0 = nodes (structurize (getProofPermuts (proofToField ProofError)))
-  |otherwise = nodes (structurize (getProofPermuts (proofToField prf)))
+-- randomProof :: ChoiceTree Expression -> ChoiceTree ([Field], [Int])
+-- randomProof (Node a)
+--   | length (getPrfStep prf) == 0 = nodes (structurize (getProofPermuts (proofToField ProofError)))
+--   |otherwise = nodes (structurize (getProofPermuts (proofToField prf)))
+--   where
+--     prf = getDerivation 5 _arithmetic_laws a -- limit permutations
+--     getPrfStep (Proof _ lst) = lst
+--     getPrfStep ProofError = []
+--     structurize = map (\(x,y) -> ([FText $"Can you put it in the right order?",
+--                                    FIndented 1 [FMath (show a)], FReorder "proof" x], y))
+-- randomProof (Branch lst) = Branch [randomProof (lst !! i)| i <- [0..((length lst)-1)]]
+
+randomProof' :: Expression -> [Law] -> ChoiceTree ([Field], [Int])
+randomProof' a lws
+  | length (getPrfStep prf) == 0 = structurize <$> (getProofPermuts (proofToField ProofError))
+  | otherwise = structurize  <$> (getProofPermuts (proofToField prf))
   where
-    prf = getDerivation 5 _arithmetic_laws a -- limit permutations
+    prf = getDerivation 5 lws a
     getPrfStep (Proof _ lst) = lst
     getPrfStep ProofError = []
-    structurize = map (\(x,y) -> ([FText $"Can you put it in the right order?",
-                                   FIndented 1 [FMath (show a)], FReorder "proof" x], y))
-randomProof (Branch lst) = Branch [randomProof (lst !! i)| i <- [0..((length lst)-1)]]
+    structurize (x,y) = ([FText $"Can you put it in the right order?",
+                                   FIndented 1 [FMath (show a)], FReorder "proof" x], y)
+
 
 proofToField :: Proof -> [[Field]]
 proofToField ProofError = [[FText "No Proof was found for this expression"]]
@@ -61,14 +72,33 @@ proofToField (Proof exp steps) = [ wrapField st | st <- steps]
   where
     wrapField (a,b) = [FMath "equiv_{p}", FText a, FIndented 1 [FMath (show b)]]
 
+permutations :: Int -> ChoiceTree [Int]
+permutations 0 = Node []
+permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you can more easily check this out in GHCI.
+ = do i <- nodes [0..n-1]
+      rm <- permutations (n-1)
+      return (i : map (\v -> if v >= i then v+1 else v) rm)
 
-getProofPermuts :: [[Field]] -> [([[Field]], [Int])]
-getProofPermuts [] = []
-getProofPermuts x = [(map (x !!) p, p) | p <- permutations [0..((length x)-1)]]
 
-getLawPermuts :: [Law] -> [[Law]]
-getLawPermuts [] = []
-getLawPermuts x = [map (x !!) p | p <- permutations [0..((length x)-1)]]
+assignRandExprs :: Int -> [a] -> ChoiceTree [(a, Expression)]
+assignRandExprs = undefined
+
+sizeOf :: Expression -> Int
+sizeOf = undefined
+
+-- get atleast one step
+-- smartForceLaw e siz
+--   = do let vars = nubSort (getVariables e)
+--        assignments <- assignRandExprs (siz - sizeOf e) vars
+--        return (apply assignments e)
+
+getProofPermuts :: [[Field]] -> ChoiceTree ([[Field]], [Int])
+getProofPermuts x = do p <- permutations (length x)
+                       return (map (x !!) p, p)
+
+getLawPermuts :: [Law] -> ChoiceTree [Law]
+getLawPermuts x = do p <- permutations (length x)
+                     return (map (x !!) p)
 
 genProof :: ([Field], [Int]) -> Exercise -> Exercise
 genProof (quer, _solution) ex = trace ("Solution = " ++ (show _solution)) $  ex{eQuestion=quer, eBroughtBy = ["Sanket S. Joshi", "Anmol Chachra"] }

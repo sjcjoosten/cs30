@@ -125,6 +125,9 @@ instance Show Expression where
     showsPrec _ (Fixed b) = showString [b]
     showsPrec _ (Var v) = showString [v]
     showsPrec p (UnOp Neg e) = showParen (p > 6) (showString [charNeg] . showsPrec (7) e)
+    showsPrec p (BinOp Pow e1 e2)
+        = showParen (p >= q) (showsPrec q e1 . showSpace . showOp Pow . showChar '{' . showsPrec (q+1) e2 . showChar '}')
+          where q = prec Pow
     showsPrec p (BinOp op e1 e2)
         = showParen (p >= q) (showsPrec q e1 . showSpace . showOp op . showSpace . showsPrec (q+1) e2)
           where q = prec op
