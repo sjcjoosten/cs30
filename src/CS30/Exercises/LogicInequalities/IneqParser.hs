@@ -15,7 +15,7 @@ data Opr           = Multiplication | Division | Addition | Subtraction
 data Law           = Law {lawName :: String, lawEq :: Equation}
 type Equation      = (Expr,Expr)
 data Proof         = Proof Expr [ProofStep] deriving Show
-type ProofStep     = (String, Expr)
+data ProofStep     = Single (String, Expr) | Double (String,Inequality) deriving Show
 -- MathExpr for parsing, gets converted to Expr for everything else
 data MathExpr      = MathConst Integer 
                    | MathVar String
@@ -68,6 +68,11 @@ instance Show Expr where
   showsPrec p (Op o [e1,e2]) = showParens (p>q) (showsPrec q e1 . showString (symb o) . showsPrec (q+1) e2)
       where q = prec o
   showsPrec _ (Op _ _) = showString "()"
+
+-- can't directly make Inequality an instance of Show :/
+showHandler :: Inequality -> String
+showHandler (e1,i,e2)
+    = show e1 ++ show i ++ show e2
 
 prec :: Opr -> Int
 prec Factorial = 3

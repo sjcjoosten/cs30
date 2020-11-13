@@ -21,7 +21,6 @@ expr4 = Op Exponentiation [Op Addition [Var "n", Const 4], Const 2]
 lawList :: [String]
 lawList = [ "Exponentiation: a ^ 0 = 1"
           , "Exponentiation: a ^ 1 = a"
-          , "Exponentiation: a ^ 2 = a * a"
           , "Additive Identity: a + 0 = a"
           , "Additive Identity: 0 + a = a"
           , "Additive Inverse: a - a = 0"
@@ -40,6 +39,7 @@ lawList = [ "Exponentiation: a ^ 0 = 1"
           , "Distributive Right: (a + b) * c = a * c + b * c"
           , "Distributive Left: a * (c - d) = a * c - a * d"
           , "Distributive Right: (a - b) * c = a * c - b * c"
+          , "Exponentiation: a ^ 2 = a * a"
           ]
 
 -- ineqLawList :: [String]
@@ -59,16 +59,36 @@ lawList = [ "Exponentiation: a ^ 0 = 1"
 
 lawBois = stringsToLaw lawList
 
-getDerivationLengthN :: [Law] -> Ineq -> Expr -> Integer -> Proof
-getDerivationLengthN laws ineq e i = Proof e (multiSteps e i) 
-  where multiSteps e' i' | i' <= 0 = []
-                         | otherwise = case [ (lawName law, res)
-                                            | law <- laws
-                                            , res <- getStep2 laws (lawEq law) ineq e'
-                                            , res /= e && res /= e'
-                                            ] of
-                                        [] -> []
-                                        ((nm,e''):_) -> (nm,e'') : multiSteps e'' (i' - 1)
+getDerivationLengthN :: [Law] -> Ineq -> Expr -> Expr -> Integer -> Proof
+getDerivationLengthN laws ineq e1 e2 i = Proof e1 (multiSteps e1 e2 i) 
+  where multiSteps e1' e2' i' | i' <= 0 = []
+                              | otherwise = case [ (lawName law, res)
+                                                 | law <- laws
+                                                 , res <- getStep2 laws (lawEq law) ineq e1'
+                                                 , res /= e1
+                                                 ] of
+                                             [] -> (firstThing e1' e2') : (addMore e1' e2' i')
+                                             ((nm,e1''):_) -> (Single (nm,e1'')) : multiSteps e1'' e2' (i' - 1)
+        addMore e1' e2' i'    | i' <= 0 = []
+                              | otherwise = case [ (lawName law, (e1',ineq,res))
+                                                 | law <- laws
+                                                 , res <- getStep2 laws (lawEq law) ineq e2'
+                                                 , res /= e2
+                                                 ] of
+                                             [] -> []
+                                             ((nm,(e1',q,e2'')):_) -> (Double (nm,(e1',q,e2''))) : addMore e1' e2'' (i' - 1)
+        firstThing e1' e2' = Double ("Assumption",(e1',ineq,e2'))
+
+getSingleDerivation :: [Law] -> Ineq -> Expr -> Integer -> Proof
+getSingleDerivation laws ineq e1 i = Proof e1 (multiSteps e1 i) 
+  where multiSteps e1' i'     | i' <= 0 = []
+                              | otherwise = case [ (lawName law, res)
+                                                 | law <- laws
+                                                 , res <- getStep2 laws (lawEq law) ineq e1'
+                                                 , res /= e1
+                                                 ] of
+                                             [] -> []
+                                             ((nm,e1''):_) -> (Single (nm,e1'')) : multiSteps e1'' (i' - 1)
 
 --[ (lawName law, res) | law <- lawBois, res <- getStep2 laws (lawEq law) GThan a ]
 
@@ -101,13 +121,13 @@ getStep2 laws (lhs, rhs) ineq e
         recurse (Op _ _) = [] -- satisfy the compiler
 
         --"Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"
-        isPositive e1 = provesGEQ 1 (getDerivationLengthN laws ineq e1 5)
-        isNonNeg e1   = provesGEQ 0 (getDerivationLengthN laws ineq e1 5)
+        isPositive e1 = provesGEQ 1 (getSingleDerivation laws ineq e1 5)
+        isNonNeg e1   = provesGEQ 0 (getSingleDerivation laws ineq e1 5)
         provesGEQ b (Proof e1 steps) = go b e1 steps
               where go b' (Const n) _ | n >= b'     = True
                                      | otherwise = False
                     --go b' (Op Negation [e]) _ = False
-                    go b' _ ((_ , e2):ss) = go b' e2 ss --b-1 with strict inequalities
+                    go b' _ ((Single (_ , e2)):ss) = go b' e2 ss --b-1 with strict inequalities
                     go _ _ [] = False
 
         checkFunc Multiplication = case ineq of 
@@ -229,22 +249,29 @@ evalFac n = case (n>=0) of
         realFac x = x * realFac (x - 1)
 
 
+generateRandIneq :: ChoiceTree Ineq
+generateRandIneq = Branch [Node GThan, Node GEq]
+
 -- return valid expressions, i.e. those that have a variable in them
 -- just calling generateRandEx i<1 may or may not generate a valid expression
 -- but calling generateRandEx i≥1 will filter out the invalid ones
-generateRandEx :: Int -> ChoiceTree Expr
-generateRandEx i | i < 1
- = Branch [ Branch [Node (Var varName) | varName <- ["n"]] -- add support for more variables
+generateRandEx :: Int -> String -> ChoiceTree Expr
+generateRandEx i n | i < 1
+ = Branch [ Branch [Node (Var varName) | varName <- [n]] -- add support for more variables
           , Branch [Node (Const val) | val <- [2..10]]
           ]
-generateRandEx i
- = filterTree $ Branch [do {e1 <- generateRandEx i'
-                       ;e2 <- generateRandEx (i - i' - 1)
-                       ;opr <- nodes [Addition,Subtraction,Multiplication,Exponentiation]
+generateRandEx i n
+ = filterTree $ Branch [do {e1 <- generateRandEx i' n
+                       ;e2 <- generateRandEx (i - i' - 1) n
+                       ;opr <- nodes $ availOps i
                        ;return (Op opr [e1,e2])
                        }
                        | i' <- [0..i-1]
                        ]
+    where
+      availOps j = case (j < 2) of
+                    True -> [Addition,Subtraction,Multiplication,Exponentiation]
+                    False -> [Addition,Multiplication]
 
 filterTree :: ChoiceTree Expr -> ChoiceTree Expr
 filterTree (Branch b@((Branch _):_)) = Branch $ filter isNonEmpty $ map filterTree b
