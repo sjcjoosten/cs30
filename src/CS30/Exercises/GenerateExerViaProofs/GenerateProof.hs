@@ -4,6 +4,7 @@ import           Text.Megaparsec.Char
 import           CS30.Exercises.Probability.SolutionChecker
 import Control.Monad.Combinators.Expr
 import CS30.Exercises.GenerateExerViaProofs.ProofProbability
+import qualified Data.Functor
 
 -- datatypes for law
 data Law = Law {lawName :: String, lawEq :: Equation} deriving Show
@@ -41,10 +42,10 @@ incluExclu = "Inclusion exclusion: Pr[A \\vee B] = Pr[A] + Pr[B] - Pr[A \\wedge 
 parseLaws :: Parser Law
 parseLaws = do {lawname <- parseUntil ':';
                 lt_spaces;
-                lhs <- fractional_parser;
+                lhs <- fractionalParser;
                 _ <- string "=";
                 lt_spaces;
-                rhs <- fractional_parser;
+                rhs <- fractionalParser;
                 return (Law lawname (lhs,rhs))} -- lhs is the left hand side of "=".
 
 
@@ -63,8 +64,9 @@ parseUntil c
 parsedLaws = Prelude.map strToLaw laws-}
 
 strToLaw :: String -> Law 
-strToLaw law =  case parse parseLaws "" law of
+strToLaw law =  case parse parseLaws "" law of 
                 Right st -> st
+
 
 -- parse laws
 getDerivation :: [Law] -> FracExpr -> Proof
@@ -110,7 +112,7 @@ matchE (FConst i) (FConst j)              | i == j = Just []
 matchE (FConst _) _                       = Nothing
 matchE (FExpr e1 e2) (FExpr e3 e4)        = matchHelper (matchE e1 e3)(matchE e2 e4) -- P(A|B)P(C|D)
 matchE (FBin op e1 e2) (FBin op1 e3 e4)   |op == op1 = matchHelper (matchE e1 e3)(matchE e2 e4)
-matchE (FBin _ _ _) _                     = Nothing
+-- matchE (FBin _ _ _) _                     = Nothing
 matchE (AndEvent e1 e2) (AndEvent e3 e4)  = matchHelper (matchE e1 e3)(matchE e2 e4) 
 matchE (OrEvent e1 e2) (OrEvent e3 e4)    = matchHelper (matchE e1 e3)(matchE e2 e4) 
 matchE (NegaEvent e1) (NegaEvent e3)      = matchE e1 e3
@@ -124,9 +126,11 @@ matchHelper sub1 sub2 = case (sub1, sub2)
 
 combineTwoSubsts ::  Substitution -> Substitution -> Maybe Substitution
 combineTwoSubsts  s1 s2 
-    = case and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2] of    
-        True -> Just (s1 ++ s2)    
-        False -> Nothing
+    = if and
+       [v1 == v2 | (nm1, v1) <- s1, (nm2, v2) <- s2, nm1 == nm2] then
+      Just (s1 ++ s2)
+  else
+      Nothing
 
 -- change the lhs
 apply :: Substitution -> FracExpr -> FracExpr
@@ -147,31 +151,31 @@ lookupInSubst _[] = error "Substitution was not complete, or free variables exis
 
 
 -- parse basic event
-basEvent_parser :: Parser FracExpr
-basEvent_parser = do {lt_spaces; 
+basEventParser :: Parser FracExpr
+basEventParser = do {lt_spaces; 
                     c <- satisfy isLetterforEvent;
                     _ <- lt_spaces;
                     return (FVar c)}
-                where isLetterforEvent v = elem v ['A'..'Z']
+                where isLetterforEvent v = v `elem` ['A' .. 'Z']
 
 -- parse "\Omege" and "\emptyset"
 omeEmpParser :: Parser FracExpr
 omeEmpParser = do {lt_spaces; 
                     _ <- string "\\Omega";
                     _ <- lt_spaces;
-                    return (Omega)}
+                    return Omega}
             <|> 
                 do {lt_spaces; 
                     _ <- string "\\emptyset";
                     _ <- lt_spaces;
-                    return (EmptySet)}
+                    return EmptySet}
 
               
-fractional_parser :: Parser FracExpr
-fractional_parser = makeExprParser termParser operatorTable
+fractionalParser :: Parser FracExpr
+fractionalParser = makeExprParser termParser operatorTable
              
 termParser :: Parser FracExpr
-termParser = do {r <- (string "0"*> return 0) <|> (string "1"*> return 1);
+termParser = do {r <- (string "0" Data.Functor.$> 0) <|> (string "1" Data.Functor.$> 1);
                 lt_spaces;
                 return (FConst r)}
             <|>
@@ -179,19 +183,19 @@ termParser = do {r <- (string "0"*> return 0) <|> (string "1"*> return 1);
             <|>
              do {_ <- string "(";
                 lt_spaces;
-                e1 <- fractional_parser;
+                e1 <- fractionalParser;
                 _ <- string ")";
                 lt_spaces;
-                return (e1)}
+                return e1}
             <|>
              do {_ <- string "\\frac{";
                 lt_spaces;
-                e1 <- fractional_parser;
+                e1 <- fractionalParser;
                 lt_spaces;
                 _ <- string "}";
                 lt_spaces;
                 _ <- string "{";
-                e2 <- fractional_parser;
+                e2 <- fractionalParser;
                 lt_spaces;
                 _ <- string "}";
                 lt_spaces;
@@ -199,12 +203,12 @@ termParser = do {r <- (string "0"*> return 0) <|> (string "1"*> return 1);
             <|>
             do {_ <- string "Pr[";
                 lt_spaces;
-                e1 <- fractional_parser;
+                e1 <- fractionalParser;
                 _ <- string "]";
                 lt_spaces;
                 return (Prob e1)}
             <|> 
-            basEvent_parser
+            basEventParser
             {- 
              <|>
              do {string "Pr[";
