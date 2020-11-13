@@ -91,20 +91,19 @@ binExprs :: (SetExpr -> SetExpr -> SetExpr) -> Int -> ChoiceTree SetExpr
 binExprs operator i
  = do i' <- nodes [0..i-1]
       e1 <- genRand i'
-      e2 <- genRand (i' - 1)
+      e2 <- genRand (i - i' - 1)
       return (operator e1 e2)
 
 unaryExprs :: (SetExpr -> SetExpr) -> Int -> ChoiceTree SetExpr
 unaryExprs operator i
- = do i' <- nodes [0..i-1]
-      e1 <- genRand i'
+ = do e1 <- genRand (i -1)
       return (operator e1)
 
 genRand :: Int -> ChoiceTree SetExpr
 genRand i | i < 1
  = Branch [ Branch [Node (Var varName) | varName <- ["A"]] 
           ]
-genRand i
+genRand i 
  = do result <- nodes [binExprs Cap i, binExprs Cup i, binExprs SetMinus i, 
                        unaryExprs Power i] 
       result
@@ -113,8 +112,7 @@ genRand i
 -- genRand i
 --  = join (nodes [binExprs Cap, binExprs Cup, binExprs SetMinus, 
 --                        unaryExprs Power] )
- 
- 
+
 -- assignVar definition to go over the final expression by replacing all variables from left to right.
 -- creative element; ensures that there is no duplication of variables in the random expr generated as the problem
 assignVar :: SetExpr -> [String] -> (SetExpr, [String]) 
@@ -160,15 +158,53 @@ assignVar (Power e) lst
 -- first case, diff var names
 -- last case allow duplicates
 
--- creating the choice tree for problems, 3 levels in terms of degree of nested expr
+-- level 1 --> simple cap, cup, set min 
+-- level 2 --> add in power
+-- level 3 --> add in hard laws
+-- level 4 --> duplicate var names
+
+-- TODO: add in check for order that it's not already in order
+-- that can be another creative element
 setConversion :: [ChoiceTree ([Field], [Int])] 
 setConversion
- = [do { expr <- genRand i
-         ; let expr' = fst (assignVar expr ["A", "B", "C", "D", "E"]) 
-         ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
-         ; order <- permutations (length steps)
-         ; return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
-    } | i <- [2..3]]
+ = [
+     Branch [ do { expr <- generateRandEx 2
+                   ; let expr' = fst (assignVar expr ["A", "B", "C"]) 
+                   ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
+                   ; order <- permutations (length steps)
+                   ;  return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
+                 } ]
+     , Branch [ do { expr <- genRand i
+                   ; let expr' = fst (assignVar expr ["A", "B", "C", "D"]) 
+                   ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
+                   ; order <- permutations (length steps)
+                   ;  return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
+                 } | i <- [2..3]]
+     , Branch [do { expr <- genRand i
+                   ; let expr' = fst (assignVar expr ["A", "B", "C", "D"]) 
+                   ; let (Proof _expr steps) = generateProof parsedAdvancedLaws expr'
+                   ; order <- permutations (length steps)
+                   ;  return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
+                 } | i <- [2..3] ]
+   ]
+
+-- creating the choice tree for problems, 3 levels in terms of degree of nested expr
+-- setConversion :: [ChoiceTree ([Field], [Int])] 
+-- setConversion
+--  = [do { expr <- genRand i
+--          ; let expr' = fst (assignVar expr ["A", "B", "C", "D", "E"]) 
+--          ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
+--          ; order <- permutations (length steps)
+--          ; return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
+--     } | i <- [3..4]]
+-- setConversion :: [ChoiceTree ([Field], [Int])] 
+-- setConversion
+--  = [do { expr <- genRand i
+--          ; let expr' = fst (assignVar expr ["A", "B", "C", "D", "A"]) -- so that when we get to the third level, there are repeated var to deal with 
+--          ; let (Proof _expr steps) = if i < 3 then generateProof parsedBasicLaws expr' else generateProof parsedAdvancedLaws expr' 
+--          ; order <- permutations (length steps)
+--          ; return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
+--     } | i <- [2..4]]
 
 
 -- generating the proof question
@@ -188,8 +224,7 @@ showProofLine (lwnm, expr)
 
 ----------- SHOWING SETEXPR AS STRINGS ------
 prec :: SetExpr -> Int 
--- I ended up keeping this because it was used in myShow, in which I don't enumerate all the various 
--- setexpr cases, but if there is a way to get rid of it without having to entirely rewrite that function, I can do that
+-- I ended up keeping this because it was used in myShow, in which I don't enumerate all the various setexpr cases
 prec (Var _) = 0
 prec (Power _) = 0
 prec (SetBuilder _) = 1
