@@ -9,7 +9,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 
 {- defining datas and types -}
 type Parser        = Parsec Void String
-data Expr          = Var String | Const Integer | Op Opr [Expr] deriving (Eq)
+data Expr          = Var String | Const Integer | Op Opr [Expr] deriving (Eq)  -- | ConstVar String
 data Opr           = Multiplication | Division | Addition | Subtraction
                    | Exponentiation | Factorial | Negate deriving (Eq,Show)
 data Law           = Law {lawName :: String, lawEq :: Equation}
@@ -58,7 +58,7 @@ instance Show Ineq where
   showsPrec _ EqEq  = showString " = "
 
 instance Show Expr where
-  showsPrec _ (Var s) = showString (show s)
+  showsPrec _ (Var s) = showString s
   showsPrec _ (Const n) = showString (show n)
   showsPrec p (Op o [e1]) = case o of
     Factorial -> showParens (p>q) (showsPrec q e1 . showString (symb Factorial))

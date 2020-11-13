@@ -22,38 +22,40 @@ lawList :: [String]
 lawList = [ "Exponentiation: a ^ 0 = 1"
           , "Exponentiation: a ^ 1 = a"
           , "Exponentiation: a ^ 2 = a * a"
-          , "Exponentiation: a ^ b = a * (a ^ (b - 1))"
           , "Additive Identity: a + 0 = a"
           , "Additive Identity: 0 + a = a"
           , "Additive Inverse: a - a = 0"
+          , "Additive Inverse: a + (- a) = 0"
+          , "Subtraction by Addition: a + (- b) = a - b"
           , "Multiplicative Identity: a * 1 = a"
           , "Multiplicative Identity: 1 * a = a"
           , "Multiplication Times 0: 0 * a = 0"
           , "Multiplication Times 0: a * 0 = 0"
           , "Dividing Zero: 0 / a = 0"
-          , "Multiplicative Inverse: a / a = 1"
           , "Distributive Law: a - (b + c) = a - b - c"
           , "Distributive Law: a - (b - c) = a - b + c"
           , "Additive Association: a + (b + c) = (a + b) + c"
           , "Multiplicative Association: a * (b * c) = (a * b) * c"
-          , "Commutative of Addition: a + b = b + a"
-          , "FOIL: (a + b) * (c + d) = a * c + a * d + b * c + b * d"
+          , "Distributive Left: a * (c + d) = a * c + a * d"
+          , "Distributive Right: (a + b) * c = a * c + b * c"
+          , "Distributive Left: a * (c - d) = a * c - a * d"
+          , "Distributive Right: (a - b) * c = a * c - b * c"
           ]
 
-ineqLawList :: [String]
-ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"    -- hold off for now
-              --, "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"    -- hold off for now
-                "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"      -- done
-              , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"      -- done
-              , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"      -- done
-              , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x"      -- done
-              , "Addition: x > y \\Rightarrow x + z > y + z"
-              , "Division for x > 0 and z > 0: x < y \\Rightarrow z / x > z / y"
-              , "Division for x > 0 and z > 0: x > y \\Rightarrow z / x < z / y"
-              , "Division for x > 0 and z ≥ 0: x < y \\Rightarrow z / x ≥ z / y"
-              , "Division for x > 0 and z ≥ 0: x > y \\Rightarrow z / x ≤ z / y"
-              , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
-              ]
+-- ineqLawList :: [String]
+-- ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"    -- hold off for now
+--               --, "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"    -- hold off for now
+--                 "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"      -- done
+--               , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"      -- done
+--               , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"      -- done
+--               , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x"      -- done
+--               , "Addition: x > y \\Rightarrow x + z > y + z"
+--               , "Division for x > 0 and z > 0: x < y \\Rightarrow z / x > z / y"
+--               , "Division for x > 0 and z > 0: x > y \\Rightarrow z / x < z / y"
+--               , "Division for x > 0 and z ≥ 0: x < y \\Rightarrow z / x ≥ z / y"
+--               , "Division for x > 0 and z ≥ 0: x > y \\Rightarrow z / x ≤ z / y"
+--               , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
+--               ]
 
 lawBois = stringsToLaw lawList
 
@@ -67,6 +69,8 @@ getDerivationLengthN laws ineq e i = Proof e (multiSteps e i)
                                             ] of
                                         [] -> []
                                         ((nm,e''):_) -> (nm,e'') : multiSteps e'' (i' - 1)
+
+--[ (lawName law, res) | law <- lawBois, res <- getStep2 laws (lawEq law) GThan a ]
 
 getStep :: Equation -> Expr -> [Expr]
 getStep (lhs, rhs) expr
@@ -211,6 +215,11 @@ compute (Op o [e1,e2]) = case (compute e1, compute e2, o) of
                                                                       _ -> Just (eval1 `div` eval2)
                           (Just eval1, Just eval2, Exponentiation) -> Just (eval1 ^ eval2)
 
+-- (n + 6) - 3
+-- 1. assume n > generateRandEx "c"
+-- 2. assume 6 > generateRandEx "c"
+-- 3. assume (n + 6) > generateRandEx "c"
+
 -- Factorial function
 evalFac :: Integer -> Maybe Integer
 evalFac n = case (n>=0) of
@@ -231,7 +240,7 @@ generateRandEx i | i < 1
 generateRandEx i
  = filterTree $ Branch [do {e1 <- generateRandEx i'
                        ;e2 <- generateRandEx (i - i' - 1)
-                       ;opr <- nodes [Addition,Subtraction,Multiplication,Division,Exponentiation]
+                       ;opr <- nodes [Addition,Subtraction,Multiplication,Exponentiation]
                        ;return (Op opr [e1,e2])
                        }
                        | i' <- [0..i-1]
