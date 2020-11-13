@@ -19,7 +19,7 @@ type ParseError = ParseErrorBundle String Void
 
 data Proof = Proof Expression [ProofStep] | ProofError deriving (Eq)
 type ProofStep = (String, Expression)
-type Substitution = [(String, Expression)] -- [ProofStep]
+type Substitution = [(String, Expression)]
 
 data Law = Law {lawName :: String, lawEq :: Equation} | LawError deriving (Show, Eq)
 type Equation = (Expression, Expression)
@@ -30,30 +30,9 @@ data Expression = Con Int |
                   UnOp Op Expression |
                   BinOp Op Expression Expression |
                   ExpressionError
-                  deriving (Eq, Ord) -- TODO : Add show?
+                  deriving (Eq, Ord)
 
-data Op = Neg | Pow | Mul | Sub | Add | ModEq deriving (Eq, Ord) -- TODO : Add show?
-
---------------------------------------Characters-------------------------------------------
-
--- TODO : Replace with special characters wherever applicable
-charNeg, charAdd, charSub, charPow :: Char
-charNeg = '-'
-charAdd = '+'
-charSub = '-'
-charPow = '^'
-
-charOpen, charClose, charEquals, charColon :: Char
-charOpen = '('
-charClose = ')'
-charEquals = '='
-charColon = ':'
-
-stringMod, stringImplies, stringCongruent, stringMul :: String
-stringMod = "mod"
-stringImplies = "implies"
-stringCongruent = "\\equiv_p" -- ≡
-stringMul = "\\cdot"
+data Op = Neg | Pow | Mul | Sub | Add | ModEq deriving (Eq, Ord)
 
 --------------------------------------Parser Functions-------------------------------------------
 
@@ -63,9 +42,9 @@ parseLaw isFixed str = getLaw (parse (parserLaw isFixed) "<myparse>" (filter (\y
                              getLaw _ = LawError
 
 parserLaw :: Bool -> Parser Law
-parserLaw isFixed = do _name <- someTill anySingle (char charColon)
+parserLaw isFixed = do _name <- someTill anySingle (string ":")
                        _lhs  <- parserExpression isFixed
-                       _     <- char charEquals
+                       _     <- string "="
                        _rhs  <- parserExpression isFixed
                        return Law { lawName = _name, lawEq = (_lhs, _rhs)}
 
@@ -83,17 +62,17 @@ parserTerm isFixed = Con <$> L.lexeme space L.decimal <|>
                      parserParenthesis (parserExpression isFixed)
 
 parserParenthesis :: Parser a -> Parser a
-parserParenthesis = between (char charOpen) (char charClose)
+parserParenthesis = between (string "(") (string ")")
 
 operatorTable :: [[Operator Parser Expression]]
 operatorTable =
   [ 
-    [Prefix (UnOp Neg <$ char charNeg)],
-    [InfixL (BinOp Pow <$ char charPow)],
-    [InfixL (BinOp Mul <$ string stringMul)],
-    [InfixL (BinOp Sub <$ char charSub)],
-    [InfixL (BinOp Add <$ char charAdd)],
-    [InfixL (BinOp ModEq <$ string stringCongruent)]
+    [Prefix (UnOp Neg <$ string "-")],
+    [InfixL (BinOp Pow <$ string "^")],
+    [InfixL (BinOp Mul <$ string "\\cdot")],
+    [InfixL (BinOp Sub <$ string "-")],
+    [InfixL (BinOp Add <$ string "+")],
+    [InfixL (BinOp ModEq <$ string "\\equiv_{p}")]
   ]
 
 -------------------------------------Shows----------------------------------------
@@ -107,26 +86,26 @@ prec Pow = 5
 prec Neg = 6
 
 showSpace :: ShowS
-showSpace = showChar ' '
+showSpace = showString " "
 
 showOp :: Op -> ShowS
 showOp = showString . symb
 
 symb :: Op -> String
-symb Neg = [charNeg]
-symb Pow = [charPow]
-symb Mul = stringMul
-symb Sub = [charSub]
-symb Add = [charAdd]
-symb ModEq = stringCongruent
+symb Neg = "-"
+symb Pow = "^"
+symb Mul = "\\cdot"
+symb Sub = "-"
+symb Add = "+"
+symb ModEq = "\\equiv_{p}"
 
 instance Show Expression where
     showsPrec _ (Con b) = showString (show b)
     showsPrec _ (Fixed b) = showString [b]
     showsPrec _ (Var v) = showString [v]
-    showsPrec p (UnOp Neg e) = showParen (p > 6) (showString [charNeg] . showsPrec (7) e)
+    showsPrec p (UnOp Neg e) = showParen (p > 6) (showString "-" . showsPrec (7) e)
     showsPrec p (BinOp Pow e1 e2)
-        = showParen (p >= q) (showsPrec q e1 . showSpace . showOp Pow . showChar '{' . showsPrec (q+1) e2 . showChar '}')
+        = showParen (p >= q) (showsPrec q e1 . showSpace . showOp Pow . showString "{" . showsPrec (q+1) e2 . showString "}")
           where q = prec Pow
     showsPrec p (BinOp op e1 e2)
         = showParen (p >= q) (showsPrec q e1 . showSpace . showOp op . showSpace . showsPrec (q+1) e2)

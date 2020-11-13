@@ -2,7 +2,6 @@
 
 module CS30.Exercises.ModuloGenerateEx where
 
-
 import qualified Data.Map as Map
 
 import CS30.Data
@@ -14,7 +13,7 @@ import CS30.Exercises.ModularArithmetic.ModuloParser
 
 import Debug.Trace
 
--- -------------------------------------- Exercise Generation ------------------------------------
+---------------------------------------- Exercise Generation ------------------------------------
 
 modProofEx :: ExerciseType
 modProofEx = exerciseType "ModuloProof" "L??.?????"
@@ -49,8 +48,8 @@ exprOfSize n xs
 
 
 genGiven :: Expression -> ChoiceTree Law
-genGiven e = do expr <- (exprOfSize 3 (getRHS e)) --  = c * c
-                return (Law "given" (Fixed (head (getVariables e)), expr))
+genGiven e = do expr <- (exprOfSize 3 (getRHS e))
+                return (Law "Given" (Fixed (head (getVariables e)), expr))
 
 getRHS :: Expression -> [Char]
 getRHS e
@@ -72,7 +71,7 @@ randomProof' a lws
     getPrfStep ProofError = []
     structurize (x,y) = ([FText $"Can you put it in the right order?",
                                    FIndented 1 [FMath (show a)],
-                                   FText $ "Given",
+                                   FText $ "Given:",
                                    FIndented 1 [FMath (show (fst (lawEq given))), FMath "=", FMath (show (snd (lawEq given)))],
                                    FReorder "proof" x], y)
 
@@ -128,26 +127,3 @@ breakUnderscore s
        "" -> []
        s' -> w : breakUnderscore s''
              where (w, s'') = break (=='_') s'
-
---------------------------------------Random Expression Generation-------------------------------
-
--- Takes a list of operations and fit them in between a,b,c,d
--- Example gen_expressions ['*', '+']
--- a + b + c + d
--- a + b + c * d
--- a + b * c + d
--- a + b * c * d
-gen_expressions :: String -> [String]
-gen_expressions [] = []
-gen_expressions oper = [sbst op |op <- op_list]
-    where
-        op_list = [[i,j,k] | i <- oper, j <- oper, k <- oper]
-        sbst x = (concat [[fst a, snd a] | a <- zip "abc" x]) ++ ['d']
-
-
--- Testing
--- expressions = gen_expressions [charAdd, charMul, charSub]
--- example =  parseExpression True ((gen_expressions [charAdd, charMul, charSub]) !! 22)
--- example_proof = getDerivation 5 arithmetic_laws example
--- example_fields = proofToField example_proof
--- sample = getProofPermuts example_fields

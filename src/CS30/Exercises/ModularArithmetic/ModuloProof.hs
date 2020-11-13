@@ -1,42 +1,37 @@
 {-# OPTIONS_GHC -Wall #-}
+
 module CS30.Exercises.ModularArithmetic.ModuloProof where
 
 import CS30.Exercises.ModularArithmetic.ModuloParser
-import Debug.Trace
 
-------------------------------------------Implicit Laws----------------------------------------
-
--- modulo_laws :: [Law]
--- modulo_laws = map (parseLaw False Congruent)
---               [
---                "Law2 : p \\equiv_p 0 (mod p)",
---                "Law1 : x ^ (p-1) \\equiv_p 1 (mod p)"
---               ]
+-------------------------------------Laws----------------------------------------
 
 _arithmetic_laws :: [Law]
 _arithmetic_laws = map (parseLaw False)
                   [
                      "Law1 : x \\cdot 0 = 0"
-                    ,"Law2 : x + 0 = x"
-                    ,"Law3 : x \\cdot 1 = x"
-                    ,"Law4 : x \\cdot -1 = -x"
-                    ,"Law5 : x ^ 0 = 1"
-                    ,"Law6 : 1 ^ x = 1"
-                    ,"Law7 : x \\cdot (y + z) = x \\cdot y + x \\cdot z"
-                    ,"Law8 : x \\cdot (y - z) = x \\cdot y - x \\cdot z"
-                    ,"Law9 : (x + y) \\cdot z = x \\cdot z + y \\cdot z"
-                    ,"Law10 : (x - y) \\cdot z = x \\cdot z - y \\cdot z"
-                    ,"Law11 : x ^ (y + z) = x ^ y \\cdot x ^ z"
-                    ,"Law12 : (x \\cdot y) ^ z = x ^ z \\cdot y ^ z"
-                    -- Least priority
-                    -- ,"Law13 : x + y = y + x"
-                    -- ,"Law14 : x \\cdot y = y \\cdot x"
-                    -- ,"Law15 : (x + y) + z = x + (y + z)"
-                    -- ,"Law16 : (x \\cdot y) \\cdot z = x \\cdot (y \\cdot z)"
+                    ,"Law2 : 0 \\cdot x = 0"
+                    ,"Law3 : x + 0 = x"
+                    ,"Law4 : 0 + x = x"
+                    ,"Law5 : x - y = x + (-y)"
+                    ,"Law6 : x + (-x) = 0"
+                    ,"Law7 : x \\cdot 1 = x"
+                    ,"Law8 : 1 \\cdot x = x"
+                    ,"Law9 : x \\cdot -1 = -x"
+                    ,"Law10 : -1 \\cdot x = -x"
+                    ,"Law11 : x ^ 0 = 1"
+                    ,"Law12 : 1 ^ x = 1"
+                    ,"Law13 : x \\cdot (y + z) = x \\cdot y + x \\cdot z"
+                    ,"Law14 : x \\cdot (y - z) = x \\cdot y - x \\cdot z"
+                    ,"Law15 : (x + y) \\cdot z = x \\cdot z + y \\cdot z"
+                    ,"Law16 : (x - y) \\cdot z = x \\cdot z - y \\cdot z"
+                    ,"Law17 : x ^ (y + z) = x ^ y \\cdot x ^ z"
+                    ,"Law18 : (x \\cdot y) ^ z = x ^ z \\cdot y ^ z"
                   ]
                   
 -------------------------------------Proofs----------------------------------------
 
+-- TODO : Steps using given should be implicit
 getDerivation :: Int -> [Law] -> Expression -> Proof
 getDerivation steps laws e
  = Proof e (multiSteps steps e)
@@ -47,7 +42,7 @@ getDerivation steps laws e
                , res <- getStep (lawEq law) e' -- getStep
                ] of
                    [] -> []
-                   ((nm,e''):_) -> trace ("STEP = " ++ (show (nm, e''))) $ (nm,e'') : multiSteps (steps'-1) e''
+                   ((nm,e''):_) -> (nm,e'') : multiSteps (steps'-1) e''
 
 -- would go into rewrite function
 -- Law1 : a = b (mod p) implies a + c = b + c (mod p)
@@ -85,7 +80,6 @@ matchE (UnOp Neg e1) (UnOp Neg e2) = matchE e1 e2
 matchE (UnOp _ _) _ = Nothing
 matchE ExpressionError _ = Nothing
 
--- For common var, the val should match
 combineTwoSubsts :: Substitution -> Substitution -> Maybe Substitution
 combineTwoSubsts s1 s2
   = case and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2] of
@@ -117,28 +111,28 @@ evalExpression' p (UnOp op e) = modulo p (fnOp op (evalExpression' p e) Nothing)
 evalExpression' p (BinOp op e1 e2) = modulo p (fnOp op (evalExpression' p e1) (evalExpression' p e2))
 evalExpression' _ _ = Nothing
 
--- TODO : Handle 0 ^ 0
 fnOp :: Op -> Maybe Int -> Maybe Int -> Maybe Int
 fnOp Neg (Just x) _ = Just (-x)
-fnOp op (Just i1) (Just i2) = Just (opVal i1 i2)
+fnOp Pow (Just 0) (Just 0) = Nothing
+fnOp op (Just x) (Just y) = Just (opVal x y)
                               where opVal = case op of {Pow -> (^); Mul -> (*); Sub -> (-); Add -> (+); _ -> (+)}
 fnOp _ _ _ = Nothing
 
 modulo :: Int -> Maybe Int -> Maybe Int
-modulo p (Just i) = Just (i `mod` p)
+modulo p (Just x) = Just (x `mod` p)
 modulo _ _ = Nothing
 
 evalApply :: Substitution -> Expression -> Expression
 evalApply subst (Var nm) = lookupInSubst [nm] subst
-evalApply _ (Con i) = Con i
+evalApply _ (Con x) = Con x
 evalApply subst (Fixed nm) = lookupInSubst [nm] subst
 evalApply subst (UnOp op e) = UnOp op (evalApply subst e)
 evalApply subst (BinOp op e1 e2) = BinOp op (evalApply subst e1) (evalApply subst e2)
 evalApply _ _ = ExpressionError
 
 getVariables :: Expression -> [Char]
-getVariables (Var v) = [v]
-getVariables (Fixed f) = [f]
+getVariables (Var x) = [x]
+getVariables (Fixed x) = [x]
 getVariables (Con _) = []
 getVariables (UnOp _ e) = dedup (getVariables e)
 getVariables (BinOp _ e1 e2) = dedup (getVariables e1 ++ getVariables e2)
@@ -152,9 +146,15 @@ dedup (x:xs) = if elem x xs
 
 -------------------------------------Tests----------------------------------------
 
+testLaw :: Law -> Bool
+testLaw (Law _ (lhs, rhs)) = and [ evalExpression subst 101 lhs == evalExpression subst 101 rhs 
+                                  | x <- [2,3,4],
+                                    y <- [2,3,4],
+                                    z <- [2,3,4],
+                                  let subst = [("x", Con x), ("y", Con y), ("z", Con z)]]
+
 _exp :: Expression
--- _exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
-_exp = parseExpression True "a ^(a ^(a ^a))"
+_exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
 
 _subst :: Substitution
 _subst = [("a", Con 3), ("b", Con 2), ("c", Con 1), ("d", Con 4)]
@@ -167,14 +167,3 @@ _given = parseLaw True "given : a = b ^ b"
 
 _prf :: Proof
 _prf = getDerivation 5 (_given:_arithmetic_laws) _exp
-
---------------------------------
-
-testLaw :: Law -> Bool
-testLaw (Law _ (lhs, rhs)) = and [ evalExpression subst 101 lhs == evalExpression subst 101 rhs 
-                                  | x <- [2,3,4],
-                                    y <- [2,3,4],
-                                    z <- [2,3,4],
-                                  let subst = [("x", Con x), ("y", Con y), ("z", Con z)]]
-
-
