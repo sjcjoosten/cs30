@@ -2,6 +2,7 @@
 module CS30.Exercises.ModularArithmetic.ModuloProof where
 
 import CS30.Exercises.ModularArithmetic.ModuloParser
+import Debug.Trace
 
 ------------------------------------------Implicit Laws----------------------------------------
 
@@ -28,10 +29,10 @@ _arithmetic_laws = map (parseLaw False)
                     ,"Law11 : x ^ (y + z) = x ^ y \\cdot x ^ z"
                     ,"Law12 : (x \\cdot y) ^ z = x ^ z \\cdot y ^ z"
                     -- Least priority
-                    ,"Law13 : x + y = y + x"
-                    ,"Law14 : x \\cdot y = y \\cdot x"
-                    ,"Law15 : (x + y) + z = x + (y + z)"
-                    ,"Law16 : (x \\cdot y) \\cdot z = x \\cdot (y \\cdot z)"
+                    -- ,"Law13 : x + y = y + x"
+                    -- ,"Law14 : x \\cdot y = y \\cdot x"
+                    -- ,"Law15 : (x + y) + z = x + (y + z)"
+                    -- ,"Law16 : (x \\cdot y) \\cdot z = x \\cdot (y \\cdot z)"
                   ]
                   
 -------------------------------------Proofs----------------------------------------
@@ -46,7 +47,7 @@ getDerivation steps laws e
                , res <- getStep (lawEq law) e' -- getStep
                ] of
                    [] -> []
-                   ((nm,e''):_) -> (nm,e'') : multiSteps (steps'-1) e''
+                   ((nm,e''):_) -> trace ("STEP = " ++ (show (nm, e''))) $ (nm,e'') : multiSteps (steps'-1) e''
 
 -- would go into rewrite function
 -- Law1 : a = b (mod p) implies a + c = b + c (mod p)
@@ -139,15 +140,21 @@ getVariables :: Expression -> [Char]
 getVariables (Var v) = [v]
 getVariables (Fixed f) = [f]
 getVariables (Con _) = []
-getVariables (UnOp _ e) = getVariables e
-getVariables (BinOp _ e1 e2) = getVariables e1 ++ getVariables e2
+getVariables (UnOp _ e) = dedup (getVariables e)
+getVariables (BinOp _ e1 e2) = dedup (getVariables e1 ++ getVariables e2)
 getVariables _ = []
+
+dedup :: Eq a => [a] -> [a]
+dedup [] = []
+dedup (x:xs) = if elem x xs 
+               then dedup xs 
+               else [x] ++ dedup xs 
 
 -------------------------------------Tests----------------------------------------
 
 _exp :: Expression
 -- _exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
-_exp = parseExpression True "(a + b) \\cdot (c + d)"
+_exp = parseExpression True "a ^(a ^(a ^a))"
 
 _subst :: Substitution
 _subst = [("a", Con 3), ("b", Con 2), ("c", Con 1), ("d", Con 4)]
@@ -156,7 +163,7 @@ _eval :: Maybe Int
 _eval = evalExpression _subst 10 _exp
 
 _given :: Law
-_given = parseLaw True "given1 : a = b + c"
+_given = parseLaw True "given : a = b ^ b"
 
 _prf :: Proof
 _prf = getDerivation 5 (_given:_arithmetic_laws) _exp
@@ -169,5 +176,5 @@ testLaw (Law _ (lhs, rhs)) = and [ evalExpression subst 101 lhs == evalExpressio
                                     y <- [2,3,4],
                                     z <- [2,3,4],
                                   let subst = [("x", Con x), ("y", Con y), ("z", Con z)]]
-       
+
 

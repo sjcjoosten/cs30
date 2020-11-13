@@ -25,34 +25,41 @@ modProofEx = exerciseType "ModuloProof" "L??.?????"
 
 modProofs :: [ChoiceTree ([Field], [Int])]
 modProofs
- = [ do e <- (exprOfSize i)
+ = [ do e <- (exprOfSize i ['a', 'b', 'c', 'd'])
         l <- getLawPermuts _arithmetic_laws
-        -- g <- f -- ChoiceTree Law
-        randomProof' e l
+        traceM ("Expression = " ++ (show e))
+        g <- (genGiven e) -- ChoiceTree Law
+        traceM ("ABCDEFG = " ++  (show g))
+        randomProof' e ([g]++l)
+        -- randomProof' e l
     | i <- [7,9,11]]
-       
-exprOfSize :: Int -> ChoiceTree Expression
-exprOfSize 1 = Branch [aCon,aFixed]
-               where 
-                 aCon = nodes (map Con [0..4])
-                 aFixed = nodes [Fixed nm | nm <- ['a', 'b', 'c', 'd']]
-exprOfSize n
- = Branch [Branch [BinOp op <$> exprOfSize i <*> exprOfSize (n - i - 1)
+
+-- ToDo revert constants
+-- Filter single variable expressions    
+exprOfSize :: Int -> [Char] -> ChoiceTree Expression
+exprOfSize 1 xs = Branch [aFixed]
+-- exprOfSize 1 xs = Branch [aCon,aFixed]
+                 where 
+                   -- aCon = nodes (map Con [0..4])
+                   aFixed = nodes [Fixed nm | nm <- xs]
+exprOfSize n xs
+ = Branch [Branch [BinOp op <$> exprOfSize i xs<*> exprOfSize (n - i - 1) xs
                     | i <- [1..(n-2)], i `mod` 2 == 1] 
             | op <- [Pow, Mul, Sub, Add]]
 
 
--- randomProof :: ChoiceTree Expression -> ChoiceTree ([Field], [Int])
--- randomProof (Node a)
---   | length (getPrfStep prf) == 0 = nodes (structurize (getProofPermuts (proofToField ProofError)))
---   |otherwise = nodes (structurize (getProofPermuts (proofToField prf)))
---   where
---     prf = getDerivation 5 _arithmetic_laws a -- limit permutations
---     getPrfStep (Proof _ lst) = lst
---     getPrfStep ProofError = []
---     structurize = map (\(x,y) -> ([FText $"Can you put it in the right order?",
---                                    FIndented 1 [FMath (show a)], FReorder "proof" x], y))
--- randomProof (Branch lst) = Branch [randomProof (lst !! i)| i <- [0..((length lst)-1)]]
+genGiven :: Expression -> ChoiceTree Law
+genGiven e = do expr <- (exprOfSize 3 (getRHS e)) --  = c * c
+                return (Law "given" (Fixed (head (getVariables e)), expr))
+
+getRHS :: Expression -> [Char]
+getRHS e
+  | length t == 0 = [x |x <- ['a', 'b', 'c', 'd'], not $ elem x vars]
+  | otherwise = t
+  where
+    vars = getVariables e
+    h = head vars
+    t = tail vars
 
 randomProof' :: Expression -> [Law] -> ChoiceTree ([Field], [Int])
 randomProof' a lws
@@ -60,17 +67,20 @@ randomProof' a lws
   | otherwise = structurize  <$> (getProofPermuts (proofToField prf))
   where
     prf = getDerivation 5 lws a
+    given = head lws
     getPrfStep (Proof _ lst) = lst
     getPrfStep ProofError = []
     structurize (x,y) = ([FText $"Can you put it in the right order?",
-                                   FIndented 1 [FMath (show a)], FReorder "proof" x], y)
-
+                                   FIndented 1 [FMath (show a)],
+                                   FText $ "Given",
+                                   FIndented 1 [FMath (show (fst (lawEq given))), FMath "=", FMath (show (snd (lawEq given)))],
+                                   FReorder "proof" x], y)
 
 proofToField :: Proof -> [[Field]]
 proofToField ProofError = [[FText "No Proof was found for this expression"]]
-proofToField (Proof exp steps) = [ wrapField st | st <- steps]
+proofToField (Proof exp steps) = trace ("Stepsssss = " ++ (show steps)) $ [ wrapField st | st <- steps]
   where
-    wrapField (a,b) = [FMath "equiv_{p}", FText a, FIndented 1 [FMath (show b)]]
+    wrapField (a,b) = [FMath "\\equiv_{p}", FText a, FIndented 1 [FMath (show b)]]
 
 permutations :: Int -> ChoiceTree [Int]
 permutations 0 = Node []
