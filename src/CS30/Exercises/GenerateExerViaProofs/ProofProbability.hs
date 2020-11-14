@@ -9,7 +9,7 @@ import Control.Monad.Combinators.Expr
 data FracExpr 
     = FConst Rational -- the constants 0 and 1
     | FVar Char -- basic evert, such as A, B 
-    | FExpr FracExpr FracExpr 
+    | FExpr FracExpr FracExpr -- ^ probability expression like Pr[A|B].
     | FBin MathOp FracExpr FracExpr -- ^ operations
     | AndEvent FracExpr FracExpr  -- ‘and’ \wedge 
     | OrEvent FracExpr FracExpr -- ‘or’ \vee  
