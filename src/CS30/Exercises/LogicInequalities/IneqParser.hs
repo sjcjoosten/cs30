@@ -14,7 +14,8 @@ data Opr           = Multiplication | Division | Addition | Subtraction
                    | Exponentiation | Factorial | Negate deriving (Eq,Show)
 data Law           = Law {lawName :: String, lawEq :: Equation}
 type Equation      = (Expr,Expr)
-data Proof         = Proof Expr [ProofStep] deriving Show
+data OldProof      = OldProof Expr [ProofStep] deriving Show
+data Proof         = Proof Inequality Integer [ProofStep] deriving Show
 data ProofStep     = Single (String, Expr) | Double (String,Inequality) deriving Show
 -- MathExpr for parsing, gets converted to Expr for everything else
 data MathExpr      = MathConst Integer 
@@ -65,7 +66,9 @@ instance Show Expr where
     Negate -> showParens (p>q) (showString (symb Negate) . showsPrec q e1)
     _ -> showParens (True) (showsPrec q e1)
     where q = prec o
-  showsPrec p (Op o [e1,e2]) = showParens (p>q) (showsPrec q e1 . showString (symb o) . showsPrec (q+1) e2)
+  showsPrec p (Op o [e1,e2]) = case o of
+                                Exponentiation -> showParens (p>q) (showsPrec q e1 . showString (symb o) . showString "{" . showsPrec (q+1) e2 . showString "}")
+                                _ -> showParens (p>q) (showsPrec q e1 . showString (symb o) . showsPrec (q+1) e2)
       where q = prec o
   showsPrec _ (Op _ _) = showString "()"
 

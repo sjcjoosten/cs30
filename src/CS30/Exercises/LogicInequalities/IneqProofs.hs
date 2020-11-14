@@ -4,20 +4,7 @@ import           CS30.Exercises.Data
 import           Data.Maybe
 import           CS30.Exercises.LogicInequalities.IneqParser
 
-{- some sample expressions -}
-expr1 :: Expr
-expr1 = Op Addition [Op Multiplication [Const 3,Var "n"], Const 6]
-expr2 :: Expr
-expr2 = Op Exponentiation [Var "n", Const 3]
-expr3 :: Expr
-expr3 = Op Factorial [Var "n"]
-expr4 :: Expr
-expr4 = Op Exponentiation [Op Addition [Var "n", Const 4], Const 2]
-
-
 {- laws to be used in our proofs -}
-
--- some of these are duplicated, ex: a * 0 = 0 and 0 * a = 0
 lawList :: [String]
 lawList = [ "Exponentiation: a ^ 0 = 1"
           , "Exponentiation: a ^ 1 = a"
@@ -44,32 +31,36 @@ lawList = [ "Exponentiation: a ^ 0 = 1"
 
 lawBois = stringsToLaw lawList
 
-getDerivationLengthN :: [Law] -> Ineq -> Expr -> Expr -> Integer -> Proof
-getDerivationLengthN laws ineq e1 e2 i = Proof e1 (multiSteps e1 e2 i) 
+makeProof :: Expr -> Expr -> Integer -> Proof
+makeProof e1 e2 n = case evaluate e1 e2 of
+                    Nothing -> makeProof e2 e1 n
+                    Just (ineq,a) -> getDerivationLengthN lawBois ineq e1 e2 n a
+
+getDerivationLengthN :: [Law] -> Ineq -> Expr -> Expr -> Integer -> Integer -> Proof
+getDerivationLengthN laws ineq e1 e2 i a = Proof (e1,ineq,e2) a (multiSteps e1 e2 i) 
   where multiSteps e1' e2' i' | i' <= 0 = []
-                              | otherwise = case [ (lawName law, res)
+                              | otherwise = case [ (lawName law, (res,ineq,e2'))
                                                  | law <- laws
                                                  , res <- getStep2 laws (lawEq law) ineq e1'
                                                  , res /= e1
                                                  ] of
-                                             [] -> case doMath e1' of
-                                                    ((nm,e1''):_) -> (Single (nm,e1'')) : multiSteps e1'' e2' (i' - 1)
-                                                    [] -> (firstThing e1' e2') : (addMore e1' e2' i')
-                                             ((nm,e1''):_) -> (Single (nm,e1'')) : multiSteps e1'' e2' (i' - 1)
+                                             [] -> (addMore e1' e2' i')
+                                             ((nm,(e1'',ineq,e2')):_) -> (Double (nm,(e1'',ineq,e2'))) : multiSteps e1'' e2' (i' - 1)
         addMore e1' e2' i'    | i' <= 0 = []
                               | otherwise = case [ (lawName law, (e1',ineq,res))
                                                  | law <- laws
                                                  , res <- getStep2 laws (lawEq law) ineq e2'
                                                  , res /= e2
                                                  ] of
-                                             [] -> case doMath2 (e1',ineq,e2') of
-                                                    ((nm,(e1',q,e2'')):_) -> (Double (nm,(e1',q,e2''))) : addMore e1' e2'' (i' - 1)
-                                                    [] -> []
+                                             [] -> (lastThing e1' e2')
                                              ((nm,(e1',q,e2'')):_) -> (Double (nm,(e1',q,e2''))) : addMore e1' e2'' (i' - 1)
-        firstThing e1' e2' = Double ("Assumption",(e1',ineq,e2'))
+        lastThing e1' e2' = let (one,two) = sub (e1',e2') "n" a
+                                Just one' = compute one
+                                Just two' = compute two
+                            in [Double ("Assumption",(one,ineq,two)), Double ("Calculate",(Const one',ineq,Const two'))]
 
-getSingleDerivation :: [Law] -> Ineq -> Expr -> Integer -> Proof
-getSingleDerivation laws ineq e1 i = Proof e1 (multiSteps e1 i) 
+getSingleDerivation :: [Law] -> Ineq -> Expr -> Integer -> OldProof
+getSingleDerivation laws ineq e1 i = OldProof e1 (multiSteps e1 i) 
   where multiSteps e1' i'     | i' <= 0 = []
                               | otherwise = case [ (lawName law, res)
                                                  | law <- laws
@@ -78,81 +69,6 @@ getSingleDerivation laws ineq e1 i = Proof e1 (multiSteps e1 i)
                                                  ] of
                                              [] -> []
                                              ((nm,e1''):_) -> (Single (nm,e1'')) : multiSteps e1'' (i' - 1)
-
--- does some specific pattern matching to see if certain expressions can be simplified
-doMath :: Expr -> [(String,Expr)]
-doMath (Op o [e1,e2]) = case (e1,e2) of
-                        (Const a, Const b) 
-                            -> case o of
-                                Multiplication -> [("Do Math", Const (a * b))]
-                                Addition -> [("Do Math", Const (a + b))]
-                                Subtraction -> [("Do Math", Const (a - b))]
-                                Division -> [("Do Math", Const (a `div` b))]
-                                Exponentiation -> [("Do Math", Const (a ^ b))]
-                                _ -> []
-                        (Op Multiplication [Const a, Var b],
-                         Op Multiplication [Const c, Var d]) 
-                            -> case o of
-                                Addition -> [("Do Math", Op Multiplication [Const (a + c), Var b])]
-                                Subtraction -> [("Do Math", Op Multiplication [Const (a - c), Var b])]
-                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Op Exponentiation [Var b, Const 2]])]
-                                Division -> [("Do Math", Const (a `div` c))]
-                                _ -> []
-                        (Op Multiplication [Var b, Const a],
-                         Op Multiplication [Const c, Var d]) 
-                            -> case o of
-                                Addition -> [("Do Math", Op Multiplication [Const (a + c), Var b])]
-                                Subtraction -> [("Do Math", Op Multiplication [Const (a - c), Var b])]
-                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Op Exponentiation [Var b, Const 2]])]
-                                Division -> [("Do Math", Const (a `div` c))]
-                                _ -> []
-                        (Op Multiplication [Const a, Var b],
-                         Op Multiplication [Var d, Const c]) 
-                            -> case o of
-                                Addition -> [("Do Math", Op Multiplication [Const (a + c), Var b])]
-                                Subtraction -> [("Do Math", Op Multiplication [Const (a - c), Var b])]
-                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Op Exponentiation [Var b, Const 2]])]
-                                Division -> [("Do Math", Const (a `div` c))]
-                                _ -> []
-                        (Op Multiplication [Var b, Const a],
-                         Op Multiplication [Var d, Const c]) 
-                            -> case o of
-                                Addition -> [("Do Math", Op Multiplication [Const (a + c), Var b])]
-                                Subtraction -> [("Do Math", Op Multiplication [Const (a - c), Var b])]
-                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Op Exponentiation [Var b, Const 2]])]
-                                Division -> [("Do Math", Const (a `div` c))]
-                                _ -> []
-                        (Op Multiplication [Var b, Const a], Const c) 
-                            -> case o of
-                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Var b])]
-                                Division -> [("Do Math", Op Multiplication [Const (a `div` c),Var b])]
-                                _ -> []
-                        (Op Multiplication [Const a, Var b], Const c) 
-                            -> case o of
-                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Var b])]
-                                Division -> [("Do Math", Op Multiplication [Const (a `div` c),Var b])]
-                                _ -> []
-                        (Const c, Op Multiplication [Var b, Const a]) 
-                            -> case o of
-                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Var b])]
-                                Division -> [("Do Math", Op Multiplication [Const (c `div` a),Var b])]
-                                _ -> []
-                        (Const c, Op Multiplication [Const a, Var b])
-                            -> case o of
-                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Var b])]
-                                Division -> [("Do Math", Op Multiplication [Const (c `div` a),Var b])]
-                                _ -> []
-                        (_,_) -> case doMath e1 of
-                                  [("Do Math",e1')] -> [("Do Math", Op o [e1',e2])]
-                                  [] -> case doMath e2 of
-                                          [("Do Math",e2')] -> [("Do Math", Op o [e1,e2'])]
-                                          [] -> []
-doMath _ = []
-
-doMath2 :: Inequality -> [(String,Inequality)]
-doMath2 (e1,i,e2) = case doMath e1 of
-                      [] -> []
-                      ((a,b)):_ -> [(a,(e1,i,b))]
 
 getStep :: Equation -> Expr -> [Expr]
 getStep (lhs, rhs) expr
@@ -185,7 +101,7 @@ getStep2 laws (lhs, rhs) ineq e
         --"Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"
         isPositive e1 = provesGEQ 1 (getSingleDerivation laws ineq e1 5)
         isNonNeg e1   = provesGEQ 0 (getSingleDerivation laws ineq e1 5)
-        provesGEQ b (Proof e1 steps) = go b e1 steps
+        provesGEQ b (OldProof e1 steps) = go b e1 steps
               where go b' (Const n) _ | n >= b'     = True
                                      | otherwise = False
                     --go b' (Op Negation [e]) _ = False
@@ -309,48 +225,3 @@ evalFac n = case (n>=0) of
               True -> Just (realFac n)
   where realFac 0 = 1
         realFac x = x * realFac (x - 1)
-
-
-generateRandIneq :: ChoiceTree Ineq
-generateRandIneq = Branch [Node GThan, Node GEq]
-
--- return valid expressions, i.e. those that have a variable in them
--- just calling generateRandEx i<1 may or may not generate a valid expression
--- but calling generateRandEx i≥1 will filter out the invalid ones
-generateRandEx :: Int -> String -> ChoiceTree Expr
-generateRandEx i n | i < 1
- = Branch [ Branch [Node (Var varName) | varName <- [n]] -- add support for more variables
-          , Branch [Node (Const val) | val <- [2..9]]
-          ]
-generateRandEx i n
- = filterTree $ Branch [do {e1 <- generateRandEx i' n
-                       ;e2 <- generateRandEx (i - i' - 1) n
-                       ;opr <- nodes $ availOps i
-                       ;return (Op opr [e1,e2])
-                       }
-                       | i' <- [0..i-1]
-                       ]
-    where
-      availOps j = case (j < 2) of
-                    True -> [Addition,Subtraction,Multiplication,Exponentiation]
-                    False -> [Addition,Multiplication]
-
-filterTree :: ChoiceTree Expr -> ChoiceTree Expr
-filterTree (Branch b@((Branch _):_)) = Branch $ filter isNonEmpty $ map filterTree b
-filterTree (Branch n@((Node _):_)) =  Branch $ filter nodeHasVar n
-filterTree n = n
-
-isNonEmpty :: ChoiceTree Expr -> Bool
-isNonEmpty (Node _) = True
-isNonEmpty (Branch []) = False
-isNonEmpty (Branch b) = or $ map isNonEmpty b
-
-nodeHasVar :: ChoiceTree Expr -> Bool
-nodeHasVar (Branch _) = False
-nodeHasVar (Node n) = hasVar n
-  where
-    hasVar (Var _) = True
-    hasVar (Const _) = False
-    hasVar (Op _ [e1]) = hasVar e1
-    hasVar (Op _ [e1,e2]) = hasVar e1 || hasVar e2
-    hasVar (Op _ _) = False
