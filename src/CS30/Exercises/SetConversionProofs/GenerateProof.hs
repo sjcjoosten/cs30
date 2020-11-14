@@ -71,6 +71,19 @@ generateProof laws' e = Proof e (multiSteps e)
                           ((nm,e''):_) -> (nm,e'') : multiSteps e''
 
 
+cleanProof :: Proof -> Proof
+cleanProof (Proof ie (xs)) = Proof ie (clean xs)
+
+
+clean :: [(String, SetExpr)] -> [(String, SetExpr)]
+clean []    = []
+clean [stp] = [stp]
+clean (stp1@(nm,_):stp2@(nxt_nm, nxt_e):rest) = if nxt_nm == "identity fxn" then
+                                                    clean ((nm, nxt_e):rest)
+                                                else
+                                                    stp1:clean (stp2:rest)
+
+
 getStep :: Equation -> SetExpr -> [SetExpr] -- [SetExpr] because we want to check if it's empty or not
 getStep eq@(lhs, rhs) e = case match lhs e of
                             [] -> recurse e -- If there is no substition, recursively getStep e
