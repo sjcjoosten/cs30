@@ -16,10 +16,10 @@ logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
                        logicFeedback
 
 -- generate initial expressions to put through the prover
--- TODO: don't negate expressions which already have negation 
--- (e.g. for the "Double Negation" drill, we don't want "triple negation")
 initialExpr :: (Int -> ChoiceTree Expr) -> ChoiceTree Expr
-initialExpr expr = Neg <$> expr 7
+initialExpr expr = neg <$> expr 7
+                   where neg (Neg e)   = Neg e
+                         neg otherExpr = Neg otherExpr
 
 -- 
 exprOfSize :: Int -> ChoiceTree Expr
@@ -57,17 +57,18 @@ getSize (Implies e1 e2) = 1 + getSize e1 + getSize e2
 -- the expressions assigned should have sizes that sum to the given "size",
 --  thereby constraining the size of the expression overall
 assignRandExprs :: Int -> [Char] -> ChoiceTree [(Char, Expr)]
-assignRandExprs size vars = Branch $ map (mapM genPair) (map (zip vars) exprSizes)
-                            where -- exprSizes gives the possible sizes for substitutions,
-                                  -- in order to sum to the desired size
-                                  exprSizes = sumLen size (length vars)
-                                  -- sumLen returns all lists of positive integers of length l
-                                  -- that sum to n
-                                  sumLen :: Int -> Int -> [[Int]]
-                                  sumLen x 1 = [[x]]
-                                  sumLen n l = [num:r | num <- [1..(n-1)], r <- sumLen (n-num) (l-1)]
-                                  genPair :: (Char, Int) -> ChoiceTree (Char, Expr)
-                                  genPair (c, n) = (exprOfSize n) >>= (\expr -> return (c, expr))
+assignRandExprs size vars | length vars == 0 = Node []
+                          | otherwise = Branch $ map (mapM genPair) (map (zip vars) exprSizes)
+                          where -- exprSizes gives the possible sizes for substitutions,
+                              -- in order to sum to the desired size
+                              exprSizes = sumLen size (length vars)
+                              -- sumLen returns all lists of positive integers of length l
+                              -- that sum to n
+                              sumLen :: Int -> Int -> [[Int]]
+                              sumLen x 1 = [[x]]
+                              sumLen n l = [num:r | num <- [1..(n-1)], r <- sumLen (n-num) (l-1)]
+                              genPair :: (Char, Int) -> ChoiceTree (Char, Expr)
+                              genPair (c, n) = (exprOfSize n) >>= (\expr -> return (c, expr))
 
 -- generate an expression to fit the law given by the expression
 --  using s as a constraint on the size
@@ -88,9 +89,9 @@ getLawsByName name = nodes [(Law nm eq) | (Law nm eq) <- laws, nm == name]
 -- contains all the exercises: the list of Fields is what we display
 -- and the String is the solution (actually just the index of the right choice)
 logicExercises :: [ChoiceTree ([Field], String)]
-logicExercises = [do (Law testName (expr, _)) <- getLawsByName name
-                     e <- initialExpr (forceLaw expr)
-                     let (Proof e' steps) = getDerivation laws e
+logicExercises = [do (Law testName (lhs, rhs)) <- getLawsByName name
+                     e <- initialExpr (forceLaw lhs)
+                     let (Proof e' steps) = getDerivation ((Law testName (lhs,rhs)):laws) e
                      remStep <- nodes $ findIndices ((== testName) . fst) steps
                      let (stepName, _) = steps!!remStep
                      choices <- (getOrderedSubset (delete stepName lawNames) 2)
