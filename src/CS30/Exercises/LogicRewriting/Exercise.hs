@@ -16,9 +16,12 @@ logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
                        logicFeedback
 
 -- generate initial expressions to put through the prover
-randomExpr :: ChoiceTree Expr
-randomExpr = Neg <$> exprOfSize 6
+-- TODO: don't negate expressions which already have negation 
+-- (e.g. for the "Double Negation" drill, we don't want "triple negation")
+initialExpr :: (Int -> ChoiceTree Expr) -> ChoiceTree Expr
+initialExpr expr = Neg <$> expr 7
 
+-- 
 exprOfSize :: Int -> ChoiceTree Expr
 exprOfSize 1 = Branch [nodes (map Const [True,False]), 
                         nodes (map Var ['p','q','r'])]
@@ -39,22 +42,46 @@ getVars (And e1 e2) = getVars e1 ++ getVars e2
 getVars (Or e1 e2) = getVars e1 ++ getVars e2
 getVars (Implies e1 e2) = getVars e1 ++ getVars e2
 
--- assigns random expressions to the variables
--- of constant size 4. TODO: vary the size of the expression generated
-assignRandExprs :: [Char] -> ChoiceTree [(Char, Expr)]
-assignRandExprs [] = return []
-assignRandExprs (x:xs) = do varExpPair <- genPair x
-                            remPairs <- assignRandExprs xs
-                            return (varExpPair:remPairs)
-                         where genPair :: Char -> ChoiceTree (Char, Expr)
-                               genPair c = (exprOfSize 4) >>= (\expr -> return (c, expr))                                                              
+-- gets the size of an expression
+-- (variables have size 0, because in the case of matching laws, 
+-- they will be replaced by other expressions)
+getSize :: Expr -> Int
+getSize (Var _)         = 0
+getSize (Const _)       = 1
+getSize (Neg e)         = 1 + getSize e
+getSize (And e1 e2)     = 1 + getSize e1 + getSize e2
+getSize (Or e1 e2)      = 1 + getSize e1 + getSize e2
+getSize (Implies e1 e2) = 1 + getSize e1 + getSize e2
+
+-- assigns random expressions of random sizes to the variables
+-- the expressions assigned should have sizes that sum to the given "size",
+--  thereby constraining the size of the expression overall
+assignRandExprs :: Int -> [Char] -> ChoiceTree [(Char, Expr)]
+assignRandExprs size vars = Branch $ map (mapM genPair) (map (zip vars) exprSizes)
+                            where -- exprSizes gives the possible sizes for substitutions,
+                                  -- in order to sum to the desired size
+                                  exprSizes = sumLen size (length vars)
+                                  -- sumLen returns all lists of positive integers of length l
+                                  -- that sum to n
+                                  sumLen :: Int -> Int -> [[Int]]
+                                  sumLen x 1 = [[x]]
+                                  sumLen n l = [num:r | num <- [1..(n-1)], r <- sumLen (n-num) (l-1)]
+                                  genPair :: (Char, Int) -> ChoiceTree (Char, Expr)
+                                  genPair (c, n) = (exprOfSize n) >>= (\expr -> return (c, expr))
 
 -- generate an expression to fit the law given by the expression
-forceLaw :: Expr -> ChoiceTree Expr
-forceLaw e = do let vars = nub $ getVars e
-                assignments <- assignRandExprs vars
-                return (apply assignments e)
+--  using s as a constraint on the size
+-- 
+-- note: if there are duplicate variables in the expression, the generated expressions
+--  may be larger than s, but after the first step they should be simplified to 
+--  an expression of at most size s 
+forceLaw :: Expr -> Int -> ChoiceTree Expr
+forceLaw e s = do let vars = nub $ getVars e
+                  let size = s - (getSize e)
+                  assignments <- assignRandExprs size vars
+                  return (apply assignments e)
 
+-- get all the laws which have given name
 getLawsByName :: String -> ChoiceTree Law
 getLawsByName name = nodes [(Law nm eq) | (Law nm eq) <- laws, nm == name]
 
@@ -62,7 +89,7 @@ getLawsByName name = nodes [(Law nm eq) | (Law nm eq) <- laws, nm == name]
 -- and the String is the solution (actually just the index of the right choice)
 logicExercises :: [ChoiceTree ([Field], String)]
 logicExercises = [do (Law testName (expr, _)) <- getLawsByName name
-                     e <- Neg <$> forceLaw expr
+                     e <- initialExpr (forceLaw expr)
                      let (Proof e' steps) = getDerivation laws e
                      remStep <- nodes $ findIndices ((== testName) . fst) steps
                      let (stepName, _) = steps!!remStep
