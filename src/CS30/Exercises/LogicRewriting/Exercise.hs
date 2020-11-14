@@ -5,7 +5,7 @@ import           CS30.Exercises.Data
 import           CS30.Exercises.Util
 import qualified Data.Map as Map
 import           Data.List
-import           CS30.Exercises.LogicRewriting.Parsing (laws, lawNames, Expr (..), Law (..))
+import           CS30.Exercises.LogicRewriting.Parsing (laws, lawNames, Expr (..), Op (..), Law (..))
 import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, Proof (..), apply)
 
 -- final exercise type
@@ -24,23 +24,18 @@ initialExpr expr = neg <$> expr 7
 -- 
 exprOfSize :: Int -> ChoiceTree Expr
 exprOfSize 1 = Branch [nodes (map Const [True,False]), 
-                        nodes (map Var ['p','q','r'])]
+                       nodes (map Var ['p','q','r'])]
 exprOfSize 2 = Branch [Neg <$> exprOfSize 1]
-exprOfSize n = Branch ([And <$> exprOfSize i <*> exprOfSize (n-i-1)
-                    | i <- [1..(n-2)]] ++ 
-                    [Or <$> exprOfSize i <*> exprOfSize (n-i-1)
-                    | i <- [1..(n-2)]] ++
-                    [Implies <$> exprOfSize i <*> exprOfSize (n-i-1)
-                    | i <- [1..(n-2)]])
+exprOfSize n = Branch ([Bin op <$> exprOfSize i <*> exprOfSize (n-i-1)
+                       | i <- [1..(n-2)]
+                       , op <- [And, Or, Implies]])
 
 -- extracts all the variables from an expression
 getVars :: Expr -> [Char]
 getVars (Var v) = [v]
 getVars (Const _) = []
 getVars (Neg e) = getVars e
-getVars (And e1 e2) = getVars e1 ++ getVars e2
-getVars (Or e1 e2) = getVars e1 ++ getVars e2
-getVars (Implies e1 e2) = getVars e1 ++ getVars e2
+getVars (Bin _ e1 e2) = getVars e1 ++ getVars e2
 
 -- gets the size of an expression
 -- (variables have size 0, because in the case of matching laws, 
@@ -49,9 +44,7 @@ getSize :: Expr -> Int
 getSize (Var _)         = 0
 getSize (Const _)       = 1
 getSize (Neg e)         = 1 + getSize e
-getSize (And e1 e2)     = 1 + getSize e1 + getSize e2
-getSize (Or e1 e2)      = 1 + getSize e1 + getSize e2
-getSize (Implies e1 e2) = 1 + getSize e1 + getSize e2
+getSize (Bin _ e1 e2)   = 1 + getSize e1 + getSize e2
 
 -- assigns random expressions of random sizes to the variables
 -- the expressions assigned should have sizes that sum to the given "size",

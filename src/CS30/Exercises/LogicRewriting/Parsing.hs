@@ -14,38 +14,51 @@ type Equation = (Expr,Expr)
 
 data Expr = Var Char          -- variable like 'p' or 'q' 
           | Const Bool        -- either true or false
-          | And Expr Expr     -- <expr> \wedge <expr> 
-          | Or Expr Expr      -- <expr> \vee <expr>
-          | Implies Expr Expr -- <expr> \Rightarrow <expr>
+          | Bin Op Expr Expr  -- binary operations (and,or,implies)
           | Neg Expr          -- negation (\neg <expr>)
     deriving Eq
+
+data Op = And     -- <expr> \wedge <expr> 
+        | Or      -- <expr> \vee <expr>
+        | Implies -- <expr> \Rightarrow <expr>
+    deriving Eq
+
+opPrec :: Op -> Int
+opPrec (And)     = 3
+opPrec (Or)      = 2
+opPrec (Implies) = 1
+
+opSymb :: Op -> String
+opSymb (And)     = "\\ \\wedge\\ "
+opSymb (Or)      = "\\ \\vee\\ "
+opSymb (Implies) = "\\ \\Rightarrow\\ "
 
 -- display an Expr as a string (to be used with FMath)
 instance Show Expr where
     -- showsPrec :: Int -> Expr -> ShowS
-    showsPrec _ (Var v)         = showChar v
-    showsPrec _ (Const b)       = if b then showString "\\text{true}" 
-                                  else showString "\\text{false}"
-    showsPrec p (Neg e)         = showParenLATEX (p >= 4) (showString "\\neg " . showsPrec 4 e)
-    showsPrec p (And e1 e2)     = showParenLATEX (p > 3)
-                                   (showsPrec 3 e1 . showString "\\ \\wedge\\ " . showsPrec 3 e2)
-    showsPrec p (Or e1 e2)      = showParenLATEX (p > 2)
-                                   (showsPrec 2 e1 . showString "\\ \\vee\\ " . showsPrec 2 e2)
-    showsPrec p (Implies e1 e2) = showParenLATEX (p > 1)
-                                   (showsPrec 1 e1 . showString "\\ \\Rightarrow\\ " . showsPrec 1 e2)                               
+    showsPrec _ (Var v)        = showChar v
+    showsPrec _ (Const b)      = if b then showString "\\text{true}" 
+                                 else showString "\\text{false}"
+    showsPrec p (Neg e)        = showParenLATEX (p >= 4) (showString "\\neg " . showsPrec 4 e)
+    showsPrec p (Bin op e1 e2) = showParenLATEX (p > prec)
+                                   (showsPrec prec e1 . showString symb . showsPrec prec e2)
+                                 where prec = opPrec op 
+                                       symb = opSymb op
 
 -- evaluates an expression containing only variables 'p', 'r', 'q'
 evalExpr :: Expr -> [Bool]
-evalExpr (Var v)         = case v of
-                            'p' -> [True,True,True,True,False,False,False,False]
-                            'q' -> [True,True,False,False,True,True,False,False]
-                            'r' -> [True,False,True,False,True,False,True,False]
-                            _   -> error "expression contains unrecognized variable (not p,q, or r)"
-evalExpr (Const b)       = replicate 8 b
-evalExpr (Neg e)         = [not b | b <- evalExpr e]
-evalExpr (And e1 e2)     = [b1 && b2 | (b1,b2) <- zip (evalExpr e1) (evalExpr e2)]
-evalExpr (Or e1 e2)      = [b1 || b2 | (b1,b2) <- zip (evalExpr e1) (evalExpr e2)]
-evalExpr (Implies e1 e2) = [not b1 || b2 | (b1,b2) <- zip (evalExpr e1) (evalExpr e2)]
+evalExpr (Var v)        = case v of
+                           'p' -> [True,True,True,True,False,False,False,False]
+                           'q' -> [True,True,False,False,True,True,False,False]
+                           'r' -> [True,False,True,False,True,False,True,False]
+                           _   -> error "expression contains unrecognized variable (not p,q, or r)"
+evalExpr (Const b)      = replicate 8 b
+evalExpr (Neg e)        = [not b | b <- evalExpr e]
+evalExpr (Bin op e1 e2) = [(perform op) b1 b2 
+                          | (b1,b2) <- zip (evalExpr e1) (evalExpr e2)]
+                          where perform (And)     = (&&)
+                                perform (Or)      = (||)
+                                perform (Implies) = (\x y -> not x || y)
 
 checkLaw :: Law -> Bool
 checkLaw (Law _ (e1,e2)) = evalExpr e1 == evalExpr e2
@@ -126,9 +139,10 @@ parens = between (symbol "(") (symbol ")")
 operatorTable :: [[Operator Parser Expr]]
 operatorTable = 
     [ [prefix "\\neg" Neg, prefix "!" Neg],
-      [binary "\\vee" Or, binary "||" Or, 
-       binary "\\wedge" And, binary "&&" And,
-       binary "\\Rightarrow" Implies, binary "=>" Implies]
+      [binary "\\vee" (Bin Or), binary "||" (Bin Or), 
+       binary "\\wedge" (Bin And), binary "&&" (Bin And),
+       binary "\\Rightarrow" (Bin Implies), 
+       binary "=>" (Bin Implies)]
     ]
 
 -- helper function for generating an binary infix operator
