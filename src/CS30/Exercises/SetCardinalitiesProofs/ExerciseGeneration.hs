@@ -15,6 +15,13 @@ type SetCardinalityProblem = ([Field], Proof, Integer)
 type PossibleVals = [(Expr, Integer)] -- Stores (expression, possible values) for each expression found in the equation
 
 
+-- TODO:
+-- get rid of warnings
+-- try to import functions combine and parseAnswer
+-- maybe make latex a little prettier
+-- change/improve law names
+-- general organization
+
 cardinalityProofExer :: ExerciseType
 cardinalityProofExer 
     = exerciseType  "Set Cardinality" "L?.?" 
@@ -26,7 +33,7 @@ cardinalityProofExer
 
 
 setExercises :: [ChoiceTree SetCardinalityProblem] -- first thing in field will be expression, rest its equivalencies
-setExercises = [fullExercise 3, fullExercise 5, fullExercise 7]
+setExercises = [fullExercise 3, fullExercise 5, fullExercise 6]
   where fullExercise i = do ex <- generateRandSetExpr i
                             let proof@(Proof lhs steps) = genProof laws (Op Cardinality [ex])
                                 rhs = last (lhs:map snd steps)
@@ -38,7 +45,8 @@ setExercises = [fullExercise 3, fullExercise 5, fullExercise 7]
 
         genFields lhs getVal exprs
           = [FText "Given that "] 
-            ++ combine [FMath (exprToLatex e ++ "=" ++ show (getVal e)) | e <- exprs]
+            ++ combine [FMath (exprToLatex e ++ "=" ++ show (getVal e)) | e <- (filter (\x -> x /= (Val a) ) 
+            exprs)]
             ++ [FText ". Compute ", FMath (exprToLatex lhs)]
             ++ [FFieldMath "Answer"]
 
@@ -75,7 +83,7 @@ generateFeedback (question, (Proof proofExpr proofSteps), answer) usrRsp pr
             wrongRsp = [FText ("incorrect response, these are the steps to calculate"), FMath (exprToLatex proofExpr ++ "=" ++ show answer), FText "with the given values",
                         FTable (
                             [headerRow] ++           
-                            [[Cell (FText "") , Cell (FMath (exprToLatex proofExpr))]] ++
+                            [[Cell (FText "Expression") , Cell (FMath ("\\quad" ++ exprToLatex proofExpr))]] ++
                             [[Cell (FText rule) , Cell (FMath ("= " ++ exprToLatex step))] | (rule, step) <- proofSteps]                                                                          -- add header row to the table                        
                         )
                     ]
@@ -95,11 +103,22 @@ combine (x:xs) = [x, FText ", "] ++ combine xs
 -- intersection in cardinality will necessitate lookup
 
 generateRandSetExpr :: Int -> ChoiceTree Expr
-generateRandSetExpr i = generateRandSetExpr_helper [Union, Powerset, Cartesian, Setminus] i
+generateRandSetExpr i = fst . flip setVars ['A' ..] <$> (generateRandSetExpr_helper [Union, Powerset, Cartesian, Setminus] i)
+    
+setVars :: Expr -> [Char] -> (Expr, [Char])
+setVars e@(Val a) varNames = (e, varNames)
+setVars (Var _) (possible:possibles) = (Var possible, possibles)
+setVars (Op o [expr]) possibles = 
+        let (expr', newPossible) = setVars expr possibles in (Op o [expr'], newPossible)
+setVars (Op o [expr1,expr2]) possibles = 
+        let (expr1', newPossible1) = setVars expr1 possibles
+            (expr2', newPossible2) = setVars expr2 newPossible1
+        in
+            (Op o [expr1',expr2'], newPossible2)
 
 generateRandSetExpr_helper :: [Symb] -> Int -> ChoiceTree Expr
 generateRandSetExpr_helper _ n 
-    | n < 2 = Branch [ Node (Var varName) | varName <- ['A' .. 'F']]
+    | n < 2 = Branch [ Node (Var varName) | varName <- ['A']]
 generateRandSetExpr_helper lstOfOps n = do {
                             symb <- nodes lstOfOps; -- [Union, Powerset, Cartesian, Setminus];
                             if symb == Union then
@@ -120,9 +139,11 @@ generateRandSetExpr_helper lstOfOps n = do {
                                     n' <- nodes [1 .. n-1];
                                     expr1 <- generateRandSetExpr_helper [Union, Setminus] n';
                                     expr2 <- generateRandSetExpr_helper [Union, Setminus] (n - n' - 2);
-                                    return (Op symb [expr1, expr2])                                }
+                                    return (Op symb [expr1, expr2])                                
+                                }
 } 
-           
+
+
 
 
 -- From IncExcCardinalities.hs (maybe import)
@@ -136,17 +157,15 @@ parseAnswer = unspace digits
       cvt d = fromEnum d - fromEnum '0'
 
 
-
 genAllPossibleValues :: Expr -> ChoiceTree PossibleVals
 genAllPossibleValues expr = assignAll toAssign
     where
         toAssign = nubSort (getExprs expr)  -- List of all expression (e.g. Var A, Op Intersection [Var A, Var C], Op Intersection [Var B,Var C] ] )
-
         assignAll [] = Node []
         assignAll (x:xs) = do {
             intersectionPossibleVal <- nodes [2 .. 10];
             varPossibleVal <- nodes [11 .. 20];
-            genericPossibleVal <- nodes [11 .. 20];
+            genericPossibleVal <- nodes [2 .. 20];
             xs' <- assignAll xs;
             case (x) of
                 Val (x')                            -> return ((x, x'):xs'); -- Only possible value for a constant is itself

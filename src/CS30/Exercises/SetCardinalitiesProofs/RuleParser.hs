@@ -184,7 +184,7 @@ parens e = case (e) of
             Op Add _             -> exprToLatex e 
             Op Sub _             -> exprToLatex e
             Op Mult _            -> exprToLatex e
-            _                    -> "\\left(" ++ exprToLatex e ++ "\\right)"
+            _                    -> "(" ++ exprToLatex e ++ ")"
 
 
    -- if e1 === Var or Card then s otherwise brackets ++ symbLookupAlt symb ++ if e2 === Var or Card then s otherwise brackets
