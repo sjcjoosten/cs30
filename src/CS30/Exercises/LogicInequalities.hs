@@ -13,10 +13,10 @@ logicInequalitiesEx = exerciseType "ineqProof" "L?.???" "Logic: Inequality"
   where simpleFeedback (_,sol) rsp pr
                 = case Map.lookup "proof" rsp of
                         Just str
-                         -> if map ((sol !!) . read ) (breakUnderscore str) == [0..length sol - 1]
+                         -> if map (sol !!) (breakUnderscore str) == [0..length sol - 1]
                             then markCorrect pr
                             else markWrong pr{prFeedback=[ FText "You answered: ", FText $ show (breakUnderscore str)
-                                                         , FText "but the answer was: ", FText $ show sol]}
+                                                         , FText " but the answer was: ", FText $ show sol]}
                         Nothing -> error "Client response is missing 'proof' field"
 
 
@@ -27,11 +27,11 @@ permutations n
       rm <- permutations (n-1)
       return (i : map (\v -> if v >= i then v+1 else v) rm)
 
-breakUnderscore :: String -> [String]
+breakUnderscore :: String -> [Int]
 breakUnderscore s
   =  case dropWhile (=='_') s of
        "" -> []
-       s' -> w : breakUnderscore s''
+       s' -> (read w) : breakUnderscore s''
              where (w, s'') = break (=='_') s'
 
 shuffle :: Proof -> [Int] -> [Field]

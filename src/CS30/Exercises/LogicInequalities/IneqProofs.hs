@@ -39,23 +39,8 @@ lawList = [ "Exponentiation: a ^ 0 = 1"
           , "Distributive Right: (a + b) * c = a * c + b * c"
           , "Distributive Left: a * (c - d) = a * c - a * d"
           , "Distributive Right: (a - b) * c = a * c - b * c"
-          , "Exponentiation: a ^ 2 = a * a"
+          -- , "Exponentiation: a ^ 2 = a * a"
           ]
-
--- ineqLawList :: [String]
--- ineqLawList = [ --"Multiplication for x > 0: x * y > x * z \\Rightarrow y > z"    -- hold off for now
---               --, "Multiplication for x > 0: y * x > z * x \\Rightarrow y > z"    -- hold off for now
---                 "Multiplication for x ≥ 0: y > z \\Rightarrow x * y ≥ x * z"      -- done
---               , "Multiplication for x > 0: y > z \\Rightarrow x * y > x * z"      -- done
---               , "Multiplication for x > 0: y > z \\Rightarrow y * x > z * x"      -- done
---               , "Multiplication for x ≥ 0: y > z \\Rightarrow y * x ≥ z * x"      -- done
---               , "Addition: x > y \\Rightarrow x + z > y + z"
---               , "Division for x > 0 and z > 0: x < y \\Rightarrow z / x > z / y"
---               , "Division for x > 0 and z > 0: x > y \\Rightarrow z / x < z / y"
---               , "Division for x > 0 and z ≥ 0: x < y \\Rightarrow z / x ≥ z / y"
---               , "Division for x > 0 and z ≥ 0: x > y \\Rightarrow z / x ≤ z / y"
---               , "Numbers: 1 > 0" -- idk what to do about this last one but it's needed
---               ]
 
 lawBois = stringsToLaw lawList
 
@@ -67,7 +52,9 @@ getDerivationLengthN laws ineq e1 e2 i = Proof e1 (multiSteps e1 e2 i)
                                                  , res <- getStep2 laws (lawEq law) ineq e1'
                                                  , res /= e1
                                                  ] of
-                                             [] -> (firstThing e1' e2') : (addMore e1' e2' i')
+                                             [] -> case doMath e1' of
+                                                    ((nm,e1''):_) -> (Single (nm,e1'')) : multiSteps e1'' e2' (i' - 1)
+                                                    [] -> (firstThing e1' e2') : (addMore e1' e2' i')
                                              ((nm,e1''):_) -> (Single (nm,e1'')) : multiSteps e1'' e2' (i' - 1)
         addMore e1' e2' i'    | i' <= 0 = []
                               | otherwise = case [ (lawName law, (e1',ineq,res))
@@ -75,7 +62,9 @@ getDerivationLengthN laws ineq e1 e2 i = Proof e1 (multiSteps e1 e2 i)
                                                  , res <- getStep2 laws (lawEq law) ineq e2'
                                                  , res /= e2
                                                  ] of
-                                             [] -> []
+                                             [] -> case doMath2 (e1',ineq,e2') of
+                                                    ((nm,(e1',q,e2'')):_) -> (Double (nm,(e1',q,e2''))) : addMore e1' e2'' (i' - 1)
+                                                    [] -> []
                                              ((nm,(e1',q,e2'')):_) -> (Double (nm,(e1',q,e2''))) : addMore e1' e2'' (i' - 1)
         firstThing e1' e2' = Double ("Assumption",(e1',ineq,e2'))
 
@@ -90,7 +79,80 @@ getSingleDerivation laws ineq e1 i = Proof e1 (multiSteps e1 i)
                                              [] -> []
                                              ((nm,e1''):_) -> (Single (nm,e1'')) : multiSteps e1'' (i' - 1)
 
---[ (lawName law, res) | law <- lawBois, res <- getStep2 laws (lawEq law) GThan a ]
+-- does some specific pattern matching to see if certain expressions can be simplified
+doMath :: Expr -> [(String,Expr)]
+doMath (Op o [e1,e2]) = case (e1,e2) of
+                        (Const a, Const b) 
+                            -> case o of
+                                Multiplication -> [("Do Math", Const (a * b))]
+                                Addition -> [("Do Math", Const (a + b))]
+                                Subtraction -> [("Do Math", Const (a - b))]
+                                Division -> [("Do Math", Const (a `div` b))]
+                                Exponentiation -> [("Do Math", Const (a ^ b))]
+                                _ -> []
+                        (Op Multiplication [Const a, Var b],
+                         Op Multiplication [Const c, Var d]) 
+                            -> case o of
+                                Addition -> [("Do Math", Op Multiplication [Const (a + c), Var b])]
+                                Subtraction -> [("Do Math", Op Multiplication [Const (a - c), Var b])]
+                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Op Exponentiation [Var b, Const 2]])]
+                                Division -> [("Do Math", Const (a `div` c))]
+                                _ -> []
+                        (Op Multiplication [Var b, Const a],
+                         Op Multiplication [Const c, Var d]) 
+                            -> case o of
+                                Addition -> [("Do Math", Op Multiplication [Const (a + c), Var b])]
+                                Subtraction -> [("Do Math", Op Multiplication [Const (a - c), Var b])]
+                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Op Exponentiation [Var b, Const 2]])]
+                                Division -> [("Do Math", Const (a `div` c))]
+                                _ -> []
+                        (Op Multiplication [Const a, Var b],
+                         Op Multiplication [Var d, Const c]) 
+                            -> case o of
+                                Addition -> [("Do Math", Op Multiplication [Const (a + c), Var b])]
+                                Subtraction -> [("Do Math", Op Multiplication [Const (a - c), Var b])]
+                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Op Exponentiation [Var b, Const 2]])]
+                                Division -> [("Do Math", Const (a `div` c))]
+                                _ -> []
+                        (Op Multiplication [Var b, Const a],
+                         Op Multiplication [Var d, Const c]) 
+                            -> case o of
+                                Addition -> [("Do Math", Op Multiplication [Const (a + c), Var b])]
+                                Subtraction -> [("Do Math", Op Multiplication [Const (a - c), Var b])]
+                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Op Exponentiation [Var b, Const 2]])]
+                                Division -> [("Do Math", Const (a `div` c))]
+                                _ -> []
+                        (Op Multiplication [Var b, Const a], Const c) 
+                            -> case o of
+                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Var b])]
+                                Division -> [("Do Math", Op Multiplication [Const (a `div` c),Var b])]
+                                _ -> []
+                        (Op Multiplication [Const a, Var b], Const c) 
+                            -> case o of
+                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Var b])]
+                                Division -> [("Do Math", Op Multiplication [Const (a `div` c),Var b])]
+                                _ -> []
+                        (Const c, Op Multiplication [Var b, Const a]) 
+                            -> case o of
+                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Var b])]
+                                Division -> [("Do Math", Op Multiplication [Const (c `div` a),Var b])]
+                                _ -> []
+                        (Const c, Op Multiplication [Const a, Var b])
+                            -> case o of
+                                Multiplication -> [("Do Math", Op Multiplication [Const (a * c), Var b])]
+                                Division -> [("Do Math", Op Multiplication [Const (c `div` a),Var b])]
+                                _ -> []
+                        (_,_) -> case doMath e1 of
+                                  [("Do Math",e1')] -> [("Do Math", Op o [e1',e2])]
+                                  [] -> case doMath e2 of
+                                          [("Do Math",e2')] -> [("Do Math", Op o [e1,e2'])]
+                                          [] -> []
+doMath _ = []
+
+doMath2 :: Inequality -> [(String,Inequality)]
+doMath2 (e1,i,e2) = case doMath e1 of
+                      [] -> []
+                      ((a,b)):_ -> [(a,(e1,i,b))]
 
 getStep :: Equation -> Expr -> [Expr]
 getStep (lhs, rhs) expr
@@ -258,7 +320,7 @@ generateRandIneq = Branch [Node GThan, Node GEq]
 generateRandEx :: Int -> String -> ChoiceTree Expr
 generateRandEx i n | i < 1
  = Branch [ Branch [Node (Var varName) | varName <- [n]] -- add support for more variables
-          , Branch [Node (Const val) | val <- [2..10]]
+          , Branch [Node (Const val) | val <- [2..9]]
           ]
 generateRandEx i n
  = filterTree $ Branch [do {e1 <- generateRandEx i' n
