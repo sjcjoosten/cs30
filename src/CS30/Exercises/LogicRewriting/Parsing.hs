@@ -7,9 +7,8 @@ import           Control.Monad.Combinators.Expr
 import           Data.Void
 import           Data.Functor.Identity
 
-data Law = Law LawName Equation
+data Law = Law {lawName :: String, lawEqn :: Equation}
     deriving Show
-type LawName = String
 type Equation = (Expr,Expr)
 
 data Expr = Var Char          -- variable like 'p' or 'q' 
@@ -97,7 +96,7 @@ laws = map prsLaw lawStrings
 
 -- just the (unique) names of the laws
 lawNames :: [String]
-lawNames = uniques [name | (Law name _) <- laws]
+lawNames = uniques [lawName law| law <- laws]
            where uniques [] = []
                  uniques (x:xs) = if x `elem` xs then uniques xs
                                   else x:(uniques xs)

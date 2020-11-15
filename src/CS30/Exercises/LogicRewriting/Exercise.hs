@@ -77,15 +77,16 @@ forceLaw e s = do let vars = nub $ getVars e
 
 -- get all the laws which have given name
 getLawsByName :: String -> ChoiceTree Law
-getLawsByName name = nodes [(Law nm eq) | (Law nm eq) <- laws, nm == name]
+getLawsByName name = nodes [law | law <- laws, lawName law == name]
 
 -- contains all the exercises: the list of Fields is what we display
 -- and the String is the solution (actually just the index of the right choice)
 logicExercises :: [ChoiceTree ([Field], String)]
-logicExercises = [do (Law testName (lhs, rhs)) <- getLawsByName name
+logicExercises = [do law <- getLawsByName name
+                     let (lhs, rhs) = lawEqn law
                      e <- initialExpr (forceLaw lhs)
-                     let (Proof e' steps) = getDerivation ((Law testName (lhs,rhs)):laws) e
-                     remStep <- nodes $ findIndices ((== testName) . fst) steps
+                     let (Proof e' steps) = getDerivation (law:laws) e
+                     remStep <- nodes $ findIndices ((== name) . fst) steps
                      let (stepName, _) = steps!!remStep
                      choices <- (getOrderedSubset (delete stepName lawNames) 2)
                      correctN <- nodes [0..2]
