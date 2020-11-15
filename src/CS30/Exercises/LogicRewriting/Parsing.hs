@@ -91,10 +91,35 @@ lawStrings = [
 
 -- parse all the laws into our Law data structure
 laws :: [Law]
-laws = map prsLaw lawStrings
-       where prsLaw x = case parse parseLaw "" x of
+laws = normalLaws ++ assocAndComm normalLaws
+       where normalLaws = map prsLaw lawStrings
+             prsLaw x = case parse parseLaw "" x of
                            Left s  -> error (show s) 
                            Right l -> l
+
+-- generate a list of  associativity and commutativity laws 
+-- which should only be applied when needed to apply the given list of laws
+-- 
+-- e.g. we rewrite "(p || r) || p" as "(r || p) || p" using commutativity
+-- and then "r || (p || p)" using associativity, so we can apply idempotency
+assocAndComm :: [Law] -> [Law]
+assocAndComm lws 
+    = (concatMap comms binLaws) ++ (concatMap assoc binLaws)
+      where binLaws  = [Bin op e1 e2 | (Law _ ((Bin op e1 e2), _)) <- lws
+                                     , op `elem` [And, Or]]
+            -- ^ we only need associativity/commutativity for laws that 
+            -- match either an "and" or an "or" expression 
+            comms (Bin op e1 e2) = [Law "Commutativity" (Bin op (Bin op e1 (Var 'x')) e2, 
+                                                         Bin op (Bin op (Var 'x') e1) e2), 
+                                    Law "Commutativity" (Bin op e1 (Bin op (Var 'x') e2), 
+                                                         Bin op e1 (Bin op e2 (Var 'x'))),
+                                    Law "Commutativity" (Bin op e2 e1, Bin op e1 e2)]
+            comms _ = []
+            assoc (Bin op e1 e2) = [Law "Associativity" (Bin op (Bin op (Var 'x') e1) e2, 
+                                                         Bin op (Var 'x') (Bin op e1 e2)), 
+                                    Law "Associativity" (Bin op e1 (Bin op e2 (Var 'x')), 
+                                                         Bin op (Bin op e1 e2) (Var 'x'))]
+            assoc _ = []
 
 type Parser = ParsecT Void String Identity
 
