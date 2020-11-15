@@ -85,6 +85,19 @@ putElemIn y 0 xs = y:xs
 putElemIn y _ [] = y:[]
 putElemIn y n (x:xs) = x:(putElemIn y (n-1) xs)
 
+-- the laws we want to test, in order
+-- (note: we don't test Definition of False/True at all, 
+--  although we do use it in proofs)
+testLaws :: [String]
+testLaws = ["Double Negation Law",
+            "De Morgan's Law",
+            "Identity Law",
+            "Domination Law",
+            "Idempotent Law",
+            "Negation Law",
+            "Implication Law"
+            ]
+
 -- contains all the exercises: the list of Fields is what we display
 -- and the String is the solution (actually just the index of the right choice)
 logicExercises :: [ChoiceTree ([Field], Int, [Field])]
@@ -94,13 +107,13 @@ logicExercises = [do law <- getLawsByName name
                      let (Proof e' steps) = getDerivation (laws' law) e
                      remStep <- nodes $ findIndices ((== name) . fst) steps
                      let stepName = fst $ steps!!remStep
-                     choices <- (getOrderedSubset (delete stepName lawNames) 2)
+                     choices <- (getOrderedSubset (delete stepName testLaws) 2)
                      correctN <- nodes [0..2]
                      let shuffChoices = putElemIn stepName correctN choices 
                      return (showExer (Proof e' steps) remStep shuffChoices, 
                              correctN,
                              showSol law)
-                  | name <- lawNames]
+                  | name <- testLaws]
                  where laws' law = if lawName law == "De Morgan's Law" then law:laws
                                    else laws
                        displayStepsExcept :: Int -> [Step] -> [String] -> [Field]
