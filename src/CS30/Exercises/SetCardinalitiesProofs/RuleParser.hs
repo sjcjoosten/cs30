@@ -31,6 +31,8 @@ type Equation = (Expr, Expr)  -- (left,right)
 $(deriveJSON defaultOptions ''Symb)
 $(deriveJSON defaultOptions ''Expr)
 
+
+-- Storing the laws
 laws :: [Law]
 laws = map lawFromString lawStrings
    where
@@ -41,16 +43,19 @@ laws = map lawFromString lawStrings
          "Setminus Cardinality: |A \\setminus B| = |A| - |A \\cap B|"
          ]
 
+-- Parses string to law
 lawFromString :: String -> Law
 lawFromString s = case (parse (pLaw parseExpr) "" s) of 
                Right law -> law
                Left e -> error (errorBundlePretty e)
 
+-- Parses string to return expression
 exprFromString :: String -> Expr
 exprFromString s = case (parse parseExpr "" s) of 
                Right expr -> expr
                Left e -> error (errorBundlePretty e)
 
+-- Turns a parser expr into a parser law
 pLaw :: Parser Expr -> Parser Law
 pLaw pExpr = 
    do lawNm <- parseUntil ':' <*spaces
@@ -59,6 +64,7 @@ pLaw pExpr =
       rhs <- pExpr
       return (Law lawNm (lhs, rhs))
 
+-- Largely from lecture, parses until the token c
 parseUntil :: MonadParsec e s f => Token s -> f [Token s]
 parseUntil c 
    =  (do _ <- satisfy (== c) 
@@ -76,7 +82,7 @@ operatorTable =
      [binary "\\cdot" Mult],
      [binary "+" Add, binary "-" Sub],
 
-   --   -- Set operations
+      -- Set operations
      [binary "\\times" Cartesian],
      [binary "\\cup" Union],
      [binary "\\cap" Intersection],
@@ -85,13 +91,6 @@ operatorTable =
 
 binary :: String -> Symb -> Operator (ParsecT Void String Data.Functor.Identity.Identity) Expr
 binary name symb = InfixL ((\lhs rhs -> Op symb [lhs,rhs]) <$ symbol name)
-
-
--- parses some integer number alone into MathExpr
--- parseConstant :: Parser Expr
--- parseConstant = do
---   n <- lexeme L.decimal
---   return (Const n)
 
 --next few functions taken from Donia and Bennetts Exercise:
 
@@ -126,33 +125,38 @@ parseCardinality = do
    x <- pipes parseExpr
    return (Op Cardinality [x])
 
-
+-- Get what is in the powerset
 powerset :: Parser a -> Parser a
 powerset = between (symbol "\\P(") (symbol ")")
 
+-- Parses the powerset
 parsePowerset :: Parser Expr
 parsePowerset = do
    x <- powerset parseExpr
    return (Op Powerset [x])
 
-
+-- Parses a variable
 parseVar :: Parser Expr
 parseVar = Var <$> satisfy isCapLetter <* spaces
    where
       isCapLetter c = elem c ['A'..'Z']
 
+-- Parses an integer
 parseInt :: Parser Expr
 parseInt = do
    num <- some digit
    return (Val (read num))
 
+-- gets an integer 0..9
 digit :: Parser Char
 digit = satisfy isMyDigit
             where isMyDigit x = elem x ['0'..'9']
 
+-- term parser
 parseTerm :: Parser Expr
 parseTerm =  brackets parseExpr <|> parseCardinality <|> parsePowerset <|> parseVar <|> parseInt
 
+-- expression parser
 parseExpr :: Parser Expr
 parseExpr =  makeExprParser parseTerm operatorTable
 
@@ -177,6 +181,7 @@ exprToLatex (Op Expon [e1,e2]) = "(" ++ exprToLatex e1 ++ ")^{" ++ exprToLatex e
 exprToLatex (Op symb [e1,e2]) = parens e1 ++ " " ++ symbLookupAlt symb ++ " " ++ parens e2
 exprToLatex e = error ("Invalid expression: " ++ show e)
 
+-- Adds parentheses to the correct places
 parens :: Expr -> [Char]
 parens e = case (e) of 
             Var _                -> exprToLatex e
@@ -186,14 +191,7 @@ parens e = case (e) of
             Op Mult _            -> exprToLatex e
             _                    -> "(" ++ exprToLatex e ++ ")"
 
-
-   -- if e1 === Var or Card then s otherwise brackets ++ symbLookupAlt symb ++ if e2 === Var or Card then s otherwise brackets
-   --                         case (e1,e2) of
-   --                               (Var _, Var _) -> exprToLatex e1 ++ " " ++ symbLookupAlt symb ++ " " ++ exprToLatex e2
-   --                               (Var _, _ )    -> exprToLatex e1 ++ " " ++ symbLookupAlt symb ++ " \\left(" ++ exprToLatex e2 ++ "\\right)"
-   --                               (_, Var _ )    -> "\\left(" ++ exprToLatex e1 ++ "\\right) " ++ symbLookupAlt symb ++ " " ++ exprToLatex e2
-   --                               (_, _)         -> "\\left(" ++ exprToLatex e1 ++ "\\right) " ++ symbLookupAlt symb ++ " \\left(" ++ exprToLatex e2 ++ "\\right)"
-
+-- Converts symbols to the corresponding string
 symbLookupAlt :: Symb -> String
 symbLookupAlt s =
     case s of
@@ -207,29 +205,3 @@ symbLookupAlt s =
        Cardinality -> "|"
        Powerset -> "\\P"
        Expon -> "^"
--- These functions do the same thing as the exprToLatex and symbLookup functions from above
--- They just incorporate some of the feedback we got in the parser section
-
--- exprToLatex :: Expr -> String
--- exprToLatex expr =
---    case expr of
---       Var v -> [v]
---       Val v -> show v
---       -- Unary expressions: Cardinality and Powerset are the only valid operations
---       Op symb [e] -> case symb of
---                         Cardinality -> "|" ++ exprToLatex e ++ "|"
---                         Powerset -> "\\P(" ++ exprToLatex e ++")"
---                         _ -> "Invalid operator for unary expression"
---       -- Binary expressions: Expon is treated in a special manner. The rest rely on symbLookupAlt
---       Op symb [e1, e2] -> case symb of
---                               Expon -> "(" ++ exprToLatex e1 ++ ")^{" ++ exprToLatex e2 ++ "}"
---                               _ -> "\\left(" ++ exprToLatex e1 ++ "\\right) " ++ symbLookupAlt symb ++ " \\left(" ++ exprToLatex e2 ++ "\\right)"
---       _ -> error ("Invalid expression: " ++ show expr)
-
--- This function matches the operation to the latex string
--- It is only used in the case when you have a binary expression and a symbol
--- other than Expon. Because Expon needs brackets to be syntactically valid,
--- this function isn't used in that case. Realistically, it should also never
--- meet the "Cardinality" and "Powerset" cases, since binary expressions shouldn't
--- have those.
-
