@@ -14,10 +14,7 @@ type PossibleVals = [(Expr, Integer)] -- Stores (expression, possible values) fo
 
 
 -- TODO:
--- try to import functions combine and parseAnswer
--- maybe make latex a little prettier
 -- change/improve law names
--- general organization
 
 cardinalityProofExer :: ExerciseType
 cardinalityProofExer 
@@ -87,7 +84,7 @@ generateFeedback (_, (Proof proofExpr proofSteps), answer) usrRsp pr
                     ]
             headerRow = [Header (FText "Rule"), Header (FText "Deduction Step")]
 
--- taken from Raechel and Mahas Project
+-- initially taken from Raechel and Mahas Project, wanted to import but apparently they deleted it
 combine :: [Field] -> [Field]
 combine [] = []
 combine [x] = [x] 
@@ -145,7 +142,7 @@ generateRandSetExpr_helper lstOfOps n = do {
 } 
 
 
--- From IncExcCardinalities.hs to get the user's answer
+-- From IncExcCardinalities.hs to get the user's answer, tried to import but seems like it was not exposed/exported by the module
 parseAnswer :: Parser Int
 parseAnswer = unspace digits
   where 

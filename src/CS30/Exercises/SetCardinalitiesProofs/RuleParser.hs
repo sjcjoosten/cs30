@@ -38,7 +38,7 @@ laws = map lawFromString lawStrings
    where
       lawStrings = [ -- all given Rules
          "Inclusion-Exclusion: |A \\cup B| = |A| + |B| - |A \\cap B|",      
-         "Cardinality of cartesian Product: |A \\times B| = |A| \\cdot |B|",
+         "Cartesian Product Cardinality: |A \\times B| = |A| \\cdot |B|",
          "Powerset Cardinality: |\\P(A)| = 2^{|A|}",
          "Setminus Cardinality: |A \\setminus B| = |A| - |A \\cap B|"
          ]
@@ -176,7 +176,7 @@ exprToLatex (Val v) = show v
 exprToLatex (Op Cardinality [e]) = "|" ++ exprToLatex e ++ "|"
 exprToLatex (Op Powerset [e]) = "\\P(" ++ exprToLatex e ++")"
 -- binary operators with brackets
-exprToLatex (Op Expon [e1,e2]) = "(" ++ exprToLatex e1 ++ ")^{" ++ exprToLatex e2 ++ "}"
+exprToLatex (Op Expon [e1,e2]) = exprToLatex e1 ++ "^{" ++ exprToLatex e2 ++ "}"
 -- binary operators without brackets
 exprToLatex (Op symb [e1,e2]) = parens e1 ++ " " ++ symbLookup symb ++ " " ++ parens e2
 exprToLatex e = error ("Invalid expression: " ++ show e)
