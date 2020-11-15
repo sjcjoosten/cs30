@@ -173,7 +173,7 @@ exprToLatex :: Expr -> String
 exprToLatex (Var v) = [v]
 exprToLatex (Val v) = show v
 -- unary operators
-exprToLatex (Op Cardinality [e]) = "\\left|" ++ exprToLatex e ++ "\\right|"
+exprToLatex (Op Cardinality [e]) = "|" ++ exprToLatex e ++ "|"
 exprToLatex (Op Powerset [e]) = "\\P(" ++ exprToLatex e ++")"
 -- binary operators with brackets
 exprToLatex (Op Expon [e1,e2]) = "(" ++ exprToLatex e1 ++ ")^{" ++ exprToLatex e2 ++ "}"

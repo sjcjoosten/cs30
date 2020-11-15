@@ -6,8 +6,6 @@ import CS30.Exercises.Util
 import CS30.Exercises.SetCardinalitiesProofs.Proof
 import CS30.Exercises.SetCardinalitiesProofs.RuleParser
 import qualified Data.Map as Map
-import GHC.Stack
-import Debug.Trace
 import Data.List.Extra
 import Text.Megaparsec
 
@@ -38,7 +36,6 @@ setExercises = [fullExercise 3, fullExercise 5, fullExercise 6]
                             asgn <- genAllPossibleValues rhs 
                             let answer = evaluate asgn rhs
                             let exprs = (getExprs rhs)
-                            trace ("asgn:" ++ show asgn ++ "\nlhs: " ++ show lhs ++ "\nexprs: " ++ show exprs) (return ())
                             return (genFields lhs (evaluate asgn) exprs, proof, answer)
 
         genFields lhs getVal exprs
@@ -181,7 +178,7 @@ genAllPossibleValues expr = assignAll toAssign
 
 
 -- Evaluates an expression with possible values to give an integer answer
-evaluate :: HasCallStack => PossibleVals -> Expr -> Integer
+evaluate :: PossibleVals -> Expr -> Integer
 evaluate _ (Var _) = error "Cannot evaluate var"
 evaluate _ (Val v) = v
 evaluate pV expr@(Op Cardinality [_])
