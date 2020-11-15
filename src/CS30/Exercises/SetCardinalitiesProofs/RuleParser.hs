@@ -178,7 +178,7 @@ exprToLatex (Op Powerset [e]) = "\\P(" ++ exprToLatex e ++")"
 -- binary operators with brackets
 exprToLatex (Op Expon [e1,e2]) = "(" ++ exprToLatex e1 ++ ")^{" ++ exprToLatex e2 ++ "}"
 -- binary operators without brackets
-exprToLatex (Op symb [e1,e2]) = parens e1 ++ " " ++ symbLookupAlt symb ++ " " ++ parens e2
+exprToLatex (Op symb [e1,e2]) = parens e1 ++ " " ++ symbLookup symb ++ " " ++ parens e2
 exprToLatex e = error ("Invalid expression: " ++ show e)
 
 -- Adds parentheses to the correct places
@@ -192,8 +192,8 @@ parens e = case (e) of
             _                    -> "(" ++ exprToLatex e ++ ")"
 
 -- Converts symbols to the corresponding string
-symbLookupAlt :: Symb -> String
-symbLookupAlt s =
+symbLookup :: Symb -> String
+symbLookup s =
     case s of
        Add -> "+"
        Sub -> "-"
