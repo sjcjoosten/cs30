@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {-
-authors: Donia Tung
+authors: Donia Tung & Mikio Obuchi 
 COSC 69.14, 20F
 Group Assignment 2
 -}
@@ -17,7 +17,7 @@ data Law = Law String (Equation)
             deriving Show
 type Equation = (SetExpr, SetExpr)
 
-law1, law2, law3, law4, law5, law6, law7, law8, law9, law10, law11, law12, law13, law14, law15, law16 :: String 
+law1, law2, law3, law4, law5, law8, law9, law10, law11, law12, law13, law14, law15, law16 :: String 
 -- 5 given laws from assignment sheet 
 law1 = "Intersection Definition:A \\cap B = \\left\\{e| e \\in A \\wedge e\\in B\\right\\}"
 law2 = "Union Definition:A \\cup B = \\left\\{e| e \\in A \\vee e\\in B\\right\\}"
@@ -25,8 +25,6 @@ law3 = "Set Difference Definition:A \\setminus B = \\left\\{e| e \\in A \\wedge 
 law4 = "Powerset Definition:\\P(A) = \\left\\{e| e \\subseteq A\\right\\}"
 law5 = "identity function:e\\in \\left\\{e|p\\right\\} = p"
 -- creative element: additional laws, used in subsequent levels 
-law6 = "Union Communtativity:A \\cup B = B \\cup A"
-law7 = "Intersection Communtativity:A \\cap B = B \\cap A"
 law8 = "Union Associativity:(A \\cup B) \\cup C = A \\cup (B \\cup C)"
 law9 = "Intersection Associativity:(A \\cap B) \\cap C = A \\cap (B \\cap C)"
 law10 = "Union Idempotent Law:A \\cup A = A"
@@ -39,7 +37,7 @@ law16 = "Name:(A \\setminus B) \\cup B = A \\cup B"
 
 basicLaws, advancedLaws :: [String] 
 basicLaws = [law1, law2, law3, law4, law5]
-advancedLaws = [law1, law2, law3, law4, law5, law6, law7, law8, law9, law10, law11, law12, law13, law14, law15, law16]
+advancedLaws = [law8, law9, law10, law11, law12, law13, law14, law15, law16, law1, law2, law3, law4, law5]
 
 --fxn for parsing laws 
 parseLaw :: Parser Law
@@ -72,10 +70,6 @@ validateLaw (Law _nm (e1, e2)) = sort (evaluate e1) == sort (evaluate e2)
 
 -- evaluate fxn, calcualtes values for expressions to test that they are valid 
 -- generates [int] representation for a set, need to compare two to evaluate, only does #, not sets of numbers
-data Set = Set [Either Int Set]
-
--- evaluate :: SetExpr -> Set
--- evaluate (Var "A") = Set (map Left [0,1,2,3])
 evaluate :: SetExpr -> [Int]
 evaluate (Var "A") = [0,1,2,3]
 evaluate (Var "B") = [0,2,4,6]
@@ -93,8 +87,8 @@ evaluate (SetBuilder e) = evaluate e
 evaluate (Power _e) = [] --powerset (evaluate e)
 evaluate (Subset _e) = []--powerset (evaluate e)
 
-
 -- fxn for building out the powerset of a variable list
-powerset :: [a] -> [[a]]
-powerset [] = [[]]
-powerset (x:xs) = [x:ps | ps <- powerset xs] ++ powerset xs
+-- commented because not used, but was an alternative for defining evaluate on a power/subset eq
+-- powerset :: [a] -> [[a]]
+-- powerset [] = [[]]
+-- powerset (x:xs) = [x:ps | ps <- powerset xs] ++ powerset xs

@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {-
-authors: Donia Tung
+authors: Donia Tung & Mikio Obuchi 
 COSC 69.14, 20F
 Group Assignment 2
 -}

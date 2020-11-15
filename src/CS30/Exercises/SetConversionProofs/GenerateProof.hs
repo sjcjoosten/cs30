@@ -1,3 +1,9 @@
+{-
+authors: Mikio Obuchi & Donia Tung
+COSC 69.14, 20F
+Group Assignment 2
+-}
+
 module CS30.Exercises.SetConversionProofs.GenerateProof  where
 import CS30.Exercises.Data
 import CS30.Exercises.SetConversionProofs.SetExprParser

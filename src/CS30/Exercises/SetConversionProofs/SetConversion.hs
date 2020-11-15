@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {-
-authors: Donia Tung
+authors: Donia Tung & Mikio Obuchi 
 COSC 69.14, 20F
 Group Assignment 2
 -}
@@ -14,6 +14,7 @@ import qualified Data.Map as Map
 import CS30.Exercises.SetConversionProofs.SetExprParser
 import CS30.Exercises.SetConversionProofs.LawParser (parsedBasicLaws, parsedAdvancedLaws)
 import CS30.Exercises.SetConversionProofs.GenerateProof (Proof(..), generateProof)
+import Debug.Trace
 
 
 -- setConv definition for export to Pages.hs
@@ -21,28 +22,42 @@ setConv :: ExerciseType
 setConv = exerciseType "Set Conversion" "L??" "Conversion to set-builder notation" 
               setConversion 
               genProof 
-              simpleFeedback  
+              feedback  
 
 -- simple feedback mechanism 
-simpleFeedback :: ([Field],[Int]) -> Map.Map [Char] String -> ProblemResponse -> ProblemResponse
-simpleFeedback (_problem, sol) rsp pr
+-- structure mostly taken from Proof.hs
+feedback :: ([Field],[Int]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+feedback (problem, sol) rsp pr
                = reTime $ case Map.lookup "proof" rsp of
                    Just str
-                     -> if numWrong == 0 
+                     -> if length num == 0 
                         then markCorrect pr{prFeedback=[FText"Nice Job!"]}
-                        else markWrong pr{prFeedback=[FText "You answered with the steps in the order: ",
-                                                      FText str, 
+                        else trace ( show( map showDetails ( Map.toList rsp)) )
+                             trace ("intput order: " ++ show(map ((sol !!) . read) (breakUnderscore str) )  )
+                             trace ("num result: " ++show num )
+                             markWrong pr{prFeedback=[FText "You answered with the steps in the order: ",
+                                                      FText (show (map ((sol !!) . read) (breakUnderscore str))), 
                                                       FText". You had ",
-                                                      FText (show numWrong),  -- creative element: gives the user a bit more information on their incorrect answer
-                                                      FText " steps in the wrong order :("]}
-                        where numWrong = wrongOrd (map ((sol !!) . read) (breakUnderscore str) ) 
+                                                      FText (show (length num)),  -- creative element: gives the user a bit more information on their incorrect answer
+                                                      FText " steps in the wrong order :(", 
+                                                      FText "The correct proof would read: "]}
+                        where -- numWrong = wrongOrd (map ((sol !!) . read) (breakUnderscore str) ) 
+                              num = isRight 0 (map ((sol !!) . read) (breakUnderscore str) ) 
+                              -- proof = generateProof parsedBasicLaws problem
                    Nothing -> error "Client response is missing 'proof' field"
 
--- fxn for determining if a list is comprised of directly successive numbers for super simple response checking 
--- isSucc :: (Enum a, Eq a) => [a] -> Bool
--- isSucc [] = True
--- isSucc (_x:[]) = True
--- isSucc (x:y:zs) | y == succ x = isSucc $ y:zs
+showDetails :: (String, String) -> String
+showDetails (key, val) = key ++ ", " ++ val
+
+-- to generate the proof in the user gets it OR correct order, check if step follows the one it's supposed to follow
+-- could provide correct proof
+-- isRight n (x:xs) | n == x 
+--   = isRight (n+1) xs
+--   | otherwise = [error] ++ isRight (x+1) xs
+isRight :: Int -> [Int] -> [(Int, Int)]
+isRight _n [] = []
+isRight n (x:xs) 
+ = [(n,x) | n /= x ] ++ isRight (x+1) xs
 
 -- fxn for counting how many steps were in the wrong order
 wrongOrd :: (Enum a, Num a, Eq a) => [a] -> Int
@@ -72,11 +87,11 @@ removeRep :: ChoiceTree [Int] -> ChoiceTree [Int]
 removeRep (Node lst) 
   = if wrongOrd lst /= 0 then (Node lst)
     else (Node [])
-removeRep (Branch [])
-  = error "should never get here because Branch should always have a Node inside, or gets caught by below case"
 removeRep (Branch (x:xs))
   = if removeRep x == (Node []) || removeRep x == (Branch []) then Branch xs
     else Branch (map removeRep (x:xs)) 
+removeRep (Branch [])
+  = error "should never get here because Branch should always have a Node inside, or gets caught by above case"
 
 -- fxn for generating a random expression, using \cap, \cup, and \setminus operators (as specified in the assignment sheet)
 generateRandEx :: Int -> ChoiceTree SetExpr
@@ -161,7 +176,6 @@ assignVar (Power e) lst
   = let (e', lst') = assignVar e lst 
     in (Power e', lst')
 
--- level 4 --> duplicate var names
 
 -- creating the choice tree for problems, 3 levels of difficulty
 -- creative element: the variation in problem type isn't just centered around number of expressions or size of problem 
