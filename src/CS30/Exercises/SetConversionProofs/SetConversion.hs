@@ -29,7 +29,7 @@ simpleFeedback (_problem, sol) rsp pr
                = reTime $ case Map.lookup "proof" rsp of
                    Just str
                      -> if numWrong == 0 
-                        then markCorrect pr
+                        then markCorrect pr{prFeedback=[FText"Nice Job!"]}
                         else markWrong pr{prFeedback=[FText "You answered with the steps in the order: ",
                                                       FText str, 
                                                       FText". You had ",
@@ -47,16 +47,16 @@ simpleFeedback (_problem, sol) rsp pr
 -- fxn for counting how many steps were in the wrong order
 wrongOrd :: (Enum a, Num a, Eq a) => [a] -> Int
 wrongOrd [] = 0
-wrongOrd lst = length ( filter (\(x, y) -> x /= y) (zip lst [0..]) ) 
+wrongOrd lst = length ( filter (\(x, y) -> x /= y) zipped ) 
+    where zipped = zip lst [0..]
 
-
-
--- wrongOrd :: (Enum a, Num a, Eq a) => [a] -> Int -> Int
--- wrongOrd [] _ = 0
--- wrongOrd [_x] n = n  
--- wrongOrd (x:xs) n = if (x + 1) == head xs 
---                     then wrongOrd xs n  
---                     else wrongOrd xs (n + 1)
+-- from ProofStub.hs
+breakUnderscore :: String -> [String]
+breakUnderscore s
+  =  case dropWhile (=='_') s of
+       "" -> []
+       s' -> w : breakUnderscore s''
+             where (w, s'') = break (=='_') s'
 
 -- from ProofStub.hs
 permutations :: Int -> ChoiceTree [Int]
@@ -66,13 +66,17 @@ permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you ca
       rm <- permutations (n-1)
       return (i : map (\v -> if v >= i then v+1 else v) rm)
 
--- from ProofStub.hs
-breakUnderscore :: String -> [String]
-breakUnderscore s
-  =  case dropWhile (=='_') s of
-       "" -> []
-       s' -> w : breakUnderscore s''
-             where (w, s'') = break (=='_') s'
+-- creative element: removes the permutation of orderings that's in the correct order
+-- ensures the user always has to rearrange something
+removeRep :: ChoiceTree [Int] -> ChoiceTree [Int]
+removeRep (Node lst) 
+  = if wrongOrd lst /= 0 then (Node lst)
+    else (Node [])
+removeRep (Branch [])
+  = error "should never get here because Branch should always have a Node inside, or gets caught by below case"
+removeRep (Branch (x:xs))
+  = if removeRep x == (Node []) || removeRep x == (Branch []) then Branch xs
+    else Branch (map removeRep (x:xs)) 
 
 -- fxn for generating a random expression, using \cap, \cup, and \setminus operators (as specified in the assignment sheet)
 generateRandEx :: Int -> ChoiceTree SetExpr
@@ -86,7 +90,8 @@ generateRandEx i
         ;opr <- nodes [Cap, Cup, SetMinus]
         ;return (opr e1 e2) 
        }
-       
+
+-- helper fxn for generating random expressions including powerset
 binExprs :: (SetExpr -> SetExpr -> SetExpr) -> Int -> ChoiceTree SetExpr
 binExprs operator i
  = do i' <- nodes [0..i-1]
@@ -94,11 +99,13 @@ binExprs operator i
       e2 <- genRand (i - i' - 1)
       return (operator e1 e2)
 
+-- helper fxn for powerset random expressions
 unaryExprs :: (SetExpr -> SetExpr) -> Int -> ChoiceTree SetExpr
 unaryExprs operator i
  = do e1 <- genRand (i -1)
       return (operator e1)
 
+-- creative element: adds in Power set to random expression generation
 genRand :: Int -> ChoiceTree SetExpr
 genRand i | i < 1
  = Branch [ Branch [Node (Var varName) | varName <- ["A"]] 
@@ -114,9 +121,9 @@ genRand i
 --                        unaryExprs Power] )
 
 -- assignVar definition to go over the final expression by replacing all variables from left to right.
--- creative element; ensures that there is no duplication of variables in the random expr generated as the problem
+-- creative element: ensures that there is no duplication of variables in the random expr generated as the problem
 assignVar :: SetExpr -> [String] -> (SetExpr, [String]) 
--- assignVar (Var _) [] = () -- TODO: how to define this
+assignVar (Var _) [] = error "Problem in assigning variables!" -- if things work correctly, it should never reach this point 
 assignVar (Var _) (x:xs) = (Var x, xs)
 assignVar (Cup e1 e2) lst 
   = let (e1', lst') = assignVar e1 lst 
@@ -154,54 +161,39 @@ assignVar (Power e) lst
   = let (e', lst') = assignVar e lst 
     in (Power e', lst')
 
--- could change the laws based on level
--- first case, diff var names
--- last case allow duplicates
-
--- level 1 --> simple cap, cup, set min 
--- level 2 --> add in power
--- level 3 --> add in hard laws
 -- level 4 --> duplicate var names
 
--- TODO: add in check for order that it's not already in order
--- that can be another creative element
+-- creating the choice tree for problems, 3 levels of difficulty
+-- creative element: the variation in problem type isn't just centered around number of expressions or size of problem 
 setConversion :: [ChoiceTree ([Field], [Int])] 
 setConversion
  = [
-     Branch [ do { expr <- generateRandEx 2
+     Branch [ do { expr <- generateRandEx 2     -- level 1 --> simple cap, cup, set min 
                    ; let expr' = fst (assignVar expr ["A", "B", "C"]) 
                    ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
-                   ; order <- permutations (length steps)
+                   ; order <- removeRep ( permutations (length steps))
                    ;  return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
                  } ]
-     , Branch [ do { expr <- genRand i
+     , Branch [ do { expr <- genRand i  -- level 2 --> add in power
                    ; let expr' = fst (assignVar expr ["A", "B", "C", "D"]) 
                    ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
-                   ; order <- permutations (length steps)
+                   ; order <- removeRep ( permutations (length steps))
                    ;  return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
                  } | i <- [2..3]]
-     , Branch [do { expr <- genRand i
+     , Branch [do { expr <- genRand i   -- level 3 --> add in advanced laws
                    ; let expr' = fst (assignVar expr ["A", "B", "C", "D"]) 
                    ; let (Proof _expr steps) = generateProof parsedAdvancedLaws expr'
-                   ; order <- permutations (length steps)
+                   ; order <- removeRep ( permutations (length steps))
                    ;  return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
                  } | i <- [2..3] ]
    ]
 
--- creating the choice tree for problems, 3 levels in terms of degree of nested expr
+-- this was a different mechanism for generating the choice tree for questions
 -- setConversion :: [ChoiceTree ([Field], [Int])] 
 -- setConversion
 --  = [do { expr <- genRand i
 --          ; let expr' = fst (assignVar expr ["A", "B", "C", "D", "E"]) 
 --          ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
---          ; order <- permutations (length steps)
---          ; return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
---     } | i <- [3..4]]
--- setConversion :: [ChoiceTree ([Field], [Int])] 
--- setConversion
---  = [do { expr <- genRand i
---          ; let expr' = fst (assignVar expr ["A", "B", "C", "D", "A"]) -- so that when we get to the third level, there are repeated var to deal with 
---          ; let (Proof _expr steps) = if i < 3 then generateProof parsedBasicLaws expr' else generateProof parsedAdvancedLaws expr' 
 --          ; order <- permutations (length steps)
 --          ; return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
 --     } | i <- [2..4]]
@@ -212,7 +204,6 @@ genProof :: ([Field],[Int]) -> Exercise -> Exercise
 genProof (problem, _order) def 
  = def{ eQuestion = [ FText $"Here is a proof, can you put it in the right order?"] ++ problem
       , eBroughtBy = ["Donia Tung", "Mikio Obuchi"] }
-
 
 -- translating a line in a proof into a field
 showProofLine :: (String, SetExpr) -> [Field]
