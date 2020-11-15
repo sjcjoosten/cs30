@@ -14,7 +14,9 @@ data Opr           = Multiplication | Division | Addition | Subtraction
                    | Exponentiation | Factorial | Negate deriving (Eq,Show)
 data Law           = Law {lawName :: String, lawEq :: Equation}
 type Equation      = (Expr,Expr)
-data OldProof      = OldProof Expr [ProofStep] deriving Show
+type Inequality    = (Expr,Ineq,Expr)
+data Ineq          = GThan | GEq | EqEq deriving (Eq)
+data OldProof      = OldProof Expr [ProofStep] deriving Show -- used for subproofs of a single Expr
 data Proof         = Proof Inequality Integer [ProofStep] deriving Show
 data ProofStep     = Single (String, Expr) | Double (String,Inequality) deriving Show
 -- MathExpr for parsing, gets converted to Expr for everything else
@@ -22,19 +24,12 @@ data MathExpr      = MathConst Integer
                    | MathVar String
                    | Fact MathExpr             -- factorial
                    | Divide MathExpr MathExpr  -- division
-                   | Mult  MathExpr MathExpr   -- multiply two MathExpr's 
-                   | Expon MathExpr MathExpr   -- set first MathExpr to the second MathExpr power
-                   | Add MathExpr MathExpr
-                   | Sub MathExpr MathExpr
-                   | Neg MathExpr
+                   | Mult  MathExpr MathExpr   -- multiplication
+                   | Expon MathExpr MathExpr   -- exponentiation
+                   | Add MathExpr MathExpr     -- addition
+                   | Sub MathExpr MathExpr     -- subtraction
+                   | Neg MathExpr              -- negation
                    deriving Show
--- maybe we can ultimately get rid of these
-data IneqLaw       = IneqLaw {ineqName :: String, ineqEq :: Implies}
-data IneqProof     = IneqProof Inequality [IneqProofStep]
-type IneqProofStep = (String, Inequality)
-type Inequality    = (Expr,Ineq,Expr)
-data Ineq          = GThan | GEq | EqEq deriving (Eq)
-type Implies       = (Inequality,Inequality)
 
 {- defining Show instances -}
 instance Show Law where 
@@ -44,14 +39,6 @@ instance Show Law where
       shows e1 .
       showString " = " . 
       shows e2
-
-instance Show IneqLaw where 
-  showsPrec _ (IneqLaw name ((e11,i1,e12),(e21,i2,e22)))
-    = showString name . 
-      showString ": " . 
-      shows e11 . shows i1 . shows e12 .
-      showString " \\Rightarrow " . 
-      shows e21 . shows i2 . shows e22
 
 instance Show Ineq where
   showsPrec _ GThan = showString " > "
@@ -77,6 +64,7 @@ showHandler :: Inequality -> String
 showHandler (e1,i,e2)
     = show e1 ++ show i ++ show e2
 
+-- precedence value (for parenthesis generation)
 prec :: Opr -> Int
 prec Factorial = 3
 prec Exponentiation = 3
@@ -99,16 +87,30 @@ showParens :: Bool -> (String -> String) -> (String -> String)
 showParens True s = showChar '(' . s . showChar ')'
 showParens False s = s
 
-
-stringsToLaw :: [String] -> [Law]
-stringsToLaw lst = catMaybes $ map convert lst
+stringsToLaws :: [String] -> [Law]
+stringsToLaws lst = catMaybes $ map convert lst
   where convert v = case parse parseLaw "" v of
                  Left _ -> Nothing
                  Right l -> Just l
 
 
 {- Our parser -}
+parseLaw :: Parser Law
+parseLaw = do lname <- parseUntil ':'
+              lhs     <- parseExpr
+              _       <- string "="
+              rhs     <- parseExpr
+              return (Law lname (lhs,rhs))
 
+parseUntil :: Char -> Parser String
+parseUntil c = (do _ <- satisfy (== c)
+                   return  []) <|>
+               (do c1 <- satisfy (const True)
+                   rmd <- parseUntil c
+                   return (c1:rmd)
+               )
+
+-- parse single digits
 digit :: Parser Integer
 digit = do c <- satisfy inRange
            return (toInteger (charToInteger c))
@@ -116,7 +118,7 @@ digit = do c <- satisfy inRange
          inRange c = let r = charToInteger c
                      in r >= 0 && r < 10
 
--- maybe add support for uppercase letter later
+-- parse lowercase letters
 var :: Parser Char
 var = do c <- satisfy inRange
          return c
@@ -124,7 +126,6 @@ var = do c <- satisfy inRange
          inRange c = let r = charToInteger c
                      in r >= 0 && r < 26
 
--- maybe add support for uppercase letter later
 parseVar :: Parser MathExpr
 parseVar = do s <- some var
               return (MathVar s)
@@ -188,6 +189,7 @@ parseExpr :: Parser Expr
 parseExpr = do mex <- parseMathExpr
                return (mathToExpr mex)
 
+-- converts a parsed MathExpr into a usable Expr
 mathToExpr :: MathExpr -> Expr
 mathToExpr (MathVar s) = Var s
 mathToExpr (MathConst n) = Const n
@@ -198,18 +200,3 @@ mathToExpr (Expon a1 a2) = Op Exponentiation [mathToExpr a1, mathToExpr a2]
 mathToExpr (Add a1 a2) = Op Addition [mathToExpr a1, mathToExpr a2]
 mathToExpr (Sub a1 a2) = Op Subtraction [mathToExpr a1, mathToExpr a2]
 mathToExpr (Neg a) = Op Negate [mathToExpr a]
-
-parseLaw :: Parser Law
-parseLaw = do lname <- parseUntil ':'
-              lhs     <- parseExpr
-              _       <- string "="
-              rhs     <- parseExpr
-              return (Law lname (lhs,rhs))
-
-parseUntil :: Char -> Parser String
-parseUntil c = (do _ <- satisfy (== c)
-                   return  []) <|>
-               (do c1 <- satisfy (const True)
-                   rmd <- parseUntil c
-                   return (c1:rmd)
-               )

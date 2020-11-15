@@ -6,7 +6,6 @@ import           CS30.Exercises.Data
 import qualified Data.Map as Map
 import           CS30.Exercises.LogicInequalities.IneqParser
 import           CS30.Exercises.LogicInequalities.IneqProofs
-import           Data.Maybe
 
 logicInequalitiesEx :: ExerciseType
 logicInequalitiesEx = exerciseType "ineqProof" "L?.???" "Logic: Inequality"
@@ -15,11 +14,30 @@ logicInequalitiesEx = exerciseType "ineqProof" "L?.???" "Logic: Inequality"
                 = case Map.lookup "proof" rsp of
                         Just str
                          -> if map (sol !!) (breakUnderscore str) == [0..length sol - 1]
-                            then markCorrect pr
-                            else markWrong pr{prFeedback=[ FText "You answered: ", FText $ show (breakUnderscore str)
-                                                         , FText " but the answer was: ", FText $ show sol]}
+                            then markCorrect $ pr{prFeedback=[ FIndented 0 [FText "Great work!"]]}
+                            else markWrong $ pr{prFeedback=[ FIndented 0 [ FText "The answer was: "
+                                                                         , FText $ show sol]
+                                                           , FIndented 0 [ FText "You got the following steps wrong: "
+                                                                         , FText $ show $ isRight 0 (map (sol !!) (breakUnderscore str))]
+                                                           ]}
                         Nothing -> error "Client response is missing 'proof' field"
 
+isRight :: Int -> [Int] -> [Int]
+isRight _ [] = []
+isRight n (x:xs) = [n | n /= x] ++ isRight (n+1) xs
+
+genProof :: ([Field],a) -> Exercise -> Exercise
+genProof (fields,_) def 
+ = def{ eQuestion = fields
+      , eBroughtBy = ["Kyle Bensink and Lucas Boebel"] }
+
+getFields :: ChoiceTree ([Field],[Int])
+getFields
+  = do e1 <- generateRandEx 4 "n"
+       e2 <- generateRandEx 4 "n"
+       let proof = makeProof e1 e2 12
+       p <- permutations (getSize proof)
+       return (shuffle proof p , p)
 
 permutations :: Int -> ChoiceTree [Int]
 permutations 0 = Node []
@@ -37,8 +55,8 @@ breakUnderscore s
 
 shuffle :: Proof -> [Int] -> [Field]
 shuffle (Proof start a proofSteps) order = [ FText $"Can you put the following proof in the right order?"
-                                            , FIndented 1 [FMath $ showHandler start]
-                                            , FIndented 1 [FText "Assuming ", FMath $ "n \\geq " ++ show a]
+                                            , FIndented 1 [FText "Assuming ", FMath $ "n \\geq " ++ show a, FText " , show ", FMath $ showHandler start]
+                                        --     , FIndented 1 [FText "Assuming ", FMath $ "n \\geq " ++ show a]
                                             , FReorder "proof" steps
                                             ]
   where
@@ -46,31 +64,16 @@ shuffle (Proof start a proofSteps) order = [ FText $"Can you put the following p
     otherSteps = map makeStep proofSteps
     makeStep (Single (one,two))   = [ FText $ "{ " ++ show one ++ " }"
                                     , FIndented 1 [FMath $ show two] ]
-    makeStep (Double (a,(b,c,d))) = [ FText $ "{ " ++ show a ++ " }"
-                                    , FIndented 1 [FMath $ show b ++ show c ++ show d] ]
+    makeStep (Double (s,(e1,i,e2))) = [ FText $ "{ " ++ show s ++ " }"
+                                    , FIndented 1 [FMath $ show e1 ++ show i ++ show e2] ]
 
 getSize :: Proof -> Int
 getSize (Proof _ _ b) = length b
 
-getFields :: ChoiceTree ([Field],[Int])
-getFields
-  = do e1 <- generateRandEx 4 "n"
-       e2 <- generateRandEx 4 "n"
-       let proof = makeProof e1 e2 15
-       p <- permutations (getSize proof)
-       return (shuffle proof p , p)
-
-genProof :: ([Field],a) -> Exercise -> Exercise
-genProof (fields,_) def 
- = def{ eQuestion = fields
-      , eBroughtBy = ["Kyle Bensink and Lucas Boebel"] }
-
-generateRandIneq :: ChoiceTree Ineq
-generateRandIneq = Branch [Node GThan, Node GEq]
 
 -- return valid expressions, i.e. those that have a variable in them
--- just calling generateRandEx i<1 may or may not generate a valid expression
--- but calling generateRandEx i≥1 will filter out the invalid ones
+-- just calling generateRandEx i < 1 may or may not generate a valid expression
+-- but calling generateRandEx i ≥ 1 will filter out the invalid ones
 generateRandEx :: Int -> String -> ChoiceTree Expr
 generateRandEx i n | i < 1
  = Branch [ Branch [Node (Var varName) | varName <- [n]] -- add support for more variables
@@ -80,13 +83,13 @@ generateRandEx i n
  = filterTree $ Branch [do {e1 <- generateRandEx i' n
                        ;e2 <- generateRandEx (i - i' - 1) n
                        ;opr <- nodes $ availOps i
-                       ;return (Op opr [e1,e2])
+                       ;return (if opr == Factorial then Op opr [e1] else Op opr [e1,e2])
                        }
                        | i' <- [0..i-1]
                        ]
     where
       availOps j = case (j < 2) of
-                    True -> [Addition,Subtraction,Multiplication,Exponentiation]
+                    True -> [Addition,Subtraction,Multiplication,Exponentiation,Factorial]
                     False -> [Addition,Multiplication]
 
 filterTree :: ChoiceTree Expr -> ChoiceTree Expr

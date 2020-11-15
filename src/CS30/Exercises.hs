@@ -30,7 +30,7 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , incExcCards -- from IncExcCardinalities
         , probaEx
         , modN
-        , logicInequalitiesEx
+        , logicInequalitiesEx -- Logic; inequality problems
         -- , combinEx -- too slow, see TODO
         ]
 
