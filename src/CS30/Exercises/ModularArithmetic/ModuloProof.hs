@@ -28,28 +28,27 @@ _arithmetic_laws = map (parseLaw False)
                     ,"Law17 : x ^ (y + z) = x ^ y \\cdot x ^ z"
                     ,"Law18 : (x \\cdot y) ^ z = x ^ z \\cdot y ^ z"
                   ]
-                  
+
 -------------------------------------Proofs----------------------------------------
 
--- TODO : Steps using given should be implicit
 getDerivation :: Int -> [Law] -> Expression -> Proof
-getDerivation steps laws e
- = Proof e (multiSteps steps e)
- where multiSteps 0 _ = [] -- [proofSteps]
-       multiSteps steps' e'
-        = case [ (lawName law, res) -- proofStep
-               | law <- laws -- Law
-               , res <- getStep (lawEq law) e' -- getStep
-               ] of
-                   [] -> []
-                   ((nm,e''):_) -> (nm,e'') : multiSteps (steps'-1) e''
+getDerivation steps laws e = Proof e (take steps (removeGiven fullPrf))
+                             where fullPrf = getDerivationWithGiven (steps * 2) laws e
+                                   removeGiven (Proof _ stps) = (filter (\stp -> fst stp /= "Given")) stps
+                                   removeGiven ProofError = []
 
--- would go into rewrite function
--- Law1 : a = b (mod p) implies a + c = b + c (mod p)
--- Law2 : a = b (mod p) implies c + a = c + b (mod p)
--- Law3 : a = b (mod p) implies a \\cdot c = b \\cdot c (mod p)
--- Law4 : a = b (mod p) implies c \\cdot a = c \\cdot b (mod p)
--- Law5 : a = b (mod p) implies a ^ c = b ^ c (mod p)
+getDerivationWithGiven :: Int -> [Law] -> Expression -> Proof
+getDerivationWithGiven steps laws e
+  = Proof e (multiSteps steps e)
+    where multiSteps 0 _ = [] -- [proofSteps]
+          multiSteps steps' e'
+            = case [ (lawName law, res) -- proofStep
+                   | law <- laws -- Law
+                   , res <- getStep (lawEq law) e' -- getStep
+                   ] of
+                       [] -> []
+                       ((nm,e''):_) -> (nm,e'') : multiSteps (steps'-1) e''
+
 getStep :: Equation -> Expression -> [Expression]
 getStep (lhs, rhs) expr
   = case matchE lhs expr of
@@ -69,8 +68,8 @@ matchE :: Expression -> Expression -> Maybe Substitution
 matchE (Var nm) expr = Just [([nm],expr)]
 matchE (Con i) (Con j) | i == j = Just []
 matchE (Con _) _ = Nothing
-matchE (Fixed i) (Fixed j) | i == j = Just [] -- TODO : Is this similar to Var or Con?
-matchE (Fixed _) _ = Nothing -- TODO : Is this similar to Var or Con?
+matchE (Fixed i) (Fixed j) | i == j = Just []
+matchE (Fixed _) _ = Nothing
 matchE (BinOp op1 e1 e2) (BinOp op2 e3 e4) | op1 == op2
  = case (matchE e1 e3, matchE e2 e4) of
     (Just s1, Just s2) -> combineTwoSubsts s1 s2
@@ -152,6 +151,7 @@ testLaw (Law _ (lhs, rhs)) = and [ evalExpression subst 101 lhs == evalExpressio
                                     y <- [2,3,4],
                                     z <- [2,3,4],
                                   let subst = [("x", Con x), ("y", Con y), ("z", Con z)]]
+testLaw LawError = False
 
 _exp :: Expression
 _exp = parseExpression True "(a \\cdot 3) ^ b \\cdot (c + d)"
