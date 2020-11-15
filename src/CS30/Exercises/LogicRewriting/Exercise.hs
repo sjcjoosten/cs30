@@ -78,26 +78,31 @@ forceLaw e s = do let vars = nub $ getVars e
 getLawsByName :: String -> ChoiceTree Law
 getLawsByName name = nodes [law | law <- laws, lawName law == name]
 
+-- utility function, places an element into the list 
+-- at given index (assumes index is valid for the list) 
+putElemIn :: a -> Int -> [a] -> [a]
+putElemIn y 0 xs = y:xs
+putElemIn y _ [] = y:[]
+putElemIn y n (x:xs) = x:(putElemIn y (n-1) xs)
+
 -- contains all the exercises: the list of Fields is what we display
 -- and the String is the solution (actually just the index of the right choice)
-logicExercises :: [ChoiceTree ([Field], String)]
+logicExercises :: [ChoiceTree ([Field], Int, [Field])]
 logicExercises = [do law <- getLawsByName name
                      let lhs = fst $ lawEqn law
                      e <- initialExpr (forceLaw lhs)
                      let (Proof e' steps) = getDerivation (laws' law) e
                      remStep <- nodes $ findIndices ((== name) . fst) steps
-                     let (stepName, _) = steps!!remStep
+                     let stepName = fst $ steps!!remStep
                      choices <- (getOrderedSubset (delete stepName lawNames) 2)
                      correctN <- nodes [0..2]
                      let shuffChoices = putElemIn stepName correctN choices 
-                     return (showExer (Proof e' steps) remStep shuffChoices, show correctN)
+                     return (showExer (Proof e' steps) remStep shuffChoices, 
+                             correctN,
+                             showSol law)
                   | name <- lawNames]
                  where laws' law = if lawName law == "De Morgan's Law" then law:laws
                                    else laws
-                       putElemIn :: a -> Int -> [a] -> [a]
-                       putElemIn y 0 xs = y:xs
-                       putElemIn y _ [] = y:[]
-                       putElemIn y n (x:xs) = x:(putElemIn y (n-1) xs)
                        displayStepsExcept :: Int -> [Step] -> [String] -> [Field]
                        displayStepsExcept _ [] _  = []
                        displayStepsExcept n (s:rems) choices = [FMath "\\equiv", name, 
@@ -109,18 +114,21 @@ logicExercises = [do law <- getLawsByName name
                        showExer :: Proof -> Int -> [String] -> [Field] 
                        showExer (Proof e steps) remStep choices = [FIndented 1 [FMath $ show e]] 
                                                                   ++ (displayStepsExcept remStep steps choices)
+                       showSol :: Law -> [Field]
+                       showSol (Law name (e1,e2)) = [FText $ "\""++name++": ", 
+                                                     FMath $ show e1, FMath "\\equiv", FMath $ show e2, 
+                                                     FText "\""]
 
 -- generate the question displayed to the user
-logicQuer :: ([Field], String) -> Exercise -> Exercise
-logicQuer (quer, _) defExer = defExer {eQuestion = quer}
+logicQuer :: ([Field], Int, [Field]) -> Exercise -> Exercise
+logicQuer (quer, _, _) defExer = defExer {eQuestion = quer}
 
 -- generate feedback
-logicFeedback :: ([Field], String) -> Map.Map String String -> ProblemResponse -> ProblemResponse
-logicFeedback (_, sol) mStrs defaultRsp 
+logicFeedback :: ([Field], Int, [Field]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+logicFeedback (_, sol, solFeedback) mStrs defaultRsp 
     = case rsp of 
-        Just v -> if v == sol then markCorrect $ defaultRsp{prFeedback = [FText "Correct"]}
-                  else if v == "" then markWrong $ defaultRsp{prFeedback = [FText "Please select which law is applied"]}
-                       else markWrong $ defaultRsp{prFeedback = [FText "Incorrect"]} 
-        Nothing -> markWrong $ defaultRsp{prFeedback = [FText "We could not understand your answer"]}
-        -- ^ TODO: give better feedback (probably need to change the solution data structure to show the correct answer)
+        Just v -> if v == show (sol) then markCorrect $ defaultRsp{prFeedback = [FText "The correct answer was: "]++solFeedback}
+                  else if v == "" then tryAgain $ defaultRsp{prFeedback = [FText "Please select which law is applied"]}
+                       else markWrong $ defaultRsp{prFeedback = [FText "The correct answer was: "]++solFeedback} 
+        Nothing -> tryAgain $ defaultRsp{prFeedback = [FText "We could not understand your answer"]}
       where rsp = Map.lookup "choice" mStrs

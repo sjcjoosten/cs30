@@ -73,7 +73,7 @@ lawStrings :: [String]
 lawStrings = [
         "Double Negation Law: !(!p) = p",
         "Definition of True: !false = true",
-        "Definition of False: !true = false"
+        "Definition of False: !true = false",
         "Identity Law: p || false = p",
         "Identity Law: p && true = p",
         "Domination Law: p && false = false",
