@@ -12,10 +12,6 @@ import Text.Megaparsec
 type SetCardinalityProblem = ([Field], Proof, Integer)
 type PossibleVals = [(Expr, Integer)] -- Stores (expression, possible values) for each expression found in the equation
 
-
--- TODO:
--- change/improve law names
-
 cardinalityProofExer :: ExerciseType
 cardinalityProofExer 
     = exerciseType  "Set Cardinality" "L?.?" 
