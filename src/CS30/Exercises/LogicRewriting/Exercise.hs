@@ -6,7 +6,7 @@ import           CS30.Exercises.Util
 import qualified Data.Map as Map
 import           Data.List
 import           CS30.Exercises.LogicRewriting.Parsing (laws, lawNames, Expr (..), Op (..), Law (..))
-import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, Proof (..), apply)
+import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, Proof (..), apply, Step)
 
 -- final exercise type
 logicRewritingEx :: ExerciseType
@@ -23,8 +23,7 @@ initialExpr expr = neg <$> expr 7
 
 -- 
 exprOfSize :: Int -> ChoiceTree Expr
-exprOfSize 1 = Branch [nodes (map Const [True,False]), 
-                       nodes (map Var ['p','q','r'])]
+exprOfSize 1 = Branch [nodes (map Var ['p','q','r'])]
 exprOfSize 2 = Branch [Neg <$> exprOfSize 1]
 exprOfSize n = Branch ([Bin op <$> exprOfSize i <*> exprOfSize (n-i-1)
                        | i <- [1..(n-2)]
@@ -83,9 +82,9 @@ getLawsByName name = nodes [law | law <- laws, lawName law == name]
 -- and the String is the solution (actually just the index of the right choice)
 logicExercises :: [ChoiceTree ([Field], String)]
 logicExercises = [do law <- getLawsByName name
-                     let (lhs, rhs) = lawEqn law
+                     let lhs = fst $ lawEqn law
                      e <- initialExpr (forceLaw lhs)
-                     let (Proof e' steps) = getDerivation (law:laws) e
+                     let (Proof e' steps) = getDerivation (laws' law) e
                      remStep <- nodes $ findIndices ((== name) . fst) steps
                      let (stepName, _) = steps!!remStep
                      choices <- (getOrderedSubset (delete stepName lawNames) 2)
@@ -93,18 +92,21 @@ logicExercises = [do law <- getLawsByName name
                      let shuffChoices = putElemIn stepName correctN choices 
                      return (showExer (Proof e' steps) remStep shuffChoices, show correctN)
                   | name <- lawNames]
-                 where putElemIn :: a -> Int -> [a] -> [a]
+                 where laws' law = if lawName law == "De Morgan's Law" then law:laws
+                                   else laws
+                       putElemIn :: a -> Int -> [a] -> [a]
                        putElemIn y 0 xs = y:xs
                        putElemIn y _ [] = y:[]
                        putElemIn y n (x:xs) = x:(putElemIn y (n-1) xs)
+                       displayStepsExcept :: Int -> [Step] -> [String] -> [Field]
                        displayStepsExcept _ [] _  = []
                        displayStepsExcept n (s:rems) choices = [FMath "\\equiv", name, 
-                                                               FIndented 1 [FMath $ show (snd s)]]
-                                                              ++ displayStepsExcept (n-1) rems choices
-                                                              where correct = FText ("{ "++(fst s)++" }")
-                                                                    name = if n/=0 then correct
-                                                                           else FChoice "choice" (map (\x -> [FText $ "{ "++x++" }"]) choices)
-
+                                                                FIndented 1 [FMath $ show (snd s)]]
+                                                               ++ displayStepsExcept (n-1) rems choices
+                                                               where correct = FText ("{ "++(fst s)++" }")
+                                                                     name = if n/=0 then correct
+                                                                            else FChoice "choice" (map (\x -> [FText $ "{ "++x++" }"]) choices)
+                       showExer :: Proof -> Int -> [String] -> [Field] 
                        showExer (Proof e steps) remStep choices = [FIndented 1 [FMath $ show e]] 
                                                                   ++ (displayStepsExcept remStep steps choices)
 
