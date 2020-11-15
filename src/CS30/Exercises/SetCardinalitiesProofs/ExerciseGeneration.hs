@@ -16,7 +16,6 @@ type PossibleVals = [(Expr, Integer)] -- Stores (expression, possible values) fo
 
 
 -- TODO:
--- get rid of warnings
 -- try to import functions combine and parseAnswer
 -- maybe make latex a little prettier
 -- change/improve law names
@@ -45,13 +44,14 @@ setExercises = [fullExercise 3, fullExercise 5, fullExercise 6]
 
         genFields lhs getVal exprs
           = [FText "Given that "] 
-            ++ combine [FMath (exprToLatex e ++ "=" ++ show (getVal e)) | e <- (filter (\x -> x /= (Val a) ) 
-            exprs)]
+            ++ combine [FMath (exprToLatex e ++ "=" ++ show (getVal e)) | e <- exprs, notVal e]
             ++ [FText ". Compute ", FMath (exprToLatex lhs)]
             ++ [FFieldMath "Answer"]
 
+        notVal (Val _) = False
+        notVal _ = True
 generateQuestion :: SetCardinalityProblem -> Exercise -> Exercise
-generateQuestion (myProblem, proof, sol) def 
+generateQuestion (myProblem, _, _) def 
     = def { eQuestion =  myProblem--myProblem --, (FText [(show sol)]) 
           , eBroughtBy = ["Paul Gralla","Joseph Hajjar","Roberto Brito"] }
 
@@ -59,7 +59,7 @@ generateQuestion (myProblem, proof, sol) def
 -- Just noticed a bit of a visual bug. When the answer is correct,
 -- a text box appears alongside the answer.
 generateFeedback :: SetCardinalityProblem -> Map.Map String String -> ProblemResponse -> ProblemResponse
-generateFeedback (question, (Proof proofExpr proofSteps), answer) usrRsp pr 
+generateFeedback (_, (Proof proofExpr proofSteps), answer) usrRsp pr 
       = reTime$ case answer' of
                   Nothing -> wrong{prFeedback=(FText " Ill formatted reponse, please only input integers, answer was "):rspwa} -- Error when parsing. 
                   Just v -> if (v == fromIntegral answer) 
@@ -106,7 +106,7 @@ generateRandSetExpr :: Int -> ChoiceTree Expr
 generateRandSetExpr i = fst . flip setVars ['A' ..] <$> (generateRandSetExpr_helper [Union, Powerset, Cartesian, Setminus] i)
     
 setVars :: Expr -> [Char] -> (Expr, [Char])
-setVars e@(Val a) varNames = (e, varNames)
+setVars e@(Val _) varNames = (e, varNames)
 setVars (Var _) (possible:possibles) = (Var possible, possibles)
 setVars (Op o [expr]) possibles = 
         let (expr', newPossible) = setVars expr possibles in (Op o [expr'], newPossible)
@@ -115,6 +115,7 @@ setVars (Op o [expr1,expr2]) possibles =
             (expr2', newPossible2) = setVars expr2 newPossible1
         in
             (Op o [expr1',expr2'], newPossible2)
+setVars _ _ = error "Invalid input given to setVars"
 
 generateRandSetExpr_helper :: [Symb] -> Int -> ChoiceTree Expr
 generateRandSetExpr_helper _ n 
