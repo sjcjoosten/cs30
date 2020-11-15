@@ -22,11 +22,13 @@ data Op = And     -- <expr> \wedge <expr>
         | Implies -- <expr> \Rightarrow <expr>
     deriving Eq
 
+-- precedence of operators, for printing parens
 opPrec :: Op -> Int
 opPrec (And)     = 3
 opPrec (Or)      = 2
 opPrec (Implies) = 1
 
+-- symbols of operators, for printing
 opSymb :: Op -> String
 opSymb (And)     = "\\ \\wedge\\ "
 opSymb (Or)      = "\\ \\vee\\ "
@@ -34,12 +36,11 @@ opSymb (Implies) = "\\ \\Rightarrow\\ "
 
 -- display an Expr as a string (to be used with FMath)
 instance Show Expr where
-    -- showsPrec :: Int -> Expr -> ShowS
     showsPrec _ (Var v)        = showChar v
     showsPrec _ (Const b)      = if b then showString "\\text{true}" 
                                  else showString "\\text{false}"
     showsPrec p (Neg e)        = showParenLATEX (p >= 4) (showString "\\neg " . showsPrec 4 e)
-    showsPrec p (Bin op e1 e2) = showParenLATEX (p > prec)
+    showsPrec p (Bin op e1 e2) = showParenLATEX (p >= prec)
                                    (showsPrec prec e1 . showString symb . showsPrec prec e2)
                                  where prec = opPrec op 
                                        symb = opSymb op
@@ -59,10 +60,11 @@ evalExpr (Bin op e1 e2) = [(perform op) b1 b2
                                 perform (Or)      = (||)
                                 perform (Implies) = (\x y -> not x || y)
 
+-- check whether both sides of a law evaluate to the same thing
 checkLaw :: Law -> Bool
 checkLaw (Law _ (e1,e2)) = evalExpr e1 == evalExpr e2
 
--- 
+-- same as showParen, but with "\left" and "\right" too
 showParenLATEX :: Bool -> ShowS -> ShowS
 showParenLATEX b p = if b 
                      then showString "\\left(" . p . showString "\\right)" 
@@ -71,6 +73,10 @@ showParenLATEX b p = if b
 -- contains all the laws that we use (after parsing)
 lawStrings :: [String]
 lawStrings = [
+        "Idempotent Law: p || p = p",
+        "Idempotent Law: p && p = p",
+        "Negation Law: p || !p = true",
+        "Negation Law: p && !p = false",
         "Double Negation Law: !(!p) = p",
         "Definition of True: !false = true",
         "Definition of False: !true = false",
@@ -78,10 +84,6 @@ lawStrings = [
         "Identity Law: p && true = p",
         "Domination Law: p && false = false",
         "Domination Law: p || true = true",
-        "Idempotent Law: p || p = p",
-        "Idempotent Law: p && p = p",
-        "Negation Law: p || !p = true",
-        "Negation Law: p && !p = false",
         "Implication Law: p => q = !p || q",
         "De Morgan's Law: !(p && q) = !p || !q",
         "De Morgan's Law: !(p || q) = !p && !q"
@@ -93,13 +95,6 @@ laws = map prsLaw lawStrings
        where prsLaw x = case parse parseLaw "" x of
                            Left s  -> error (show s) 
                            Right l -> l
-
--- just the (unique) names of the laws
-lawNames :: [String]
-lawNames = uniques [lawName law| law <- laws]
-           where uniques [] = []
-                 uniques (x:xs) = if x `elem` xs then uniques xs
-                                  else x:(uniques xs)
 
 type Parser = ParsecT Void String Identity
 

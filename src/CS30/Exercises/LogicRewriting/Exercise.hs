@@ -5,7 +5,7 @@ import           CS30.Exercises.Data
 import           CS30.Exercises.Util
 import qualified Data.Map as Map
 import           Data.List
-import           CS30.Exercises.LogicRewriting.Parsing (laws, lawNames, Expr (..), Op (..), Law (..))
+import           CS30.Exercises.LogicRewriting.Parsing (laws, Expr (..), Op (..), Law (..))
 import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, Proof (..), apply, Step)
 
 -- final exercise type
@@ -16,12 +16,15 @@ logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
                        logicFeedback
 
 -- generate initial expressions to put through the prover
+-- using the provided function for generating expressions
 initialExpr :: (Int -> ChoiceTree Expr) -> ChoiceTree Expr
 initialExpr expr = neg <$> expr 7
                    where neg (Neg e)   = Neg e
                          neg otherExpr = Neg otherExpr
+                         -- ^ we don't want to negate an expression that 
+                         -- already begins with a negation
 
--- 
+-- random expressions of given size, using variables 'p','q', and 'r'
 exprOfSize :: Int -> ChoiceTree Expr
 exprOfSize 1 = Branch [nodes (map Var ['p','q','r'])]
 exprOfSize 2 = Branch [Neg <$> exprOfSize 1]
@@ -57,7 +60,7 @@ assignRandExprs size vars | length vars == 0 = Node []
                               -- sumLen returns all lists of positive integers of length l
                               -- that sum to n
                               sumLen :: Int -> Int -> [[Int]]
-                              sumLen x 1 = [[x]]
+                              sumLen n 1 = [[n]]
                               sumLen n l = [num:r | num <- [1..(n-1)], r <- sumLen (n-num) (l-1)]
                               genPair :: (Char, Int) -> ChoiceTree (Char, Expr)
                               genPair (c, n) = (exprOfSize n) >>= (\expr -> return (c, expr))
@@ -65,9 +68,8 @@ assignRandExprs size vars | length vars == 0 = Node []
 -- generate an expression to fit the law given by the expression
 --  using s as a constraint on the size
 -- 
--- note: if there are duplicate variables in the expression, the generated expressions
---  may be larger than s, but after the first step they should be simplified to 
---  an expression of at most size s 
+-- note: if there are duplicate variables in the expression, we may generate 
+--  an expression larger than s, but these should simplify quickly
 forceLaw :: Expr -> Int -> ChoiceTree Expr
 forceLaw e s = do let vars = nub $ getVars e
                   let size = s - (getSize e)
@@ -98,8 +100,10 @@ testLaws = ["Double Negation Law",
             "Implication Law"
             ]
 
--- contains all the exercises: the list of Fields is what we display
--- and the String is the solution (actually just the index of the right choice)
+-- contains all the exercises: 
+--  the first list of Fields is what we display as a question
+--  the Int is the index of the right choice
+--  and the second list of Fields is what we display as feedback
 logicExercises :: [ChoiceTree ([Field], Int, [Field])]
 logicExercises = [do law <- getLawsByName name
                      let lhs = fst $ lawEqn law
@@ -116,6 +120,8 @@ logicExercises = [do law <- getLawsByName name
                   | name <- testLaws]
                  where laws' law = if lawName law == "De Morgan's Law" then law:laws
                                    else laws
+                       -- ^ De Morgan's Laws need to be put before other laws when they are being tested, 
+                       -- because otherwise we will occasionally generate a proof that bypasses them
                        displayStepsExcept :: Int -> [Step] -> [String] -> [Field]
                        displayStepsExcept _ [] _  = []
                        displayStepsExcept n (s:rems) choices = [FMath "\\equiv", name, 
@@ -134,7 +140,8 @@ logicExercises = [do law <- getLawsByName name
 
 -- generate the question displayed to the user
 logicQuer :: ([Field], Int, [Field]) -> Exercise -> Exercise
-logicQuer (quer, _, _) defExer = defExer {eQuestion = quer}
+logicQuer (quer, _, _) defExer = defExer {eQuestion = [FText "Can you name the missing law applied in this proof?"]
+                                                      ++quer}
 
 -- generate feedback
 logicFeedback :: ([Field], Int, [Field]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
