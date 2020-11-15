@@ -9,6 +9,8 @@ Group Assignment 2
 module CS30.Exercises.SetConversionProofs.SetExprParser where
 import           Data.Functor.Identity
 import           Data.Void
+import Data.Aeson.TH 
+
 import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
 import qualified Text.Megaparsec.Char.Lexer as L
@@ -27,6 +29,7 @@ data SetExpr = Var String -- single variable
               | NotIn SetExpr   -- not an element of
               | Subset SetExpr -- subset of
               deriving (Show, Eq)
+$(deriveJSON defaultOptions ''SetExpr)
 
 type Parser = ParsecT Void String Identity
 
