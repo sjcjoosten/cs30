@@ -16,6 +16,7 @@ import CS30.Exercises.ProbExProof (probExProof)
 import CS30.Exercises.LogicRewriting.Exercise (logicRewritingEx)
 import CS30.Exercises.LogicExpr.Display (logicProof)
 import CS30.Exercises.SetConversionProofs.SetConversion (setConv)
+import CS30.Exercises.LogicInequalities (logicInequalitiesEx)
 
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
 -- http://math.chapman.edu/~jipsen/mathquill/test/MathQuillsymbolsMathJax.html
@@ -35,6 +36,7 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , modN
         , logicRewritingEx
         , logicProof
+        , logicInequalitiesEx -- Logic; inequality problems
         -- , combinEx -- too slow, see TODO
         , probExProof
         , setConv
