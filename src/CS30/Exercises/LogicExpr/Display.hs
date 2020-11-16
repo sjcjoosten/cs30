@@ -11,7 +11,7 @@ logicProof :: ExerciseType
 logicProof
   = exerciseType "RewritingExpressions" "L?.?"
                  "Logic: rewriting expressions" 
-                 [(generateRandEx 3), (generateRandEx 5)]
+                 [generateRandEx 3, generateRandEx 5]
                  generateExercise 
                  generateFeedback
 
@@ -29,7 +29,7 @@ generateRandEx n
        let expr = Neg e
        let proof = getDerivation (map parseLaw input_laws) expr
        perms <- permutations (getSize proof)
-       return (expr, (shuffle proof perms), perms)
+       return (expr, shuffle proof perms, perms)
 
 -- Helper function for generateRandEx, generates a ChoiceTree of logic expressions of a certain size.
 genRandEx :: Int -> ChoiceTree LogicExpr
@@ -60,13 +60,13 @@ getSize (Proof _ steps) = length steps
 shuffle :: Proof String -> [Int] -> [[Field]]
 shuffle proof perm = map showStep (reorderedSteps proof)
   where steps (Proof _ s)  = s
-        reorderedSteps p = (map ((steps p) !!) perm)
+        reorderedSteps p = map (steps p !!) perm
         showStep (name, ex) = [ FMath "=", FText name, FIndented 1 [FMath $ show ex] ]
 
 -- Function for the actual text displayed to the client.
 generateExercise :: (LogicExpr, [[Field]], [Int]) -> Exercise -> Exercise
 generateExercise (expr, steps, _) exercise 
-  = exercise{eQuestion = [ FText $"Here is an example proof, can you put it in the right order?"
+  = exercise{eQuestion = [ FText "Here is an example proof, can you put it in the right order?"
                          , FIndented 1 [FMath $ show expr] 
                          , FReorder "proof" steps]
       , eBroughtBy = ["Tyler", "Fei"] }
@@ -74,9 +74,9 @@ generateExercise (expr, steps, _) exercise
 -- Function for generating feedback and displaying it to the user. 
 generateFeedback :: (LogicExpr, [[Field]], [Int]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 generateFeedback (_, _, sol) rsp pr 
-  = case (Map.lookup "proof" rsp) of
+  = case Map.lookup "proof" rsp of
       (Just userOrder) 
-        -> if map ((sol !!) . read) (breakUnderscore userOrder) == [0..((length sol) - 1)]
+        -> if map ((sol !!) . read) (breakUnderscore userOrder) == [0..(length sol - 1)]
            then markCorrect pr{prFeedback=[ FText "The order is correct. Your answer was: ",FText (display userOrder)]}
            else markWrong pr{prFeedback=[ FText "The order is incorrect. The correct order was: ",FText displayCorrect]}
       _ -> error "Response is missing 'proof' field"

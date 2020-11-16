@@ -66,14 +66,14 @@ renameLaw f law = law {lawName=f (lawName law)}
 
 -- try to generate a faulty proof for an expr
 genFaultyProof :: LogicExpr -> Proof Bool
-genFaultyProof e = getWrongDerivation true_laws false_laws e
+genFaultyProof = getWrongDerivation true_laws false_laws
   where 
     true_laws = map (renameLaw (const True) . parseLaw) input_laws
     false_laws = map (renameLaw (const False) . parseLaw) fake_laws
 
 -- Check if a list of laws are all true
 checkLaws :: [String] -> Bool
-checkLaws laws = all checkLaw laws 
+checkLaws = all checkLaw
 checkLaw :: String -> Bool
 checkLaw law = case parseLaw law of
                  (Law _ (lhs, rhs)) -> equivalenceCheck lhs rhs
@@ -91,9 +91,9 @@ getWrongDerivation true_laws false_laws e
  where multiSteps :: LogicExpr -> Int -> [Step Bool] 
        multiSteps e' stepNum
         = case [ (lawName law, res)
-               | law <- if even stepNum then (true_laws++false_laws) else (false_laws ++ true_laws) -- true_laws and false_laws in alternatining order of appearance
+               | law <- if even stepNum then true_laws++false_laws else false_laws++true_laws -- true_laws and false_laws in alternatining order of appearance
                , res <- getStep (lawEq law) e'               
-               , if lawName law then True else not $ equivalenceCheck e' res
+               , lawName law || not (equivalenceCheck e' res)
                ] of
             [] -> []
             (x:_xs) -> x:multiSteps (snd x) (stepNum+1)
@@ -150,15 +150,15 @@ matchE (Bin op1 e1 e2) (Bin op2 e3 e4) | op1 == op2
           s2 <- matchE e2' e4'
           combineTwoSubsts s1 s2 
 
-matchE (Bin _ _ _) _ = Nothing
+matchE Bin {} _ = Nothing
 matchE (Neg e1) (Neg e2) = matchE e1 e2
 matchE (Neg _) _ = Nothing
 
 combineTwoSubsts :: Substitution -> Substitution -> Maybe Substitution
 combineTwoSubsts s1 s2
-  = case and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2] of
-     True -> Just (s1 ++ s2)
-     False -> Nothing
+  = if and [v1 == v2 | (nm1,v1) <- s1, (nm2,v2) <- s2, nm1 == nm2]
+    then Just (s1 ++ s2)
+    else Nothing
 
 apply :: Substitution -> LogicExpr -> LogicExpr
 apply subst (Var nm) = fromJust $ lookup nm subst

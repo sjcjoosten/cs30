@@ -13,7 +13,7 @@ logicWrongStepEx :: ExerciseType
 logicWrongStepEx
   = exerciseType "RewritingExpressionsHarder" "L?.?"
                  "Logic: rewriting expressions (harder version)" 
-                 [(generateRandFaultyEx 3), (generateRandFaultyEx 5)]
+                 [generateRandFaultyEx 3, generateRandFaultyEx 5]
                  generateExercise 
                  generateFeedback
 
@@ -49,12 +49,10 @@ generateExercise (expr, steps, sol) exercise
 -- Function for generating feedback and displaying it to the user. 
 generateFeedback :: (LogicExpr, [[Field]], [Bool]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 generateFeedback (_, _, sol) rsp pr 
-  = case and $ zipWith compare' [0..((length sol) - 1)] sol of
-      True -> markCorrect pr{prFeedback=[ FText "Your selections were correct. The correct answer was: ",FText display]}
-      False -> markWrong pr{prFeedback=[ FText "Your selections were incorrect. The correct answer was: ",FText display]}
-  where compare' i k = case (Map.lookup (show i) rsp) of
-                        (Just input) -> if input == "0" && k == True then True
-                                        else if input == "1" && k == False then True
-                                        else False
+  = if and $ zipWith compare' [0..(length sol - 1)] sol
+    then markCorrect pr{prFeedback=[ FText "Your selections were correct. The correct answer was: ",FText display]}
+    else markWrong pr{prFeedback=[ FText "Your selections were incorrect. The correct answer was: ",FText display]}
+  where compare' i k = case Map.lookup (show i) rsp of
+                        (Just input) -> (input == "0" && k) || (input == "1" && not k)                                                                                
                         _ -> error "Expression not found"
         display = foldl (\a b -> a ++ " " ++ show b) "" sol

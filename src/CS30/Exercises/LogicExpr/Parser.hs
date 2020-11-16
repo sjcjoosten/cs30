@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wall #-}
 module CS30.Exercises.LogicExpr.Parser where
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
@@ -67,13 +68,13 @@ symb Or = orStr
 symb Imply = implyStr
 
 instance Show LogicExpr where
-    show e = showsPrec 0 e ""
+    show e = shows e ""
     showsPrec _ (Con b) = showString (if b then "true" else "false")
     showsPrec _ (Var v) = showString [v]       
     showsPrec _p (Neg e) = showString negStr . showsPrec negPrec e
     showsPrec p (Bin Imply e1 e2)
         = showParen (p /= 0) (showsPrec q e1 . showSpace . showOp Imply . showSpace . showsPrec q e2) 
-        where q = (prec Imply)
+        where q = prec Imply
     showsPrec p (Bin op e1 e2)
         = showParen (p /= 0 && p /= q) (showsPrec q e1 . showSpace . showOp op . showSpace . showsPrec q e2) 
         where q = prec op
@@ -107,43 +108,41 @@ negStr :: String; andStr :: String; orStr :: String; implyStr :: String; equalSt
 logicExpr :: Parser LogicExpr
 logicExpr = space' *> makeExprParser term ops <* space'
     where
-        term = (do 
-            v <- satisfy (\v -> v=='p' || v=='q' || v=='r') <* space'
-            return (Var v)
-            )
+        term = 
+            (do 
+                v <- satisfy (\v -> v=='p' || v=='q' || v=='r') <* space'
+                return (Var v))
             <|>
             (do
                 v <- (string "true" <|> string "false") <* space'
-                return (Con (if v == "true" then True else False)))
+                return (Con (v == "true")))
             <|>
             (do 
                 string "(" *> space'
                 t <- logicExpr
                 string ")" *> space'
-                return t
-                )
-
+                return t)
         ops = [
-            [ Prefix (return Neg <* string negStr <* space')]
+            [ Prefix (Neg <$ string negStr <* space')]
             , [ infixL andStr And
                 , infixL orStr Or]
             , [infixL implyStr Imply]
             ]            
-        space' = ((string " " <|> string "\\t" <|> string "\\ ") *> space')
-                <|> return ()            
-        infixL str op = InfixL (return (Bin op) <* string str <* space')
+        infixL str op = InfixL (Bin op <$ string str <* space')
+
+space' :: Parser ()
+space' = ((string " " <|> string "\\t" <|> string "\\ ") *> space') <|> return ()            
 
 
 law :: Parser (Law LawName)
 law = do
-    name <- parseUntil ':' <* space    
-    e1 <- logicExpr <* space
+    name <- parseUntil ':' <* space'    
+    e1 <- logicExpr <* space'
     _ <- string equalStr
-    e2 <- logicExpr <* space
+    e2 <- logicExpr <* space'
     return (Law name (e1,e2))
 
-
-parseUntil :: MonadParsec e s f => Token s -> f [Token s]
+parseUntil :: Char -> Parser String
 parseUntil c = 
     do 
         _ <- satisfy (== c)
