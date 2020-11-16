@@ -24,7 +24,7 @@ cardinalityProofExer
 
 
 setExercises :: [ChoiceTree SetCardinalityProblem] -- first thing in field will be expression, rest its equivalencies
-setExercises = [fullExercise 3, fullExercise 5, fullExercise 6]
+setExercises = [fullExercise 3] -- removed larger exercises as they cause negative exponent errors
   where fullExercise i = do ex <- generateRandSetExpr i
                             let proof@(Proof lhs steps) = genProof laws (Op Cardinality [ex])
                                 rhs = last (lhs:map snd steps)
