@@ -13,6 +13,11 @@ import CS30.Exercises.Table (tableStub)
 import CS30.Exercises.TruthTable (truthEx)
 import CS30.Exercises.ProofStub (proofStub)
 import CS30.Exercises.SetCardinalitiesProofs.ExerciseGeneration (cardinalityProofExer)
+import CS30.Exercises.ProbExProof (probExProof)
+import CS30.Exercises.LogicRewriting.Exercise (logicRewritingEx)
+import CS30.Exercises.LogicExpr.Display (logicProof)
+import CS30.Exercises.SetConversionProofs.SetConversion (setConv)
+import CS30.Exercises.LogicInequalities (logicInequalitiesEx)
 
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
 -- http://math.chapman.edu/~jipsen/mathquill/test/MathQuillsymbolsMathJax.html
@@ -31,8 +36,12 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , probaEx
         , modN
         , cardinalityProofExer
-        
+        , logicRewritingEx
+        , logicProof
+        , logicInequalitiesEx -- Logic; inequality problems
         -- , combinEx -- too slow, see TODO
+        , probExProof
+        , setConv
         ]
 
 -- the definition below is to prevent warnings about unused imports

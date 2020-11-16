@@ -6,10 +6,10 @@ COSC 69.14, 20F
 Group Assignment 1 
 -}
 
-module CS30.Exercises.Cardinality (cardEx) where
+module CS30.Exercises.Cardinality (cardEx, parseExpr, evalExpr) where
 import           CS30.Data
 import           CS30.Exercises.Data
-import           CS30.Exercises.Util
+import CS30.Exercises.Util ( reTime )
 import           Data.List.Extra (intercalate)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
