@@ -20,13 +20,16 @@ Given P[A] = 1/2, P[B|C] = 1/2, p[A & B|C] = 1/3
 Calculate Pr[A|(B|C)]
 The right answer would be 2/3
 -}
-genExercise :: Int -> ChoiceTree ((FracExpr, Rational), [(FracExpr, Rational)])
+genExercise :: Int -> ChoiceTree ((FracExpr, Rational), [(FracExpr,[Field], Rational)])
 genExercise i = do expr <- probExpr i
                    let proof = getDerivation rules expr
                    let givenExpr = getLast proof
                    rList <- permutations 16
                    let givens = combineGiveExpr givenExpr rList
-                   return ((expr, randList (evaluate expr) rList), givens)
+                   return ((expr ,randList (evaluate expr) rList), givens)
+
+getField :: [[Field]]
+getField = error "not implemented"
                
 randList :: Val -> [Integer] -> Rational
 randList (Chance f) lst = f lst
@@ -40,8 +43,8 @@ permutations l
       }
 
 
-combineGiveExpr :: [FracExpr] -> [Integer] -> [(FracExpr, Rational)]
-combineGiveExpr exprlist rlst = [(e1, f rlst)| e1 <- exprlist, Chance f <- [evaluate e1]]
+combineGiveExpr :: [FracExpr] -> [Integer] -> [(FracExpr,[Field], Rational)]
+combineGiveExpr exprlist rlst = [(e1,[FFieldMath "Your answer is: "], f rlst)| e1 <- exprlist, Chance f <- [evaluate e1]]
 
 data Val = Evet [Bool] 
           |Chance ([Integer] -> Rational)
@@ -97,7 +100,6 @@ extractExpr (Prob a) = [Prob a]
 extractExpr (FBin _ a b) = extractExpr a ++ extractExpr b
 extractExpr _ = []
 
-
 -- Fvar 'A' 
 -- Fvar 'B' 
 -- A|B
@@ -136,12 +138,12 @@ decomposeExpr e1 =
                 _ -> [e1]
 
 
-genExer :: ((FracExpr, Rational), [(FracExpr, Rational)]) -> Exercise -> Exercise
-genExer ((expr, _answer), givenList) exercise 
-    = exercise {eQuestion = [FText "Given " ] ++ processGiven givenList ++ 
-        [FIndented 0 [FText "Calculate ", FMath (myShow expr)]]}
+genExer :: ((FracExpr, Rational), [(FracExpr,[Field], Rational)]) -> Exercise -> Exercise
+genExer ((expr, _answer), [(expr1, fid, answer)]) exercise 
+    = exercise {eQuestion = [FText "Given " ] ++ processGiven [(expr1,answer)] ++ 
+        [FIndented 0 [FText "Calculate ", FMath (myShow expr)], FFieldMath "Your answer is: "]}
 
-processGiven :: [(FracExpr, Rational)] -> [Field]
+processGiven :: [(FracExpr,Rational)] -> [Field]
 processGiven list = combine [FMath $ myShow e1 ++ "=" ++ rationToLatex e2 | (e1, e2) <- list]
 
 combine :: [Field] -> [Field]
@@ -153,10 +155,6 @@ rationToLatex :: Rational -> [Char]
 rationToLatex 0 = "0"
 rationToLatex 1 = "1"
 rationToLatex r = "\\frac{" ++ show (numerator r) ++ "}" ++ "{" ++ show (denominator r) ++ "}"
-
-{-exprToLatex :: FracExpr -> String
-exprToLatex = show -}
-
 
 generateFeedback = undefined
 
@@ -178,8 +176,8 @@ myShow :: FracExpr -> String
 myShow expr = showsPrecHelper 3 expr "" 
 
 showsPrecHelper :: Int -> FracExpr -> ShowS
-showsPrecHelper p (FConst n) = showString (show n)
-showsPrecHelper p (FVar n1) = showString [n1]
+showsPrecHelper _ (FConst n) = showString (show n)
+showsPrecHelper _ (FVar n1) = showString [n1]
 showsPrecHelper p (FBin op e1 e2)
         = showParen (p>q) (showsPrecHelper q e1 . showSpace .
         showString(symb op) . showSpace . showsPrecHelper (q+1) e2) where q = prec op
@@ -189,9 +187,9 @@ showsPrecHelper p (AndEvent e1 e2)
 showsPrecHelper p (OrEvent e1 e2)
         = showsPrecHelper p e1 . showSpace .
         showString "\\vee" . showSpace . showsPrecHelper p e2
-showsPrecHelper p Omega
+showsPrecHelper _ Omega
         = showSpace . showString "\\Omega" . showSpace 
-showsPrecHelper p EmptySet
+showsPrecHelper _ EmptySet
         = showSpace . showString "\\emptyset" . showSpace 
 showsPrecHelper p (NegaEvent e1)
         =  showString "\\neg" . showSpace. showsPrecHelper p e1 . showSpace
