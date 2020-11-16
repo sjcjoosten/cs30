@@ -40,7 +40,7 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , modProofEx
         , logicRewritingEx
         , logicProof
-        , logicInequalitiesEx -- Logic; inequality problems
+        -- , logicInequalitiesEx -- Logic; inequality problems. Has negative exponents.
         -- , combinEx -- too slow, see TODO
         , probExProof
         , setConv
