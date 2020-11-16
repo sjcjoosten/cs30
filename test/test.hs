@@ -3,12 +3,13 @@ import           CS30.Exercises (pages)
 import           CS30.Exercises.Data
 import qualified Data.Text as Text
 import qualified Test.QuickCheck.Property as QCP
--- import Test.Tasty.HUnit
+import Test.Tasty.HUnit
 import           Test.Tasty
 -- import Test.Tasty.SmallCheck as SC
 import           Test.Tasty.QuickCheck as QC
 import           Text.TeXMath.Readers.TeX (readTeX)
 import Debug.Trace
+import           CS30.Exercises.LogicExpr.Proof (checkLaw, input_laws, fake_laws)
 
 _unused :: a
 _unused = undefined where _ = trace
@@ -17,7 +18,15 @@ main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [pagesStandardTests]
+tests = testGroup "Tests" [pagesStandardTests, lawTests]
+
+lawTests :: TestTree
+lawTests
+ = testGroup "LogicExpr laws" ([testLaw True l | l <- input_laws] ++
+                               [testLaw False l | l <- fake_laws])
+ where testLaw b l
+          = testCase l $ assertBool ("This law should have been "++show b ++" but was not evaluated as such.")
+                                    (b == checkLaw l)
 
 pagesStandardTests :: TestTree
 pagesStandardTests
