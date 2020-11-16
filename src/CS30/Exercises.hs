@@ -12,6 +12,7 @@ import CS30.Exercises.SetBasics (rosterEx, powsetEx, setOpsEx)
 import CS30.Exercises.Table (tableStub)
 import CS30.Exercises.TruthTable (truthEx)
 import CS30.Exercises.ProofStub (proofStub)
+import CS30.Exercises.ProbExProof (probExProof)
 import CS30.Exercises.LogicRewriting.Exercise (logicRewritingEx)
 import CS30.Exercises.LogicExpr.Display (logicProof)
 import CS30.Exercises.SetConversionProofs.SetConversion (setConv)
@@ -37,6 +38,7 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , logicProof
         , logicInequalitiesEx -- Logic; inequality problems
         -- , combinEx -- too slow, see TODO
+        , probExProof
         , setConv
         ]
 
