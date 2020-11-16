@@ -44,7 +44,7 @@ permutations l
 
 
 combineGiveExpr :: [FracExpr] -> [Integer] -> [(FracExpr,[Field], Rational)]
-combineGiveExpr exprlist rlst = [(e1,[FFieldMath "Your answer is: "], f rlst)| e1 <- exprlist, Chance f <- [evaluate e1]]
+combineGiveExpr exprlist rlst = [(e1,[FFieldMath "answer"], f rlst)| e1 <- exprlist, Chance f <- [evaluate e1]]
 
 data Val = Evet [Bool] 
           |Chance ([Integer] -> Rational)
@@ -141,7 +141,7 @@ decomposeExpr e1 =
 genExer :: ((FracExpr, Rational), [(FracExpr,[Field], Rational)]) -> Exercise -> Exercise
 genExer ((expr, _answer), [(expr1, fid, answer)]) exercise 
     = exercise {eQuestion = [FText "Given " ] ++ processGiven [(expr1,answer)] ++ 
-        [FIndented 0 [FText "Calculate ", FMath (myShow expr)], FFieldMath "Your answer is: "]}
+        [FIndented 0 [FText "Calculate ", FMath (myShow expr)], FFieldMath "answer"]}
 
 processGiven :: [(FracExpr,Rational)] -> [Field]
 processGiven list = combine [FMath $ myShow e1 ++ "=" ++ rationToLatex e2 | (e1, e2) <- list]
