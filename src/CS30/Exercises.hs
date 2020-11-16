@@ -13,6 +13,9 @@ import CS30.Exercises.Table (tableStub)
 import CS30.Exercises.TruthTable (truthEx)
 import CS30.Exercises.ProofStub (proofStub)
 import CS30.Exercises.ModuloGenerateEx (modProofEx)
+import CS30.Exercises.LogicRewriting.Exercise (logicRewritingEx)
+import CS30.Exercises.LogicExpr.Display (logicProof)
+import CS30.Exercises.SetConversionProofs.SetConversion (setConv)
 import CS30.Exercises.LogicInequalities (logicInequalitiesEx)
 
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
@@ -32,8 +35,11 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , probaEx
         , modN
         , modProofEx
+        , logicRewritingEx
+        , logicProof
         , logicInequalitiesEx -- Logic; inequality problems
         -- , combinEx -- too slow, see TODO
+        , setConv
         ]
 
 -- the definition below is to prevent warnings about unused imports
