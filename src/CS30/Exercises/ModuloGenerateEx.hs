@@ -57,29 +57,45 @@ getRHS e
   | otherwise = t
   where
     vars = getVariables e
-    h = head vars
     t = tail vars
 
 randomProof' :: Expression -> [Law] -> ChoiceTree ([Field], [Int])
 randomProof' a lws
   | length (getPrfStep prf) == 0 = structurize <$> (getProofPermuts (proofToField ProofError))
-  | otherwise = structurize  <$> (getProofPermuts (proofToField prf))
+  | otherwise = structurize <$> (getProofPermuts (proofToField prf))
   where
     prf = getDerivation 5 lws a
     given = head lws
     getPrfStep (Proof _ lst) = lst
     getPrfStep ProofError = []
-    structurize (x,y) = ([FText $"Can you put it in the right order?",
-                                   FIndented 1 [FMath (show a)],
-                                   FText $ "Given:",
-                                   FIndented 1 [FMath (show (fst (lawEq given))), FMath "=", FMath (show (snd (lawEq given)))],
-                                   FReorder "proof" x], y)
+    structurize (x,y)
+
+      | length (getPrfStep prf) > 0 = ([FText $ "Given : ",
+                                        FIndented 1 [(FMath . show . fst . lawEq) given,
+                                                     FMath "\\ =\\ ",
+                                                     (FMath . show . snd . lawEq) given],
+                                        FText $ "To prove : ",
+                                        FIndented 1 [(FMath . show) a,
+                                                     FMath "\\ \\equiv_{p}\\ \\ ",
+                                                     (FMath . show . snd . last . getPrfStep) prf],
+                                        FText $ "Can you put the proof in the right order?",
+                                        FIndented 1 [FMath (show a)],
+                                        FReorder "proof" x
+                                      ], y)
+      | otherwise = ([FText $ "Given : ",
+                      FIndented 1 [(FMath . show . fst . lawEq) given, 
+                                   FMath "\\ =\\ ", 
+                                   (FMath . show . snd . lawEq) given],
+                      FText $ "Expression : ",
+                      FIndented 1 [(FMath . show) a],
+                      FText $ "No proof could be generated, please click on check"
+                    ], y)
 
 proofToField :: Proof -> [[Field]]
 proofToField ProofError = [[FText "No Proof was found for this expression"]]
-proofToField (Proof exp steps) = trace ("Stepsssss = " ++ (show steps)) $ [ wrapField st | st <- steps]
+proofToField (Proof _ steps) = trace ("Stepsssss = " ++ (show steps)) $ [ wrapField st | st <- steps]
   where
-    wrapField (a,b) = [FMath "\\equiv_{p}", FText a, FIndented 1 [FMath (show b)]]
+    wrapField (a,b) = [FMath "\\equiv_{p}\\space\\space", FText a, FIndented 2 [FMath (show b)]]
 
 permutations :: Int -> ChoiceTree [Int]
 permutations 0 = Node []
