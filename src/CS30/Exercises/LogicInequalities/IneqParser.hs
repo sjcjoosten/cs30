@@ -1,7 +1,7 @@
 module CS30.Exercises.LogicInequalities.IneqParser where
 
 import           Control.Monad.Combinators.Expr
-import           Data.Maybe ( catMaybes )
+import           Data.Maybe ( mapMaybe )
 import           Data.Void ( Void )
 import           Text.Megaparsec
 import           Text.Megaparsec.Char ( string )
@@ -9,16 +9,20 @@ import qualified Text.Megaparsec.Char.Lexer as L
 
 {- defining datas and types -}
 type Parser        = Parsec Void String
+
 data Expr          = Var String | Const Integer | Op Opr [Expr] deriving (Eq)  -- | ConstVar String
 data Opr           = Multiplication | Division | Addition | Subtraction
                    | Exponentiation | Factorial | Negate deriving (Eq,Show)
+
 data Law           = Law {lawName :: String, lawEq :: Equation}
 type Equation      = (Expr,Expr)
-type Inequality    = (Expr,Ineq,Expr)
+
 data Ineq          = GThan | GEq | EqEq deriving (Eq)
-data OldProof      = OldProof Expr [ProofStep] deriving Show -- used for subproofs of a single Expr
+type Inequality    = (Expr,Ineq,Expr)
 data Proof         = Proof Inequality Integer [ProofStep] deriving Show
+data OldProof      = OldProof Expr [ProofStep] deriving Show -- used for subproofs of a single Expr
 data ProofStep     = Single (String, Expr) | Double (String,Inequality) deriving Show
+
 -- MathExpr for parsing, gets converted to Expr for everything else
 data MathExpr      = MathConst Integer 
                    | MathVar String
@@ -88,7 +92,7 @@ showParens True s = showChar '(' . s . showChar ')'
 showParens False s = s
 
 stringsToLaws :: [String] -> [Law]
-stringsToLaws lst = catMaybes $ map convert lst
+stringsToLaws = mapMaybe convert
   where convert v = case parse parseLaw "" v of
                  Left _ -> Nothing
                  Right l -> Just l

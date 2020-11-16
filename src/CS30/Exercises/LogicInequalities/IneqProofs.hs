@@ -24,8 +24,6 @@ lawList = [ "Exponentiation: a ^ 0 = 1"
           , "Distributive Right: (a + b) * c = a * c + b * c"
           , "Distributive Left: a * (c - d) = a * c - a * d"
           , "Distributive Right: (a - b) * c = a * c - b * c"
-          -- , "Factorial: a! = a * (a - 1)!"
-          -- , "Exponentiation: a ^ 2 = a * a"
           ]
 
 -- our list of laws
@@ -39,6 +37,7 @@ makeProof e1 e2 n = case evaluate e1 e2 of
                     Nothing -> makeProof e2 e1 n
                     Just (ineq,a) -> getDerivationLengthN lawBois ineq e1 e2 n a
 
+-- given a list of laws, inequality symbol, two expressions, and the max length of proof, generate a proof
 getDerivationLengthN :: [Law] -> Ineq -> Expr -> Expr -> Integer -> Integer -> Proof
 getDerivationLengthN laws ineq e1 e2 i a = Proof (e1,ineq,e2) a (firstThing : (multiSteps e1 e2 i))
   where 
@@ -145,7 +144,7 @@ matchE (Const _) _ = Nothing
 matchE (Op o1 [e1,e2]) (Op o2 [e3,e4]) | o1 == o2
  = case (matchE e1 e3, matchE e2 e4) of
     (Just s1, Just s2) -> combineTwoSubsts s1 s2
-    _ -> Nothing
+    _                  -> Nothing
 matchE (Op o1 [e1]) (Op o2 [e2]) | o1 == o2
  = matchE e1 e2
 matchE (Op _ _) _ = Nothing

@@ -7,6 +7,14 @@ import qualified Data.Map as Map
 import           CS30.Exercises.LogicInequalities.IneqParser
 import           CS30.Exercises.LogicInequalities.IneqProofs
 
+{- LogicInequalities.hs -}
+
+{- 
+This module generates problems that deal with inequalites, and presents the user with a proof to reorder. 
+Using laws in lawList and reasoning for inequalities, the proof simplifies expressions as much as possible before calculating.
+The user is asked to reorder the proof and is given feedback on the correct order of the proof.
+-}
+
 logicInequalitiesEx :: ExerciseType
 logicInequalitiesEx = exerciseType "ineqProof" "L?.???" "Logic: Inequality"
                       [getFields] genProof simpleFeedback
@@ -89,7 +97,7 @@ generateRandEx i n
                        ]
     where
       availOps j = case (j < 2) of
-                    True -> [Addition,Subtraction,Multiplication,Exponentiation,Factorial]
+                    True  -> [Addition,Subtraction,Multiplication,Exponentiation,Factorial]
                     False -> [Addition,Multiplication]
 
 filterTree :: ChoiceTree Expr -> ChoiceTree Expr
