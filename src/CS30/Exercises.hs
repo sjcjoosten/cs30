@@ -12,6 +12,7 @@ import CS30.Exercises.SetBasics (rosterEx, powsetEx, setOpsEx)
 import CS30.Exercises.Table (tableStub)
 import CS30.Exercises.TruthTable (truthEx)
 import CS30.Exercises.ProofStub (proofStub)
+import CS30.Exercises.SetCardinalitiesProofs.ExerciseGeneration (cardinalityProofExer)
 import CS30.Exercises.ProbExProof (probExProof)
 import CS30.Exercises.ModuloGenerateEx (modProofEx)
 import CS30.Exercises.LogicRewriting.Exercise (logicRewritingEx)
@@ -35,6 +36,7 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , incExcCards -- from IncExcCardinalities
         , probaEx
         , modN
+        , cardinalityProofExer
         , modProofEx
         , logicRewritingEx
         , logicProof
