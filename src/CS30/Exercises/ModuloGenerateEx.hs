@@ -56,7 +56,7 @@ getRHS e
   | length t == 0 = [x |x <- ['a', 'b', 'c', 'd'], not $ elem x vars]
   | otherwise = t
   where
-    vars = getVariables e
+    vars = getVariablesWithFallback e
     t = tail vars
 
 -- Takes an expression and a list of laws and generates choice tree of (proofs rendered as list of Field, solution)
@@ -89,13 +89,13 @@ randomProof' a lws
                                    (FMath . show . snd . lawEq) given],
                       FText $ "Expression : ",
                       FIndented 1 [(FMath . show) a],
-                      FText $ "No proof could be generated, please click on check"
+                      FReorder "proof" x
                     ], y)
 
 -- renders a Proof to a list of list of fields
 -- used in randomProof' to structurize the generated Proof into what will be rendered in the front end
 proofToField :: Proof -> [[Field]]
-proofToField ProofError = [[FText "No Proof was found for this expression"]]
+proofToField ProofError = [[FText "No Proof was found for this expression - Please click on Check to get a new exercise. Sorry for the inconvenience."]]
 proofToField (Proof _ steps) = trace ("Stepsssss = " ++ (show steps)) $ [ wrapField st | st <- steps]
   where
     wrapField (a,b) = [FMath "\\equiv_{p}\\space\\space", FText a, FIndented 2 [FMath (show b)]]
