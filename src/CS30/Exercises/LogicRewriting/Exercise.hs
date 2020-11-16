@@ -141,7 +141,7 @@ logicExercises = [do law <- getLawsByName name
 -- generate the question displayed to the user
 logicQuer :: ([Field], Int, [Field]) -> Exercise -> Exercise
 logicQuer (quer, _, _) defExer = defExer {eQuestion = [FText "Can you name the missing law applied in this proof?"]
-                                                      ++quer}
+                                                      ++quer, eBroughtBy = ["Chibuzo", "Lucas"]}
 
 -- generate feedback
 logicFeedback :: ([Field], Int, [Field]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
