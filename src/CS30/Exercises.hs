@@ -50,4 +50,4 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
 
 -- the definition below is to prevent warnings about unused imports
 _ignorable :: [ExerciseType]
-_ignorable = [graphStub, tableStub, combinEx]
+_ignorable = [graphStub, tableStub, combinEx, logicInequalitiesEx]
