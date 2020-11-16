@@ -73,10 +73,10 @@ showParenLATEX b p = if b
 -- contains all the laws that we use (after parsing)
 lawStrings :: [String]
 lawStrings = [
-        "Idempotent Law: p || p = p",
-        "Idempotent Law: p && p = p",
         "Negation Law: p || !p = true",
         "Negation Law: p && !p = false",
+        "Idempotent Law: p || p = p",
+        "Idempotent Law: p && p = p",
         "Double Negation Law: !(!p) = p",
         "Definition of True: !false = true",
         "Definition of False: !true = false",
@@ -89,13 +89,51 @@ lawStrings = [
         "De Morgan's Law: !(p || q) = !p && !q"
     ]
 
--- parse all the laws into our Law data structure
+-- parse all the laws into our Law data structure, and
+-- also include commutative versions of some laws 
+--  (with the expressions flipped)
+-- and the Commutativity/Associativity laws necessary
+--  to apply all the laws 
 laws :: [Law]
-laws = normalLaws ++ assocAndComm normalLaws
+laws = lawsAndFlips normalLaws ++ assocAndComm normalLaws
        where normalLaws = map prsLaw lawStrings
              prsLaw x = case parse parseLaw "" x of
                            Left s  -> error (show s) 
                            Right l -> l
+
+-- returns True if the given expression is a commutative 
+-- (and we assume also associative) binary expression
+commutes :: Expr -> Bool
+commutes (Bin op _ _)
+ = case op of
+     And -> True
+     Or  -> True
+     Implies -> False
+commutes _ = False
+
+-- a law needs a commutative version if the lhs is a  
+-- commutative binary expression where both sides of 
+-- the binary operation are not the same 
+needsComm :: Expr -> Bool
+needsComm expr 
+  = case expr of 
+      (Bin op e1 e2) -> commutes (Bin op e1 e2) && e1 /= e2
+      _                -> False
+
+-- return the given list of laws, with commutative versions of the laws
+-- (with the expressions flipped) interspersed where necessary
+-- 
+-- e.g. we will have two negation laws: "p || !p = true" and 
+--  "!p || p = true" immediately next to one another in the list, 
+--  so the order of applying laws remains the same
+lawsAndFlips :: [Law] -> [Law]
+lawsAndFlips lws = [law {lawEqn=eqn} | law <- lws, 
+                                       eqn <- flips (lawEqn law)] 
+                    where flips (e1, e2) = if needsComm e1
+                                           then [(e1,e2), (flipExpr e1, flipExpr e2)]
+                                           else [(e1,e2)]
+                          flipExpr (Bin op e1 e2) = Bin op e2 e1
+                          flipExpr expr = expr
 
 -- generate a list of  associativity and commutativity laws 
 -- which should only be applied when needed to apply the given list of laws
@@ -104,16 +142,17 @@ laws = normalLaws ++ assocAndComm normalLaws
 -- and then "r || (p || p)" using associativity, so we can apply idempotency
 assocAndComm :: [Law] -> [Law]
 assocAndComm lws 
-    = (concatMap comms binLaws) ++ (concatMap assoc binLaws)
-      where binLaws  = [Bin op e1 e2 | (Law _ ((Bin op e1 e2), _)) <- lws
-                                     , op `elem` [And, Or]]
+    = (concatMap comms binLawExprs) ++ (concatMap assoc binLawExprs)
+      where binLawExprs = [e1 | law <- lws, 
+                                let (e1,_) = lawEqn law, 
+                                commutes e1]
             -- ^ we only need associativity/commutativity for laws that 
             -- match either an "and" or an "or" expression 
             comms (Bin op e1 e2) = [Law "Commutativity" (Bin op (Bin op e1 (Var 'x')) e2, 
                                                          Bin op (Bin op (Var 'x') e1) e2), 
                                     Law "Commutativity" (Bin op e1 (Bin op (Var 'x') e2), 
-                                                         Bin op e1 (Bin op e2 (Var 'x'))),
-                                    Law "Commutativity" (Bin op e2 e1, Bin op e1 e2)]
+                                                         Bin op e1 (Bin op e2 (Var 'x')))]
+            -- ^ use Var 'x' here to not conflict with any variables in the original law
             comms _ = []
             assoc (Bin op e1 e2) = [Law "Associativity" (Bin op (Bin op (Var 'x') e1) e2, 
                                                          Bin op (Var 'x') (Bin op e1 e2)), 
