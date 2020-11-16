@@ -10,6 +10,9 @@ import           Test.Tasty.QuickCheck as QC
 import           Text.TeXMath.Readers.TeX (readTeX)
 import Debug.Trace
 
+_unused :: a
+_unused = undefined where _ = trace
+
 main :: IO ()
 main = defaultMain tests
 
@@ -63,7 +66,8 @@ validField (FValueS a b)
  = seq b (validHTMLName "The Field with constructor FValueS" a)
 validField (FMath str)
   = case readTeX (Text.pack str) of -- TODO: check latex fields and match to MathQuill, change to a different parser that matches MathQuill's.
-         Left e -> trace ("The string "++str++" wasn't parsed as valid LaTeX-math.\n"++Text.unpack e) QCP.succeeded
+         Left e -> -- trace ("The string "++str++" wasn't parsed as valid LaTeX-math.\n"++Text.unpack e)
+                   QCP.succeeded
          Right _lst -> QCP.succeeded
 
 validHTMLName :: String -> String -> QCP.Result

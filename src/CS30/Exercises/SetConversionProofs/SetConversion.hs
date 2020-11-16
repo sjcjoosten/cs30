@@ -26,25 +26,7 @@ setConv :: ExerciseType
 setConv = exerciseType "SetConversion" "L??" "Conversion to set-builder notation" 
               setConversion 
               genProof 
-              feedback  
-              simpleFeedback  
-
--- simple feedback mechanism 
-simpleFeedback :: ([Field],[Int]) -> Map.Map [Char] String -> ProblemResponse -> ProblemResponse
-simpleFeedback (_problem, sol) rsp pr
-               = reTime $ case Map.lookup "proof" rsp of
-                   Just str
-                     -> if isSucc (map ((sol !!) . read) (breakUnderscore str) )
-                        then markCorrect pr
-                        else markWrong pr{prFeedback=[FText "You answered: ",FText str]}
-                   Nothing -> error "Client response is missing 'proof' field"
-
--- fxn for determining if a list is comprised of directly successive numbers
-isSucc :: (Enum a, Eq a) => [a] -> Bool
-isSucc [] = True
-isSucc (_x:[]) = True
-isSucc (x:y:zs) | y == succ x = isSucc $ y:zs
-isSucc _ = False
+              feedback    
 
 -- from ProofStub.hs
 permutations :: Int -> ChoiceTree [Int]
@@ -70,15 +52,13 @@ removeRep (Branch [])
 -- fxn for generating a random expression, using \cap, \cup, and \setminus operators (as specified in the assignment sheet)
 genBasicEx :: Int -> ChoiceTree SetExpr
 genBasicEx i | i < 1
- = Branch [ Branch [Node (Var varName) | varName <- ["A"]] 
-          ]
+ = return (Var "A")
 genBasicEx i
- = do { i' <- nodes [0..i-1]
-        ;e1 <- genBasicEx i'
-        ;e2 <- genBasicEx (i - i' - 1)
-        ;opr <- nodes [Cap, Cup, SetMinus]
-        ;return (opr e1 e2) 
-       }
+ = do i' <- nodes [0..i-1]
+      e1 <- genBasicEx i'
+      e2 <- genBasicEx (i - i' - 1)
+      opr <- nodes [Cap, Cup, SetMinus]
+      return (opr e1 e2) 
 
 -- helper fxn for generating random expressions including powerset
 binExprs :: (SetExpr -> SetExpr -> SetExpr) -> Int -> ChoiceTree SetExpr
@@ -97,8 +77,7 @@ unaryExprs operator i
 -- creative element: adds in Power set to random expression generation
 genAdvEx :: Int -> ChoiceTree SetExpr
 genAdvEx i | i < 1
- = Branch [ Branch [Node (Var varName) | varName <- ["A"]] 
-          ]
+ = return (Var "A")
 genAdvEx i 
  = do result <- nodes [binExprs Cap i, binExprs Cup i, binExprs SetMinus i, 
                        unaryExprs Power i] 
@@ -112,7 +91,7 @@ genSuperAdvEx laws
         ; a <- genAdvEx i -- could make i or j or both 0, and replace (2 `subtract` i `subtract` j) with 0 too if we wanted a simpler expr
         ; b <- genAdvEx j
         ; c <- genAdvEx (2 `subtract` i `subtract` j)
-        ; n <- nodes [0..7] -- because there are 7 advanced laws
+        ; n <- nodes [0..4] -- because there are 5 advanced laws
         ; let (Law _nm (left, _rt)) = laws!!n
         ; let expr' = fst(assignVarAdv left [a, b, c])
         ; return expr'
@@ -219,7 +198,7 @@ setConversion
      , Branch [do { ex <- genSuperAdvEx parsedAdvancedLaws -- level 3 --> add in advanced laws, forces an expr that uses at least one of the advanced laws
                    ; let expr' = fst (assignVar ex ["A", "B", "C", "D", "E", "F", "G"]) 
                    ; let (Proof _expr steps) = generateProof parsedAdvancedLaws expr'
-                   ; order <- removeRep (permutations (length steps))
+                   ; order <- permutations (length steps) -- SJC: this generates empty branches sometimes (because of zero/one-step proofs), so removing the removeRep here
                    ; return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 3, expr = expr'}
                  } ]
    ]

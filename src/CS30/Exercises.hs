@@ -36,11 +36,11 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , incExcCards -- from IncExcCardinalities
         , probaEx
         , modN
-        , cardinalityProofExer
+        -- , cardinalityProofExer -- has negative exponents errors
         , modProofEx
         , logicRewritingEx
         , logicProof
-        -- , logicInequalitiesEx -- Logic; inequality problems. Has negative exponents.
+        , logicInequalitiesEx -- Logic; inequality problems.
         -- , combinEx -- too slow, see TODO
         , probExProof
         , setConv
@@ -48,4 +48,4 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
 
 -- the definition below is to prevent warnings about unused imports
 _ignorable :: [ExerciseType]
-_ignorable = [graphStub, tableStub, combinEx, logicInequalitiesEx]
+_ignorable = [graphStub, tableStub, combinEx, cardinalityProofExer]

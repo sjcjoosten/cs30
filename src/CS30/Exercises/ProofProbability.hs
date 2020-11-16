@@ -68,6 +68,7 @@ parsedLaws = Prelude.map strToLaw laws
 strToLaw :: String -> Law 
 strToLaw law =  case parse parseLaws "" law of
                 Right st -> st
+                Left _ -> error "Error parsing one of the internal laws"
 
 
 data Proof = Proof FracExpr [FracStep] deriving (Show, Eq)

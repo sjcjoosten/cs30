@@ -6,7 +6,6 @@ import qualified Data.Map as Map
 
 import CS30.Data
 import CS30.Exercises.Data
-import CS30.Exercises.SetBasics.SolutionChecker
 
 import CS30.Exercises.ModularArithmetic.ModuloProof
 import CS30.Exercises.ModularArithmetic.ModuloParser

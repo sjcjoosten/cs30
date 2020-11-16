@@ -37,7 +37,7 @@ law13 = "Name:(A \\setminus B) \\cup B = A \\cup B"
 
 basicLaws, advancedLaws :: [String] 
 basicLaws = [law1, law2, law3, law4, law5]
-advancedLaws = [law6, law7, law8, law9, law10, law11, law12, law13, law1, law2, law3, law4, law5]
+advancedLaws = [law6, law7, law8, law9, law10, law13, law1, law2, law3, law4, law5]
 
 --fxn for parsing laws 
 parseLaw :: Parser Law
