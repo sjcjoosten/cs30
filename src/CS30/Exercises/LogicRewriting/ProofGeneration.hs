@@ -13,33 +13,24 @@ getDerivation laws e = Proof e (manyStep laws e)
 -- by repeatedly using the laws to rewrite expressions
 manyStep :: [Law] -> Expr -> [Step]
 manyStep laws e = if null steps then []
-                  -- ^ TODO: should we change the condition here?
-                  --   since our ultimate goal is to propagate negation inwards?
                   else step : manyStep laws (snd step)
-                  where rws expr = [(name,e') | Law name eqn <- laws,
-                                                e' <- rewrites eqn e,
-                                                e' /= e]
-                        steps = rws e
+                  where steps = [(name,e') | Law name eqn <- laws,
+                                             e' <- rewrites eqn e,
+                                             e' /= e]
                         step = head steps
 
 -- rewrites gives all the ways of rewriting given expression
 -- using only the provided equation (law)
 rewrites :: Equation -> Expr -> [Expr]
-rewrites (lhs, rhs) e = 
-    case matchExpr lhs e of
-        []         -> recurse e
+rewrites (lhs, rhs) expr = 
+    case matchExpr lhs expr of
+        []         -> recurse expr
         (sub:subs) -> [apply s rhs | s <- (sub:subs)]
     where recurse (Var _)         = []
           recurse (Const _)       = []
           recurse (Neg e)         = [Neg e' | e' <- rewrites (lhs,rhs) e]
-          -- | TODO: refactor data structure with some sort of BinOp to clean this up
-          recurse (And e1 e2)     = [And e1' e2 | e1' <- rewrites (lhs, rhs) e1] ++
-                                    [And e1 e2' | e2' <- rewrites (lhs, rhs) e2]
-          recurse (Or e1 e2)      = [Or e1' e2 | e1' <- rewrites (lhs, rhs) e1] ++
-                                    [Or e1 e2' | e2' <- rewrites (lhs, rhs) e2]
-          recurse (Implies e1 e2) = [Implies e1' e2 | e1' <- rewrites (lhs, rhs) e1] ++
-                                    [Implies e1 e2' | e2' <- rewrites (lhs, rhs) e2]
-
+          recurse (Bin op e1 e2)  = [Bin op e1' e2 | e1' <- rewrites (lhs, rhs) e1] ++
+                                    [Bin op e1 e2' | e2' <- rewrites (lhs, rhs) e2]
 
 type Subst = [(Char, Expr)]
 
@@ -53,15 +44,10 @@ matchExpr (Const i) (Const j) | i == j = [[]]
 matchExpr (Const _) _ = []
 matchExpr (Neg e1) (Neg e2) = matchExpr e1 e2
 matchExpr (Neg _) _  = []
-matchExpr (And e1 e2) (And e3 e4)
-    = combine (matchExpr e1 e3) (matchExpr e2 e4)
-matchExpr (And _ _) _  = []
-matchExpr (Or e1 e2) (Or e3 e4) 
-    = combine (matchExpr e1 e3) (matchExpr e2 e4)
-matchExpr (Or _ _) _  = []
-matchExpr (Implies e1 e2) (Implies e3 e4) 
-    = combine (matchExpr e1 e3) (matchExpr e2 e4)
-matchExpr (Implies _ _) _  = []
+matchExpr (Bin op1 e1 e2) (Bin op2 e3 e4)
+    | op1 == op2 = combine (matchExpr e1 e3) (matchExpr e2 e4)
+    | otherwise  = []
+matchExpr (Bin _ _ _) _ = []
 
 -- combines two lists of substitutions, checking whether
 -- substitutions are compatible (i.e. each variable is mapped to
@@ -75,12 +61,10 @@ combine xs ys = [x ++ y | x <- xs, y <- ys, compatible x y]
 
 -- apply a substitution to transform one expression to another
 apply :: Subst -> Expr -> Expr
-apply subst (Var v)         = lookupInSubst v subst
-apply subst (Const b)       = Const b
-apply subst (Neg e)         = Neg (apply subst e)
-apply subst (And e1 e2)     = And (apply subst e1) (apply subst e2)
-apply subst (Or e1 e2)      = Or (apply subst e1) (apply subst e2)
-apply subst (Implies e1 e2) = Implies (apply subst e1) (apply subst e2)
+apply subst  (Var v)         = lookupInSubst v subst
+apply _subst (Const b)       = Const b
+apply subst  (Neg e)         = Neg (apply subst e)
+apply subst  (Bin op e1 e2)  = Bin op (apply subst e1) (apply subst e2)
 
 -- return the expression to transform variable "v" into
 lookupInSubst :: Char -> Subst -> Expr

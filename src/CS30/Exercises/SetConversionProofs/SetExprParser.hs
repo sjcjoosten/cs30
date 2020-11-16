@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {-
-authors: Donia Tung
+authors: Donia Tung & Mikio Obuchi 
+
 COSC 69.14, 20F
 Group Assignment 2
 -}
@@ -9,10 +10,14 @@ Group Assignment 2
 module CS30.Exercises.SetConversionProofs.SetExprParser where
 import           Data.Functor.Identity
 import           Data.Void
+
+import Data.Aeson.TH 
+
 import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Control.Monad.Combinators.Expr
+
 import Debug.Trace
 
 
@@ -25,15 +30,13 @@ data SetExpr = Var String -- single variable
               | SetMinus  SetExpr SetExpr  -- set difference
               | Wedge SetExpr SetExpr   -- and, intersection
               | Vee SetExpr SetExpr     -- or, union
-              | In SetExpr      -- element of 
+              | In  SetExpr      -- element of 
               | NotIn SetExpr   -- not an element of
               | Subset SetExpr -- subset of
               deriving (Show, Eq)
+$(deriveJSON defaultOptions ''SetExpr)
 
 type Parser = ParsecT Void String Identity
-
-
-
 
 -- parse spaces (used w/ symbol and lexeme)
 spaceConsumer :: Parser ()
@@ -74,13 +77,16 @@ parseConstant = do
 -- operator table for use with makeExprParser 
 operatorTable :: [[Operator Parser SetExpr]] -- order matters! 
 operatorTable =
-  [ [prefix "e\\in" In, prefix "e\\notin" NotIn], 
+
+  [ [binary "\\in" (const In), binary "\\notin" (const NotIn)], 
     [prefix "\\P" Power], 
-    [prefix "e\\subseteq" Subset],
+    [binary "\\subseteq" (const Subset)],
+
     [binary "\\cap" Cap, binary "\\cup" Cup], 
     [binary "\\setminus" SetMinus],
     [binary "\\wedge" Wedge, binary "\\vee" Vee] 
   ]
+
 -- helper function for generating an binary infix operator
 -- based on documentation for Control.Monad.Combinators.Expr
 binary :: String -> (a -> a -> a) -> Operator Parser a
@@ -117,3 +123,4 @@ parseTerm = parens parseExpr <|> exprParens parseExpr  <|> parseSetBuilder  <|> 
 -- parse a set expression (using makeExprParser)
 parseExpr :: Parser SetExpr
 parseExpr =  makeExprParser parseTerm operatorTable
+

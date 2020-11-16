@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wall #-}
 module CS30.Exercises.LogicExpr.Parser where
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
@@ -26,10 +27,35 @@ data LogicOp
 $(deriveJSON defaultOptions ''LogicOp)
 $(deriveJSON defaultOptions ''LogicExpr)
 
+equivalenceCheck :: LogicExpr -> LogicExpr -> Bool
+equivalenceCheck lhs rhs = and (
+    do 
+        p <- [('p', True), ('p', False)]
+        q <- [('q', True), ('q', False)]
+        r <- [('r', True), ('r', False)]
+        let assoc = [p, q, r]
+            lv = evaluate' lhs assoc
+            rv = evaluate' rhs assoc        
+        return (lv == rv)
+    )    
+
+
+evaluate' :: LogicExpr -> [(Char, Bool)] -> Bool
+evaluate' (Con b) _assoc = b
+evaluate' (Var v) assoc = case lookup v assoc of  Just v' -> v'; Nothing -> error "Var not in assoc table"
+evaluate' (Neg e) assoc = not $ evaluate' e assoc
+evaluate' (Bin And e1 e2) assoc = evaluate' e1 assoc && evaluate' e2 assoc
+evaluate' (Bin Or e1 e2) assoc = evaluate' e1 assoc || evaluate' e2 assoc
+evaluate' (Bin Imply e1 e2) assoc = not (evaluate' e1 assoc) || evaluate' e2 assoc
+
+
 prec :: LogicOp -> Int
-prec And = 2
+prec And = 3
 prec Or =  2
 prec Imply = 1  
+
+negPrec :: Int
+negPrec = 4
 
 showSpace :: ShowS
 showSpace = showChar ' '
@@ -42,23 +68,29 @@ symb Or = orStr
 symb Imply = implyStr
 
 instance Show LogicExpr where
-    showsPrec _ (Con b) = showString (show b)
-    showsPrec _ (Var v) = showString [v]    
-    showsPrec p (Neg e) = showParen (p > 3) (showString negStr . showsPrec (4) e)
+    show e = shows e ""
+    showsPrec _ (Con b) = showString (if b then "true" else "false")
+    showsPrec _ (Var v) = showString [v]       
+    showsPrec _p (Neg e) = showString negStr . showsPrec negPrec e
+    showsPrec p (Bin Imply e1 e2)
+        = showParen (p /= 0) (showsPrec q e1 . showSpace . showOp Imply . showSpace . showsPrec q e2) 
+        where q = prec Imply
     showsPrec p (Bin op e1 e2)
-        = showParen (p >= q) (showsPrec q e1 . showSpace . showOp op . showSpace . showsPrec (q+1) e2) 
-        where q = prec op    
+        = showParen (p /= 0 && p /= q) (showsPrec q e1 . showSpace . showOp op . showSpace . showsPrec q e2) 
+        where q = prec op
 
 instance Show LogicOp where
     show And = andStr
     show Or = orStr
     show Imply = implyStr
 
-data Law = Law {lawName :: LawName, lawEq :: Equation} deriving (Show)
+data Law a = Law {lawName :: a, lawEq :: Equation} deriving (Show)
 type LawName = String
 type Equation = (LogicExpr,LogicExpr)
 
-parseLaw :: String -> Law
+
+
+parseLaw :: String -> Law LawName
 parseLaw s =
     case parse law "" s of
     Left m -> error $ show m
@@ -70,54 +102,50 @@ parseExpr s =
     Left m -> error $ show m
     Right e' -> e'
 
+negStr :: String; andStr :: String; orStr :: String; implyStr :: String; equalStr :: String
 (negStr, andStr, orStr, implyStr, equalStr) = ("¬", "∧", "∨", "⇒", "≡")
--- negStr = "-"; andStr = "^"; orStr = "v"; implyStr = "=>"
--- (negStr, andStr, orStr, implyStr, equalStr) = ("\\neg", "\\wedge", "\\vee", "\\Rightarrow", "\\equiv")
 
 logicExpr :: Parser LogicExpr
-logicExpr = space *> makeExprParser term ops <* space
+logicExpr = space' *> makeExprParser term ops <* space'
     where
-        term = (do 
-            v <- satisfy (\v -> v=='p' || v=='q' || v=='r') <* space
-            return (Var v)
-            )
+        term = 
+            (do 
+                v <- satisfy (\v -> v=='p' || v=='q' || v=='r') <* space'
+                return (Var v))
             <|>
             (do
-                v <- (string "true" <|> string "false") <* space
-                return (Con (if v == "true" then True else False)))
+                v <- (string "true" <|> string "false") <* space'
+                return (Con (v == "true")))
             <|>
             (do 
-                string "(" *> space
+                string "(" *> space'
                 t <- logicExpr
-                string ")" *> space
-                return t
-                )
-
+                string ")" *> space'
+                return t)
         ops = [
-            [ Prefix (return Neg <* string negStr <* space)]
+            [ Prefix (Neg <$ string negStr <* space')]
             , [ infixL andStr And
                 , infixL orStr Or]
             , [infixL implyStr Imply]
             ]            
-        space = ((string " " <|> string "\\t" <|> string "\\ ") *> space)
-                <|> return ()            
-        infixL str op = InfixL (return (Bin op) <* string str <* space)
+        infixL str op = InfixL (Bin op <$ string str <* space')
+
+space' :: Parser ()
+space' = ((string " " <|> string "\\t" <|> string "\\ ") *> space') <|> return ()            
 
 
-law :: Parser Law
+law :: Parser (Law LawName)
 law = do
-    name <- parseUntil ':' <* space    
-    e1 <- logicExpr <* space
-    string equalStr
-    e2 <- logicExpr <* space
+    name <- parseUntil ':' <* space'    
+    e1 <- logicExpr <* space'
+    _ <- string equalStr
+    e2 <- logicExpr <* space'
     return (Law name (e1,e2))
 
-
--- runParser logicExpr "" "pVq^true"
--- runParser law "" "fei  : -(-p) ≡ p"
+parseUntil :: Char -> Parser String
 parseUntil c = 
     do 
-        satisfy (== c)
+        _ <- satisfy (== c)
         return []
     <|> 
     do
