@@ -45,3 +45,4 @@ strToLaw :: String -> Law
 strToLaw law
    =  case parse parseLaw "" law of
                 Right st -> st
+                Left _ -> error "Couldn't parse one of the built-in laws"

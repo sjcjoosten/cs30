@@ -80,9 +80,6 @@ numeric_value_parser = lt_spaces *> makeExprParser digits oprs <* lt_spaces
        
        parseDec = foldl (\x y -> x*10 + y) 0
         -- Latex spaces parser, doesn't return the parsed string.
-       lt_spaces :: Parser ()
-       lt_spaces = ((string " " <|> string "\\t" <|> string "\\ ") *> lt_spaces)
-                    <|> return ()
        oprs =  [ [ infixL "^" Exponentiation] -- negate, exponentiation
                 , [ infixL "\\cdot" Multiplication -- for LaTeX
                     , infixL "*" Multiplication -- for ASCII
@@ -91,6 +88,9 @@ numeric_value_parser = lt_spaces *> makeExprParser digits oprs <* lt_spaces
                     , infixL "+" Addition] -- minus and addition
                 ]
        infixL str opr = InfixL (return (BinOp opr) <* string str <* lt_spaces)
+lt_spaces :: Parser ()
+lt_spaces = ((string " " <|> string "\\t" <|> string "\\ ") *> lt_spaces)
+        <|> return ()
 
 evalRational :: NumericExpression -> Maybe Rational
 evalRational (Const r) = return r
