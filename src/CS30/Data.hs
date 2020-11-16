@@ -229,6 +229,11 @@ instance Semigroup JSOption where
 instance Monoid JSOption where
   mempty = JSOption Nothing Nothing Nothing Nothing
 
+instance Semigroup JSOptions where
+  JSOptions a1 b1 <> JSOptions a2 b2 = JSOptions (a1 <> a2) (b1 <> b2)
+instance Monoid JSOptions where
+  mempty = JSOptions mempty mempty
+
 -- code below is template haskell code
 $(deriveJSON defaultOptions ''Exercise)
 $(deriveJSON defaultOptions ''ExResponse)
@@ -258,10 +263,10 @@ instance FromJSON JSEdge where
     where parseObj v = JSEdge <$> v .: "from" -- Note: this is using the 'overloadedString' extension to make "id" of type Text
                               <*> v .: "to" -- Note: this is using the 'overloadedString' extension to make "id" of type Text
                               <*> parseJSON obj
-$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSGraph)
-$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSOption)
-$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSOptions)
-$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower} ''JSFont)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSGraph)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSOption)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSOptions)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSFont)
 $(deriveJSON defaultOptions ''Action)
 $(deriveJSON defaultOptions ''Page)
 $(deriveJSON defaultOptions ''ProblemOutcome)

@@ -508,7 +508,11 @@ ul.dropdown-content>li{
 ul.dropdown-content>li:hover{
   border: 1px solid #c4dd88;
 }
-/* js ui elements */
+
+/* graph stuff */
+.graph {min-width: width 200px;
+        height: 300px;}
+/* sortable stuff */
 
 ul.sortable>li{
   list-style:none;
@@ -523,6 +527,8 @@ li.sortable-ghost{
 	box-shadow: 0 0 3px 1px #424141;
 }
 
+<<<<<<< HEAD
+=======
 
 /* js ui elements */
 
@@ -543,3 +549,4 @@ li.sortable-ghost{
 .ui-visual-focus {
 	box-shadow: 0 0 3px 1px #424141;
 }
+>>>>>>> main
