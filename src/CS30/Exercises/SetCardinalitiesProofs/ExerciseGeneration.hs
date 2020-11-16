@@ -29,7 +29,7 @@ setExercises = [fullExercise 3] -- removed larger exercises as they cause negati
                             let proof@(Proof lhs steps) = genProof laws (Op Cardinality [ex])
                                 rhs = last (lhs:map snd steps)
                             asgn <- genAllPossibleValues rhs 
-                            let answer = evaluate asgn rhs
+                            let answer = evaluate asgn rhs -- negative exponents happen here (but only sometimes!)
                             let exprs = (getExprs rhs)
                             return (genFields lhs (evaluate asgn) exprs, proof, answer)
 
