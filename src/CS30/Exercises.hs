@@ -38,11 +38,15 @@ pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
         , incExcCards -- from IncExcCardinalities
         , probaEx
         , modN
+<<<<<<< HEAD
         -- , cardinalityProofExer -- has negative exponents errors
         , modProofEx
         , logicRewritingEx
         , logicProof
         , logicInequalitiesEx -- Logic; inequality problems.
+=======
+        , logicProof
+>>>>>>> 2afd3c46da6d14966e79b69b0ef44ebecefc636b
         , logicWrongStepEx
         -- , combinEx -- too slow, see TODO
         , probExProof
