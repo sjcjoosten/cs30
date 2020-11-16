@@ -11,7 +11,6 @@ import CS30.Exercises.SetBasics.SolutionChecker
 import CS30.Exercises.ModularArithmetic.ModuloProof
 import CS30.Exercises.ModularArithmetic.ModuloParser
 
-import Debug.Trace
 
 ---------------------------------------- Exercise Generation ------------------------------------
 
@@ -28,9 +27,9 @@ modProofs :: [ChoiceTree ([Field], [Int])]
 modProofs
  = [ do e <- (exprOfSize i ['a', 'b', 'c', 'd'])
         l <- getLawPermuts _arithmetic_laws
-        traceM ("Expression = " ++ (show e))
+        -- traceM ("Expression = " ++ (show e))
         g <- (genGiven e) -- ChoiceTree Law
-        traceM ("ABCDEFG = " ++  (show g))
+        -- traceM ("ABCDEFG = " ++  (show g))
         randomProof' e ([g]++l)
     | i <- [7,9,11]]
 
@@ -96,7 +95,7 @@ randomProof' a lws
 -- used in randomProof' to structurize the generated Proof into what will be rendered in the front end
 proofToField :: Proof -> [[Field]]
 proofToField ProofError = [[FText "No Proof was found for this expression - Please click on Check to get a new exercise. Sorry for the inconvenience."]]
-proofToField (Proof _ steps) = trace ("Stepsssss = " ++ (show steps)) $ [ wrapField st | st <- steps]
+proofToField (Proof _ steps) = [ wrapField st | st <- steps]
   where
     wrapField (a,b) = [FMath "\\equiv_{p}\\space\\space", FText a, FIndented 2 [FMath (show b)]]
 
@@ -120,15 +119,14 @@ getLawPermuts x = do p <- permutations (length x)
 
 -- Exercise helper to print question
 genProof :: ([Field], [Int]) -> Exercise -> Exercise
-genProof (quer, _solution) ex = trace ("Solution = " ++ (show _solution)) $  ex{eQuestion=quer, eBroughtBy = ["Sanket S. Joshi", "Anmol Chachra"] }
+genProof (quer, _solution) ex = ex{eQuestion=quer, eBroughtBy = ["Sanket S. Joshi", "Anmol Chachra"] }
 
 
 -- Exercise helper to give feedback
 genFeedback :: ([Field], [Int]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
-genFeedback (_, sol) mStrs resp = trace ("Solution = " ++ (show sol)) $ 
-                                  case Map.lookup "proof" mStrs of
+genFeedback (_, sol) mStrs resp = case Map.lookup "proof" mStrs of
                                     Just str
-                                      -> trace ("\nResponse = " ++ (show (breakUnderscore str))) $ if map ((sol !!) . read) (breakUnderscore str) == [0..((length sol)-1)]
+                                      -> if map ((sol !!) . read) (breakUnderscore str) == [0..((length sol)-1)]
                                          then markCorrect resp
                                          else markWrong resp{prFeedback=[FText "You answered: ",FText str]}
                                     Nothing -> error "Client response is missing 'proof' field"
