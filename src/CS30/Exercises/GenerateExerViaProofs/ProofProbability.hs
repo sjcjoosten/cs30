@@ -1,23 +1,26 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE TemplateHaskell #-}
 module CS30.Exercises.GenerateExerViaProofs.ProofProbability where
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import           CS30.Exercises.Probability.SolutionChecker
 import Control.Monad.Combinators.Expr
+import           Data.Aeson.TH
 
 -- initial datatypes
 data FracExpr 
     = FConst Rational -- the constants 0 and 1
     | FVar Char -- basic evert, such as A, B 
-    | FExpr FracExpr FracExpr -- ^ probability expression like Pr[A|B].
     | FBin MathOp FracExpr FracExpr -- ^ operations
     | AndEvent FracExpr FracExpr  -- ‘and’ \wedge 
     | OrEvent FracExpr FracExpr -- ‘or’ \vee  
     | NegaEvent FracExpr  -- event negation \neg
     | Omega -- evet Omega
     | EmptySet -- emptySet
-    | Prob FracExpr -- indicate \frac{}{}
+    | Prob FracExpr -- indicate Pr[A]
     deriving (Show, Eq)
+
+
 
 data Proof = Proof FracExpr [FracStep] deriving (Show, Eq)
 type FracStep = (String, FracExpr)
@@ -28,9 +31,9 @@ data MathOp
     | Divide   -- division
     | Mult   -- multiply 
     | Plus 
-    | Frac  -- \frac{}{}
     deriving (Show, Eq)
-
+$(deriveJSON defaultOptions ''MathOp)
+$(deriveJSON defaultOptions ''FracExpr)
 -- operatable to parse operations
 -- based on the operation priority: negaition -> multiplication -> division -> add and minus
 operatorTable :: [[Operator Parser FracExpr]]

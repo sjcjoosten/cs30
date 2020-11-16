@@ -13,8 +13,7 @@ type Equation = (FracExpr,FracExpr)
 -- laws given in the Final Assignments
 rules :: [Law]
 rules = map (takeRh . parse parseLaws "" ) 
-        [deMorgan1, deMorgan2, dbNegat, omegaElimiW, omegaElimiV, negaProba, difference,
-        condition, totalProb, bayesRule, incluExclu]
+        [deMorgan1, deMorgan2, dbNegat, omegaElimiW, omegaElimiV, negaProba, difference,incluExclu]
 
 -- show if there is any error in parsing 
 takeRh :: (Stream s, ShowErrorComponent e) => Either (ParseErrorBundle s e) p -> p
@@ -22,8 +21,7 @@ takeRh e = case e of (Right l) -> l
                      (Left err) -> error (errorBundlePretty err)
 
 deMorgan1, deMorgan2, dbNegat, omegaElimiW, omegaElimiV, 
-    negaProba, difference,emptyElimiW,emptyElimiV, 
-    condition, totalProb, bayesRule, incluExclu :: String
+    negaProba, difference,emptyElimiW,emptyElimiV, incluExclu :: String
 deMorgan1 =  "DeMorgan: \\neg (A \\wedge B) = \\neg A \\vee \\neg B"
 deMorgan2 = "DeMorgan: \\neg (A \\vee B) = \\neg A \\wedge \\neg B"
 dbNegat = "Double negation: \\neg (\\neg A) = A"
@@ -33,9 +31,6 @@ emptyElimiW = "Empty-set elimination: \\emptyset \\vee A = A"
 emptyElimiV = "Empty-set elimination: \\emptyset \\wedge A = \\emptyset"
 negaProba = "Negation in probability: Pr[\\neg A] = 1 - Pr[A]"
 difference = "Difference: Pr[A \\wedge \\neg B] = Pr[A] - Pr[A \\wedge B]"
-condition = "Definition of conditional probability: Pr[ A | B ] = Pr[A \\wedge B]\\cdot Pr[B]"
-totalProb = "Law of total probability: Pr[ A ] = Pr[A | B]\\cdot Pr[B] + Pr[A | \\neg B]\\cdot Pr[\\neg B]"
-bayesRule = "Bayes'rule: Pr[ A | B ] = \\frac{Pr[B | A]*Pr[A]}{Pr[B]}"
 incluExclu = "Inclusion exclusion: Pr[A \\vee B] = Pr[A] + Pr[B] - Pr[A \\wedge B]"
 
 -- parse Law's name and Law's equation
@@ -66,6 +61,7 @@ parsedLaws = Prelude.map strToLaw laws-}
 strToLaw :: String -> Law 
 strToLaw law =  case parse parseLaws "" law of 
                 Right st -> st
+                Left e -> error (errorBundlePretty e)
 
 
 -- parse laws
@@ -91,8 +87,6 @@ getStep (lhs, rhs) expr
     where 
         recurse (FBin op e1 e2)   = [FBin op e1' e2 | e1' <- getStep(lhs, rhs) e1] ++  
                                      [FBin op e1 e2' | e2' <- getStep(lhs, rhs) e2]
-        recurse (FExpr e1 e2)     = [FExpr e1' e2| e1' <- getStep (lhs, rhs) e1] ++
-                                     [FExpr e1 e2'| e2' <- getStep (lhs, rhs) e2]
         recurse (AndEvent e1 e2)  = [AndEvent e1' e2| e1' <- getStep (lhs, rhs) e1] ++
                                      [AndEvent e1 e2'| e2' <- getStep (lhs, rhs) e2]
         recurse (OrEvent e1 e2)   = [OrEvent e1' e2| e1' <- getStep (lhs, rhs) e1] ++
@@ -110,7 +104,6 @@ matchE :: FracExpr -> FracExpr -> Maybe Substitution
 matchE (FVar nm) expr                     = Just [(nm, expr)]
 matchE (FConst i) (FConst j)              | i == j = Just []
 matchE (FConst _) _                       = Nothing
-matchE (FExpr e1 e2) (FExpr e3 e4)        = matchHelper (matchE e1 e3)(matchE e2 e4) -- P(A|B)P(C|D)
 matchE (FBin op e1 e2) (FBin op1 e3 e4)   |op == op1 = matchHelper (matchE e1 e3)(matchE e2 e4)
 -- matchE (FBin _ _ _) _                     = Nothing
 matchE (AndEvent e1 e2) (AndEvent e3 e4)  = matchHelper (matchE e1 e3)(matchE e2 e4) 
@@ -136,12 +129,14 @@ combineTwoSubsts  s1 s2
 apply :: Substitution -> FracExpr -> FracExpr
 apply subst (FVar nm)           = lookupInSubst nm subst 
 apply _ (FConst i)              = FConst i
-apply subst (FExpr e1 e2)       = FExpr (apply subst e1) (apply subst e2) 
 apply subst (FBin op e1 e2)     = FBin op (apply subst e1) (apply subst e2) 
 apply subst (AndEvent e1 e2)    = AndEvent (apply subst e1) (apply subst e2) 
 apply subst (OrEvent e1 e2)     = OrEvent (apply subst e1) (apply subst e2)  
 apply subst (NegaEvent e1)      = NegaEvent (apply subst e1) 
-
+apply _ Omega                   = Omega
+apply _ EmptySet                = EmptySet
+apply subst (Prob e1)           = Prob (apply subst e1)
+            
 
 lookupInSubst :: Char -> [(Char, p)] -> p
 lookupInSubst nm ((nm', v) : rm)
@@ -199,7 +194,7 @@ termParser = do {r <- (string "0" Data.Functor.$> 0) <|> (string "1" Data.Functo
                 lt_spaces;
                 _ <- string "}";
                 lt_spaces;
-                return (FBin Frac e1 e2)}
+                return (FBin Divide e1 e2)}
             <|>
             do {_ <- string "Pr[";
                 lt_spaces;
