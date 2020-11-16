@@ -182,6 +182,13 @@ function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_, submitAction
           handleField(q.ffOpt1, pushHandler, function(a){onField.appendChild(a);}, submitAction);
           handleField(q.ffOpt2, pushHandler, function(a){offField.appendChild(a);}, submitAction);
           appendHandler(lbl);
+    break; case "FGraph":
+          var graph = document.createElement('div');
+          graph.className="graph";
+          var gdata = { nodes: new vis.DataSet(q.fgGraph.nodes)
+                      , edges: new vis.DataSet(q.fgGraph.edges)};
+          var network = new vis.Network(graph, gdata, q.fgOptions);
+          appendHandler(graph);
     break; default:
           appendHandler(document.createTextNode('[[ '+q.tag+' ]]'));
           console.log(q);

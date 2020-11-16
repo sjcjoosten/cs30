@@ -31,7 +31,7 @@ static_files :: PathTree Text.Text (Maybe Text.Text)
 static_files
   = augment_paths "static" $
     file_tree (Just "/single.html")
-              [ dir "js" [file "cs30.js", file "sortable.js"]
+              [ dir "js" [file "cs30.js", file "sortable.js", file "visnetwork.js"]
               , dir "mathquill"
                     [ file "mathquill-basic.css", file "mathquill-basic.js"
                     , file "mathquill.css", file "mathquill.js"

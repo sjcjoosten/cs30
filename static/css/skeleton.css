@@ -508,7 +508,11 @@ ul.dropdown-content>li{
 ul.dropdown-content>li:hover{
   border: 1px solid #c4dd88;
 }
-/* js ui elements */
+
+/* graph stuff */
+.graph {min-width: width 200px;
+        height: 300px;}
+/* sortable stuff */
 
 ul.sortable>li{
   list-style:none;

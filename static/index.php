@@ -13,6 +13,7 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js" type="text/javascript"></script>
   <script src="mathquill/mathquill.js" defer></script>
   <script src="js/sortable.js" defer></script>
+  <script src="js/visnetwork.js" defer></script>
   <script>
 var postData = '<?php echo addslashes($OAuth_base_string) ?>';
 var signature = '<?php echo addslashes($oauth_signature) ?>';
