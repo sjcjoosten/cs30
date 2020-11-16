@@ -17,6 +17,7 @@ data Law = Law String (Equation)
             deriving Show
 type Equation = (SetExpr, SetExpr)
 
+
 law1, law2, law3, law4, law5, law6, law7, law8, law9, law10, law11, law12, law13 :: String 
 -- 5 given laws from assignment sheet 
 law1 = "Intersection Definition:A \\cap B = \\left\\{e| e \\in A \\wedge e\\in B\\right\\}"
@@ -91,3 +92,4 @@ evaluate (Subset _e) = []--powerset (evaluate e)
 -- powerset :: [a] -> [[a]]
 -- powerset [] = [[]]
 -- powerset (x:xs) = [x:ps | ps <- powerset xs] ++ powerset xs
+

@@ -2,6 +2,7 @@
 
 {-
 authors: Donia Tung & Mikio Obuchi 
+
 COSC 69.14, 20F
 Group Assignment 2
 -}
@@ -9,12 +10,16 @@ Group Assignment 2
 module CS30.Exercises.SetConversionProofs.SetExprParser where
 import           Data.Functor.Identity
 import           Data.Void
+
 import Data.Aeson.TH 
 
 import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Control.Monad.Combinators.Expr
+
+import Debug.Trace
+
 
 -- datatype that we parse all expressions into 
 data SetExpr = Var String -- single variable
@@ -72,9 +77,11 @@ parseConstant = do
 -- operator table for use with makeExprParser 
 operatorTable :: [[Operator Parser SetExpr]] -- order matters! 
 operatorTable =
+
   [ [binary "\\in" (const In), binary "\\notin" (const NotIn)], 
     [prefix "\\P" Power], 
     [binary "\\subseteq" (const Subset)],
+
     [binary "\\cap" Cap, binary "\\cup" Cup], 
     [binary "\\setminus" SetMinus],
     [binary "\\wedge" Wedge, binary "\\vee" Vee] 

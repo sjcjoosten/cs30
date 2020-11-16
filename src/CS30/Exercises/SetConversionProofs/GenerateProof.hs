@@ -13,7 +13,6 @@ import CS30.Exercises.SetConversionProofs.LawParser
 data Proof = Proof SetExpr [(String, SetExpr)] deriving Show
 
 -- fxn for generating a random expression, using \cap, \cup, and \setminus operators (as specified in the assignment sheet)
--- for testing
 generateRandEx :: Int -> ChoiceTree SetExpr
 generateRandEx i | i < 1
  = Branch [ Branch [Node (Var varName) | varName <- ["A","B","C"]] -- should I have options like (Cap (Var "A") (Var "A") ? (do this and document in comments, as a creative)
@@ -25,7 +24,6 @@ generateRandEx i
         ;opr <- nodes [Cap, Cup, SetMinus]
         ;return (opr e1 e2)
        }
-
 
 example1, example2, example3, example4, example5, example6, example7, example8 :: SetExpr
 example1 = (Cap (Var "M") (Var "N"))
@@ -58,7 +56,6 @@ clean (stp1@(nm,_):stp2@(nxt_nm, nxt_e):rest) = if nxt_nm == "identity fxn" then
                                                     clean ((nm, nxt_e):rest)
                                                 else
                                                     stp1:clean (stp2:rest)
-
 
 getStep :: Equation -> SetExpr -> [SetExpr] -- [SetExpr] because we want to check if it's empty or not
 getStep eq@(lhs, rhs) e = case match lhs e of
@@ -104,8 +101,6 @@ compatible :: Subst -> Subst -> Bool
 compatible sub1 sub2 = and [e1==e2 | (v1, e1) <- sub1
                                    , (v2, e2) <- sub2
                                    , v1 == v2]
-
-
 
 apply :: Subst -> SetExpr -> SetExpr
 apply subst (Var name)       = lookupInSubst name subst

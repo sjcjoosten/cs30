@@ -3,3 +3,7 @@
 .vscode
 cs30.cabal
 data/*
+
+.DS_Store
+**/.DS_Store
+

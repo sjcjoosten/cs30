@@ -27,8 +27,24 @@ setConv = exerciseType "SetConversion" "L??" "Conversion to set-builder notation
               setConversion 
               genProof 
               feedback  
+              simpleFeedback  
 
------------ CHOICE TREE ------------
+-- simple feedback mechanism 
+simpleFeedback :: ([Field],[Int]) -> Map.Map [Char] String -> ProblemResponse -> ProblemResponse
+simpleFeedback (_problem, sol) rsp pr
+               = reTime $ case Map.lookup "proof" rsp of
+                   Just str
+                     -> if isSucc (map ((sol !!) . read) (breakUnderscore str) )
+                        then markCorrect pr
+                        else markWrong pr{prFeedback=[FText "You answered: ",FText str]}
+                   Nothing -> error "Client response is missing 'proof' field"
+
+-- fxn for determining if a list is comprised of directly successive numbers
+isSucc :: (Enum a, Eq a) => [a] -> Bool
+isSucc [] = True
+isSucc (_x:[]) = True
+isSucc (x:y:zs) | y == succ x = isSucc $ y:zs
+isSucc _ = False
 
 -- from ProofStub.hs
 permutations :: Int -> ChoiceTree [Int]
@@ -37,6 +53,7 @@ permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you ca
  = do i <- nodes [0..n-1]
       rm <- permutations (n-1)
       return (i : map (\v -> if v >= i then v+1 else v) rm)
+
 
 -- creative element: removes the permutation of orderings that's in the correct order
 -- ensures the user always has to rearrange something
@@ -347,4 +364,5 @@ showsPrec' _p (Power e)
   = "\\P\\left("  ++ showsPrec' (0) e ++ "\\right)"
 showsPrec' p (SetBuilder e) 
   = showParen' (p > q) ( "\\left\\{ e | " ++ myShow e ++ "\\right\\}")
+
     where q = 1

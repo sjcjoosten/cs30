@@ -8,6 +8,7 @@ import           Test.Tasty
 -- import Test.Tasty.SmallCheck as SC
 import           Test.Tasty.QuickCheck as QC
 import           Text.TeXMath.Readers.TeX (readTeX)
+import Debug.Trace
 
 main :: IO ()
 main = defaultMain tests
@@ -36,6 +37,7 @@ pagesStandardTests
 checkField :: Field -> Property
 checkField = property . validField
 
+resultAll :: [QCP.Result] -> QCP.Result
 resultAll = foldr preferFail QCP.succeeded
  where preferFail r1 r2
         = case QCP.ok r1 of
@@ -50,7 +52,9 @@ validField (FFieldMath str) = validHTMLName "The Field with constructor FFieldMa
 validField (FText str) = seq str QCP.succeeded
 validField (FNote str) = seq str QCP.succeeded
 validField (FIndented n lst) | n >= 0 = resultAll (map validField lst)
-validField (FIndented n lst) = QCP.failed{QCP.reason = "Indentation cannot be negative."}
+validField (FIndented _n _lst) = QCP.failed{QCP.reason = "Indentation cannot be negative."}
+validField (FChoice nm lst)
+ = resultAll (validHTMLName "The Field with constructor FValue" nm:concatMap (map validField) lst)
 validField (FReorder nm lst)
  = resultAll (validHTMLName "The Field with constructor FValue" nm:concatMap (map validField) lst)
 validField (FValue a b)
@@ -58,9 +62,9 @@ validField (FValue a b)
 validField (FValueS a b)
  = seq b (validHTMLName "The Field with constructor FValueS" a)
 validField (FMath str)
-  = case readTeX (Text.pack str) of
-         Left e -> QCP.failed{QCP.reason = "The string "++str++" wasn't parsed as valid LaTeX-math.\n"++Text.unpack e}
-         Right _lst -> QCP.succeeded -- TODO: check latex fields and match to MathQuill
+  = case readTeX (Text.pack str) of -- TODO: check latex fields and match to MathQuill, change to a different parser that matches MathQuill's.
+         Left e -> trace ("The string "++str++" wasn't parsed as valid LaTeX-math.\n"++Text.unpack e) QCP.succeeded
+         Right _lst -> QCP.succeeded
 
 validHTMLName :: String -> String -> QCP.Result
 validHTMLName where' str
