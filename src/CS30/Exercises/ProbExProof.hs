@@ -15,6 +15,10 @@ import qualified CS30.Exercises.Cardinality as Card
 import GHC.Stack
 import Debug.Trace
 
+unused :: a
+unused = undefined
+ where _ = trace
+
 data ExExpr =
             Econst Integer
             | Eranvar String
@@ -172,17 +176,17 @@ probExercises = [fullExercise 2, fullExercise 3, fullExercise 5]
                             asgn <- assignRanVal rhs 
                             let answer = head (evaluate asgn rhs)
 
-                            trace ("asgn: " ++ show asgn) (return ())
-                            trace ("lhs: " ++ show lhs) (return ())
-                            trace ("rhs: " ++ show rhs) (return ())
-                            trace ("answer: " ++ show answer) (return ())
+                            -- trace ("asgn: " ++ show asgn) (return ())
+                            -- trace ("lhs: " ++ show lhs) (return ())
+                            -- trace ("rhs: " ++ show rhs) (return ())
+                            -- trace ("answer: " ++ show answer) (return ())
 
 
                             let exprs = nubSort (getExprs rhs)
                             -- creative: makes proof a lot nicer
                             let newLaws = [Law "Given in exercise" (replaceVar e, Econst (numerator (head (evaluate asgn e)))) | e <- exprs]
 
-                            trace ("newLaws: " ++ show newLaws) (return ())
+                            -- trace ("newLaws: " ++ show newLaws) (return ())
 
 
                             let proof = genProof (newLaws ++ laws) lhs
