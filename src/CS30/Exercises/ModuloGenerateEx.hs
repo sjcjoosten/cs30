@@ -15,6 +15,7 @@ import Debug.Trace
 
 ---------------------------------------- Exercise Generation ------------------------------------
 
+-- main Exercise Generaion function 
 modProofEx :: ExerciseType
 modProofEx = exerciseType "ModuloProof" "L??.?????"
             "Numbers: modulo n with non-monotonic operations"
@@ -22,6 +23,7 @@ modProofEx = exerciseType "ModuloProof" "L??.?????"
             genProof -- present question as 'Exercise'
             genFeedback -- handle response as 'ProblemResponse'
 
+-- generates a list of choiceTree of (proofs rendered as list of Field, solution)
 modProofs :: [ChoiceTree ([Field], [Int])]
 modProofs
  = [ do e <- (exprOfSize i ['a', 'b', 'c', 'd'])
@@ -30,27 +32,25 @@ modProofs
         g <- (genGiven e) -- ChoiceTree Law
         traceM ("ABCDEFG = " ++  (show g))
         randomProof' e ([g]++l)
-        -- randomProof' e l
     | i <- [7,9,11]]
 
--- ToDo revert constants
 -- Filter single variable expressions    
 exprOfSize :: Int -> [Char] -> ChoiceTree Expression
-exprOfSize 1 xs = Branch [aFixed]
--- exprOfSize 1 xs = Branch [aCon,aFixed]
+exprOfSize 1 xs = Branch [aCon,aFixed]
                  where 
-                   -- aCon = nodes (map Con [0..4])
+                   aCon = nodes (map Con [0..4])
                    aFixed = nodes [Fixed nm | nm <- xs]
 exprOfSize n xs
  = Branch [Branch [BinOp op <$> exprOfSize i xs<*> exprOfSize (n - i - 1) xs
                     | i <- [1..(n-2)], i `mod` 2 == 1] 
             | op <- [Pow, Mul, Sub, Add]]
 
-
+-- generates a choice tree of given laws - example given: a = b + c
 genGiven :: Expression -> ChoiceTree Law
 genGiven e = do expr <- (exprOfSize 3 (getRHS e))
-                return (Law "Given" (Fixed (head (getVariables e)), expr))
+                return (Law "Given" (Fixed (head (getVariablesWithFallback e)), expr))
 
+-- helper function used in genGiven to make sure the rhs variables are not same as the lhs 
 getRHS :: Expression -> [Char]
 getRHS e
   | length t == 0 = [x |x <- ['a', 'b', 'c', 'd'], not $ elem x vars]
@@ -59,6 +59,7 @@ getRHS e
     vars = getVariables e
     t = tail vars
 
+-- Takes an expression and a list of laws and generates choice tree of (proofs rendered as list of Field, solution)
 randomProof' :: Expression -> [Law] -> ChoiceTree ([Field], [Int])
 randomProof' a lws
   | length (getPrfStep prf) == 0 = structurize <$> (getProofPermuts (proofToField ProofError))
@@ -91,12 +92,15 @@ randomProof' a lws
                       FText $ "No proof could be generated, please click on check"
                     ], y)
 
+-- renders a Proof to a list of list of fields
+-- used in randomProof' to structurize the generated Proof into what will be rendered in the front end
 proofToField :: Proof -> [[Field]]
 proofToField ProofError = [[FText "No Proof was found for this expression"]]
 proofToField (Proof _ steps) = trace ("Stepsssss = " ++ (show steps)) $ [ wrapField st | st <- steps]
   where
     wrapField (a,b) = [FMath "\\equiv_{p}\\space\\space", FText a, FIndented 2 [FMath (show b)]]
 
+-- choice tree of permutations
 permutations :: Int -> ChoiceTree [Int]
 permutations 0 = Node []
 permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you can more easily check this out in GHCI.
@@ -104,30 +108,22 @@ permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you ca
       rm <- permutations (n-1)
       return (i : map (\v -> if v >= i then v+1 else v) rm)
 
-
-assignRandExprs :: Int -> [a] -> ChoiceTree [(a, Expression)]
-assignRandExprs = undefined
-
-sizeOf :: Expression -> Int
-sizeOf = undefined
-
--- get atleast one step
--- smartForceLaw e siz
---   = do let vars = nubSort (getVariables e)
---        assignments <- assignRandExprs (siz - sizeOf e) vars
---        return (apply assignments e)
-
+-- takes Proofs converted to [[Field]] using proofToField and returns a choiceTree of all the permutations of that proof
 getProofPermuts :: [[Field]] -> ChoiceTree ([[Field]], [Int])
 getProofPermuts x = do p <- permutations (length x)
                        return (map (x !!) p, p)
 
+-- takes a list of laws and returns a choiceTree of all the permutations of the list of laws
 getLawPermuts :: [Law] -> ChoiceTree [Law]
 getLawPermuts x = do p <- permutations (length x)
                      return (map (x !!) p)
 
+-- Exercise helper to print question
 genProof :: ([Field], [Int]) -> Exercise -> Exercise
 genProof (quer, _solution) ex = trace ("Solution = " ++ (show _solution)) $  ex{eQuestion=quer, eBroughtBy = ["Sanket S. Joshi", "Anmol Chachra"] }
 
+
+-- Exercise helper to give feedback
 genFeedback :: ([Field], [Int]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
 genFeedback (_, sol) mStrs resp = trace ("Solution = " ++ (show sol)) $ 
                                   case Map.lookup "proof" mStrs of
@@ -137,6 +133,7 @@ genFeedback (_, sol) mStrs resp = trace ("Solution = " ++ (show sol)) $
                                          else markWrong resp{prFeedback=[FText "You answered: ",FText str]}
                                     Nothing -> error "Client response is missing 'proof' field"
 
+-- Helper to break the solution received from the front end into a list
 breakUnderscore :: String -> [String]
 breakUnderscore s
   =  case dropWhile (=='_') s of

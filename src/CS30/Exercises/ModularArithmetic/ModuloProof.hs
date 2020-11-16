@@ -129,6 +129,13 @@ evalApply subst (UnOp op e) = UnOp op (evalApply subst e)
 evalApply subst (BinOp op e1 e2) = BinOp op (evalApply subst e1) (evalApply subst e2)
 evalApply _ _ = ExpressionError
 
+getVariablesWithFallback :: Expression -> [Char]
+getVariablesWithFallback e = if length vars == 0
+                              then ['a'] 
+                             else 
+                              vars
+                             where vars = getVariables e
+
 getVariables :: Expression -> [Char]
 getVariables (Var x) = [x]
 getVariables (Fixed x) = [x]
