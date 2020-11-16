@@ -39,13 +39,8 @@ constructFields proof = (mapInd showStep steps, map getVal steps)
 
 -- Function for the actual text displayed to the client.
 generateExercise :: (LogicExpr, [[Field]], [Bool]) -> Exercise -> Exercise
-<<<<<<< HEAD
 generateExercise (expr, steps, _sol) exercise 
   = exercise{eQuestion = [ FText $"Identify whether each step is correct or incorrect in the proof below."
-=======
-generateExercise (expr, steps, sol) exercise 
-  = trace (show sol) $ exercise{eQuestion = [ FText $"Identify whether each step is correct or incorrect in the proof below."
->>>>>>> 2afd3c46da6d14966e79b69b0ef44ebecefc636b
                          , FIndented 1 [FMath $ show expr] 
                          , FTable ((map . map) Cell steps)]
       , eBroughtBy = ["Tyler", "Fei"] }

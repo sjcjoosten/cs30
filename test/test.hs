@@ -75,7 +75,7 @@ validField (FValueS a b)
  = seq b (validHTMLName "The Field with constructor FValueS" a)
 validField (FMath str)
   = case readTeX (Text.pack str) of -- TODO: check latex fields and match to MathQuill, change to a different parser that matches MathQuill's.
-         Left e -> -- trace ("The string "++str++" wasn't parsed as valid LaTeX-math.\n"++Text.unpack e)
+         Left _e -> -- trace ("The string "++str++" wasn't parsed as valid LaTeX-math.\n"++Text.unpack _e)
                    QCP.succeeded
          Right _lst -> QCP.succeeded
 

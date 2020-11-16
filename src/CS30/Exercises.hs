@@ -19,7 +19,6 @@ import CS30.Exercises.LogicRewriting.Exercise (logicRewritingEx)
 import CS30.Exercises.LogicExpr.Display (logicProof)
 import CS30.Exercises.SetConversionProofs.SetConversion (setConv)
 import CS30.Exercises.LogicInequalities (logicInequalitiesEx)
-import CS30.Exercises.LogicExpr.Display (logicProof)
 import CS30.Exercises.LogicExpr.CreativeDisplay (logicWrongStepEx)
 
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
