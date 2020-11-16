@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {-
-authors: Donia Tung
+authors: Donia Tung & Mikio Obuchi 
 COSC 69.14, 20F
 Group Assignment 2
 -}
@@ -9,6 +9,8 @@ Group Assignment 2
 module CS30.Exercises.SetConversionProofs.SetExprParser where
 import           Data.Functor.Identity
 import           Data.Void
+import Data.Aeson.TH 
+
 import           Text.Megaparsec
 import           Text.Megaparsec.Char -- readFile
 import qualified Text.Megaparsec.Char.Lexer as L
@@ -27,6 +29,7 @@ data SetExpr = Var String -- single variable
               | NotIn SetExpr   -- not an element of
               | Subset SetExpr -- subset of
               deriving (Show, Eq)
+$(deriveJSON defaultOptions ''SetExpr)
 
 type Parser = ParsecT Void String Identity
 
@@ -67,15 +70,6 @@ parseConstant = do
   return (Var [n])
 
 -- operator table for use with makeExprParser 
--- operatorTable :: [[Operator Parser SetExpr]] -- order matters! 
--- operatorTable =
---   [ [prefix "e\\in" In, prefix "e\\notin" NotIn], 
---     [prefix "\\P" Power], 
---     [prefix "e\\subseteq" Subset],
---     [binary "\\cap" Cap, binary "\\cup" Cup], 
---     [binary "\\setminus" SetMinus],
---     [binary "\\wedge" Wedge, binary "\\vee" Vee] 
---   ]
 operatorTable :: [[Operator Parser SetExpr]] -- order matters! 
 operatorTable =
   [ [binary "\\in" (const In), binary "\\notin" (const NotIn)], 
@@ -123,5 +117,3 @@ parseTerm = parens parseExpr <|> exprParens parseExpr  <|> parseSetBuilder  <|> 
 parseExpr :: Parser SetExpr
 parseExpr =  makeExprParser parseTerm operatorTable
 
-
---(for all A) \P(A) = \\left\\{e| e \\in A\\right\\}
