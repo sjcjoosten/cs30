@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module CS30.Exercises.SetCardinalitiesProofs.Proof where
 import CS30.Exercises.SetCardinalitiesProofs.RuleParser
-import Data.Aeson as JSON -- used for 'deriveJSON' line
+import Data.Aeson as JSON
 import Data.Aeson.TH
 
 type Step = (String, Expr)
@@ -71,7 +71,7 @@ apply _ (Val v) = (Val v)
 apply sub (Var name) = lookupInSubstitution name sub
 apply sub (Op symb exprs) = Op symb (map (apply sub) exprs)
 
-
+-- Rewrites an expression if it matches the form of a law
 getStep :: Equation -> Expr -> Expressions
 getStep (lhs, rhs) expr
     = case match lhs expr of
@@ -79,9 +79,9 @@ getStep (lhs, rhs) expr
         Just sub -> [apply sub rhs]
     where recurse (Var _) = []
           recurse (Val _) = []
-          recurse (Op symb exprs) = [Op symb (context e')| (e, context) <- takeOneOf exprs, e' <- getStep (lhs,rhs) e ] -- Ask how to modify getStep for handling Op Expr
+          recurse (Op symb exprs) = [Op symb (context e')| (e, context) <- takeOneOf exprs, e' <- getStep (lhs,rhs) e ]
 
-
+-- Used to pair an expression with potential rewritten forms
 takeOneOf :: [a] -> [(a, a -> [a])]
 takeOneOf [] = []
 takeOneOf (a:as) = (a,(:as)): map f (takeOneOf as)

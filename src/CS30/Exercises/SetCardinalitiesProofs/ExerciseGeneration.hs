@@ -10,7 +10,9 @@ import Data.List.Extra
 import Text.Megaparsec
 
 type SetCardinalityProblem = ([Field], Proof, Integer)
-type PossibleVals = [(Expr, Integer)] -- Stores (expression, possible values) for each expression found in the equation
+
+ -- Stores (expression, possible values) for each expression found in the equation
+type PossibleVals = [(Expr, Integer)]
 
 cardinalityProofExer :: ExerciseType
 cardinalityProofExer 
@@ -54,8 +56,8 @@ generateFeedback (_, (Proof proofExpr proofSteps), answer) usrRsp pr
       = reTime$ case answer' of
                   Nothing -> wrong{prFeedback=(FText " Ill formatted reponse, please only input integers, answer was "):rspwa} -- Error when parsing. 
                   Just v -> if (v == fromIntegral answer) 
-                              then correct{prFeedback=correctRsp}   -- Correct answer.
-                              else wrong{prFeedback=wrongRsp}       -- Incorrect answer
+                              then correct{prFeedback=correctRsp}
+                              else wrong{prFeedback=wrongRsp} 
       where ans = Map.lookup "Answer" usrRsp -- Raw user input. 
             answer' :: Maybe Int
             answer' = case ans of
@@ -80,7 +82,7 @@ generateFeedback (_, (Proof proofExpr proofSteps), answer) usrRsp pr
                     ]
             headerRow = [Header (FText "Rule"), Header (FText "Deduction Step")]
 
--- initially taken from Raechel and Mahas Project, wanted to import but apparently they deleted it
+-- joins together sequential fields
 combine :: [Field] -> [Field]
 combine [] = []
 combine [x] = [x] 
@@ -105,7 +107,6 @@ setVars (Op o [expr1,expr2]) possibles =
             (Op o [expr1',expr2'], newPossible2)
 setVars _ _ = error "Invalid input given to setVars"
 
--- Helper function for generateRandSetExpr
 -- Ensures that only the correct operations are considered with respect to depth
 generateRandSetExpr_helper :: [Symb] -> Int -> ChoiceTree Expr
 generateRandSetExpr_helper _ n 

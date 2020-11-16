@@ -26,7 +26,7 @@ data Expr = Val Integer | Var Char | Op Symb [Expr] deriving (Show, Eq, Ord)
 
 data Law = Law {lawName :: String, lawEquation :: Equation} deriving (Show)
 
-type Equation = (Expr, Expr)  -- (left,right)
+type Equation = (Expr, Expr)
 
 $(deriveJSON defaultOptions ''Symb)
 $(deriveJSON defaultOptions ''Expr)
@@ -89,6 +89,7 @@ operatorTable =
      [binary "\\setminus" Setminus]
   ]
 
+-- handles parsing binary expressions
 binary :: String -> Symb -> Operator (ParsecT Void String Data.Functor.Identity.Identity) Expr
 binary name symb = InfixL ((\lhs rhs -> Op symb [lhs,rhs]) <$ symbol name)
 
@@ -108,6 +109,7 @@ spaces = many spc >> return ()
 symbol :: String -> Parser String
 symbol = unspace . string
 
+-- consumes a space as it is encountered
 unspace :: Parser a -> Parser a
 unspace p = spaces *> p <* spaces
 
@@ -172,12 +174,9 @@ eqToLatex (lhs,rhs) = exprToLatex lhs ++ " = " ++ exprToLatex rhs
 exprToLatex :: Expr -> String
 exprToLatex (Var v) = [v]
 exprToLatex (Val v) = show v
--- unary operators
 exprToLatex (Op Cardinality [e]) = "|" ++ exprToLatex e ++ "|"
 exprToLatex (Op Powerset [e]) = "\\P(" ++ exprToLatex e ++")"
--- binary operators with brackets
 exprToLatex (Op Expon [e1,e2]) = exprToLatex e1 ++ "^{" ++ exprToLatex e2 ++ "}"
--- binary operators without brackets
 exprToLatex (Op symb [e1,e2]) = parens e1 ++ " " ++ symbLookup symb ++ " " ++ parens e2
 exprToLatex e = error ("Invalid expression: " ++ show e)
 
