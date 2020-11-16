@@ -14,12 +14,12 @@ logicInequalitiesEx = exerciseType "ineqProof" "L?.???" "Logic: Inequality"
                 = case Map.lookup "proof" rsp of
                         Just str
                          -> if map (sol !!) (breakUnderscore str) == [0..length sol - 1]
-                            then markCorrect $ pr{prFeedback=[ FIndented 0 [FText "Great work!"]]}
+                            then markCorrect $ pr{prFeedback=[ FIndented 0 [FText "Great work!"]], prTimeToRead = 60}
                             else markWrong $ pr{prFeedback=[ FIndented 0 [ FText "The answer was: "
                                                                          , FText $ show sol]
                                                            , FIndented 0 [ FText "You got the following steps wrong: "
                                                                          , FText $ show $ isRight 0 (map (sol !!) (breakUnderscore str))]
-                                                           ]}
+                                                           ], prTimeToRead = 60}
                         Nothing -> error "Client response is missing 'proof' field"
 
 isRight :: Int -> [Int] -> [Int]
@@ -93,9 +93,18 @@ generateRandEx i n
                     False -> [Addition,Multiplication]
 
 filterTree :: ChoiceTree Expr -> ChoiceTree Expr
-filterTree (Branch b@((Branch _):_)) = Branch $ filter isNonEmpty $ map filterTree b
+filterTree (Branch b@((Branch _):_)) = Branch $ filter isInteresting $ filter isNonEmpty $ map filterTree b
 filterTree (Branch n@((Node _):_)) =  Branch $ filter nodeHasVar n
 filterTree n = n
+
+-- make sure the generated expression can be modified by at least one of our laws
+isInteresting :: ChoiceTree Expr -> Bool
+isInteresting (Node n) = length (getProofSteps (getProof n)) > 0
+  where
+    getProof n' = getSingleDerivation lawBois GThan n' 2
+    getProofSteps (OldProof _ ps) = ps
+isInteresting (Branch []) = False
+isInteresting (Branch b) = or $ map isInteresting b
 
 isNonEmpty :: ChoiceTree Expr -> Bool
 isNonEmpty (Node _) = True
