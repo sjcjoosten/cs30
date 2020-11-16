@@ -12,11 +12,9 @@ import           CS30.Exercises.Data
 import CS30.Exercises.Util ( reTime )
 import qualified Data.Map as Map
 import           Data.Aeson as JSON
-
 import CS30.Exercises.SetConversionProofs.SetExprParser
-import CS30.Exercises.SetConversionProofs.LawParser (parsedBasicLaws, parsedAdvancedLaws)
+import CS30.Exercises.SetConversionProofs.LawParser (parsedBasicLaws, parsedAdvancedLaws, Law(..))
 import CS30.Exercises.SetConversionProofs.GenerateProof (Proof(..), generateProof)
-import Debug.Trace
 import Data.Aeson.TH (deriveJSON)
 
 -- data type for setexpr questions
@@ -30,52 +28,7 @@ setConv = exerciseType "SetConversion" "L??" "Conversion to set-builder notation
               genProof 
               feedback  
 
--- feedback mechanism 
--- structure mostly taken from Proof.hs
-feedback :: STEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
-feedback (STEx {exprAsField = _e, ord = order, lev = level, expr = ex}) rsp pr
-               = reTime $ case Map.lookup "proof" rsp of
-                   Just str
-                     -> if length num == 0 
-                        then trace("level " ++ show level)
-                             trace("expr " ++ show ex)
-                            markCorrect pr{prFeedback=[FText"Nice Job!"]}
-                        else trace("level " ++ show level)
-                             trace("expr " ++ show ex)
-                             markWrong pr{prFeedback=[FText "You answered with the steps in the order: ",
-                                                      FText (show (map ((order !!) . read) (breakUnderscore str))), 
-                                                      FText". You had ",
-                                                      FText (show (length num)),  -- creative element: gives the user a bit more information on their incorrect answer
-                                                      FText " steps in the wrong order.", -- tells them how many lines they had in the wrong order and shows the correct proof
-                                                      FIndented 0 ([FText "The correct proof would read: " ] ++ showProof proof)
-                                                     ]}                          
-                        where num = isRight 0 (map ((order !!) . read) (breakUnderscore str) )
-                              proof = if level < 3 then generateProof parsedBasicLaws ex else generateProof parsedAdvancedLaws ex
-                   Nothing -> error "Client response is missing 'proof' field"
-
-showProof :: Proof -> [Field]
-showProof (Proof start lst ) 
-  = fstln ++ concatMap showProofLine lst
-    where fstln = [FIndented 0 [], FMath( myShow start), FIndented 0 []]
-
-isRight :: Int -> [Int] -> [(Int, Int)]
-isRight _n [] = []
-isRight n (x:xs) 
- = [(n,x) | n /= x ] ++ isRight (x+1) xs
-
--- fxn for counting how many steps were in the wrong order
-wrongOrd :: (Enum a, Num a, Eq a) => [a] -> Int
-wrongOrd [] = 0
-wrongOrd lst = length ( filter (\(x, y) -> x /= y) zipped ) 
-    where zipped = zip lst [0..]
-
--- from ProofStub.hs
-breakUnderscore :: String -> [String]
-breakUnderscore s
-  =  case dropWhile (=='_') s of
-       "" -> []
-       s' -> w : breakUnderscore s''
-             where (w, s'') = break (=='_') s'
+----------- CHOICE TREE ------------
 
 -- from ProofStub.hs
 permutations :: Int -> ChoiceTree [Int]
@@ -134,6 +87,20 @@ genAdvEx i
                        unaryExprs Power i] 
       result
 
+-- creative element: generates a ChoiceTree of SetExprs that are based on the format of the advanced laws
+genSuperAdvEx :: [Law] -> ChoiceTree SetExpr
+genSuperAdvEx laws 
+    = do {  i <- nodes [0..1]
+        ; let j = (1 `subtract` i)
+        ; a <- genAdvEx i -- could make i or j or both 0, and replace (2 `subtract` i `subtract` j) with 0 too if we wanted a simpler expr
+        ; b <- genAdvEx j
+        ; c <- genAdvEx (2 `subtract` i `subtract` j)
+        ; n <- nodes [0..7] -- because there are 7 advanced laws
+        ; let (Law _nm (left, _rt)) = laws!!n
+        ; let expr' = fst(assignVarAdv left [a, b, c])
+        ; return expr'
+        } 
+                
 -- assignVar definition to go over the final expression by replacing all variables from left to right.
 -- creative element: ensures that there is no duplication of variables in the random expr generated as the problem
 assignVar :: SetExpr -> [String] -> (SetExpr, [String]) 
@@ -175,6 +142,45 @@ assignVar (Power e) lst
   = let (e', lst') = assignVar e lst 
     in (Power e', lst')
 
+-- specific assignVar definition for generating advanced expressions, replaces var with a given setexpr in the inputted list
+assignVarAdv :: SetExpr -> [SetExpr] -> (SetExpr, [SetExpr]) 
+assignVarAdv (Var _) [] = error "Problem in assigning variables!" -- if things work correctly, it should never reach this point 
+assignVarAdv (Var _) (x:xs) = (x, xs)
+assignVarAdv (Cup e1 e2) lst 
+  = let (e1', lst') = assignVarAdv e1 lst 
+        (e2', lst'') = assignVarAdv e2 lst'
+    in (Cup e1' e2', lst'')
+assignVarAdv (Cap e1 e2) lst 
+  = let (e1', lst') = assignVarAdv e1 lst 
+        (e2', lst'') = assignVarAdv e2 lst'
+    in (Cap e1' e2', lst'')
+assignVarAdv (SetMinus e1 e2) lst 
+  = let (e1', lst') = assignVarAdv e1 lst 
+        (e2', lst'') = assignVarAdv e2 lst'
+    in (SetMinus e1' e2', lst'')
+assignVarAdv (Vee e1 e2) lst 
+  = let (e1', lst') = assignVarAdv e1 lst 
+        (e2', lst'') = assignVarAdv e2 lst'
+    in (Vee e1' e2', lst'')
+assignVarAdv (Wedge e1 e2) lst 
+  = let (e1', lst') = assignVarAdv e1 lst 
+        (e2', lst'') = assignVarAdv e2 lst'
+    in (Wedge e1' e2', lst'')
+assignVarAdv (SetBuilder e) lst 
+  = let (e', lst') = assignVarAdv e lst 
+    in (SetBuilder e', lst')
+assignVarAdv (In e) lst 
+  = let (e', lst') = assignVarAdv e lst 
+    in (In e', lst')
+assignVarAdv (NotIn e) lst 
+  = let (e', lst') = assignVarAdv e lst 
+    in (NotIn e', lst')
+assignVarAdv (Subset e) lst 
+  = let (e', lst') = assignVarAdv e lst 
+    in (Subset e', lst')
+assignVarAdv (Power e) lst 
+  = let (e', lst') = assignVarAdv e lst 
+    in (Power e', lst')
 
 -- creating the choice tree for problems, 3 levels of difficulty
 -- creative element: the variation in problem type isn't just centered around number of expressions or size of problem 
@@ -193,27 +199,15 @@ setConversion
                    ; order <- removeRep ( permutations (length steps))
                    ; return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 2, expr = expr'}
                  } | i <- [2..3]]
-     , 
-     Branch [do { a <- genAdvEx i   -- level 3 --> add in advanced laws
-                   ; b <- genAdvEx i
-                   ; c <- genAdvEx i
-                   ; let ex = SetMinus a (Cup b c )
-                   ; let expr' = fst (assignVar ex ["A", "B", "C", "D"]) 
+     , Branch [do { ex <- genSuperAdvEx parsedAdvancedLaws -- level 3 --> add in advanced laws, forces an expr that uses at least one of the advanced laws
+                   ; let expr' = fst (assignVar ex ["A", "B", "C", "D", "E", "F", "G"]) 
                    ; let (Proof _expr steps) = generateProof parsedAdvancedLaws expr'
-                   ; order <- removeRep ( permutations (length steps))
+                   ; order <- removeRep (permutations (length steps))
                    ; return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 3, expr = expr'}
-                 } | i <- [2..3] ]
+                 } ]
    ]
 
--- genSuperAdvEx :: [Law] -> ChoiceTree SetExpr
--- genSuperAdvEx laws = do { a <- genAdvEx i   -- level 3 --> add in advanced laws
---                         ; b <- genAdvEx j
---                         ; c <- genAdvEx k
-
---                     } 
--- use apply to do the replacements 
-
--- this was a different mechanism for generating the choice tree for questions
+-- a simple mechanism for generating the choice tree for questions
 -- setConversion :: [ChoiceTree ([Field], [Int])] 
 -- setConversion
 --  = [do { expr <- genAdvEx i
@@ -223,12 +217,43 @@ setConversion
 --          ; return ([FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], order)
 --     } | i <- [2..4]]
 
+----------- QUESTION ------
 
 -- generating the proof question
 genProof :: STEx -> Exercise -> Exercise
 genProof (STEx {exprAsField = ex, ord = _o, lev = _l, expr = _ex}) def 
  = def{ eQuestion = [ FText $"Here is a proof, can you put it in the right order?"] ++ ex
       , eBroughtBy = ["Donia Tung", "Mikio Obuchi"] }
+
+----------- FEEDBACK ------
+
+-- feedback mechanism 
+-- structure mostly taken from Proof.hs
+feedback :: STEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
+feedback (STEx {exprAsField = _e, ord = order, lev = level, expr = ex}) rsp pr
+               = reTime $ case Map.lookup "proof" rsp of
+                   Just str
+                     -> if length num == 0 
+                        then markCorrect pr{prFeedback=[FText"Nice Job!"]}
+                        else markWrong pr{prFeedback=[FText "You answered with the steps in the order: ",
+                                                      FText (show (map ((order !!) . read) (breakUnderscore str))), 
+                                                      FText". You had ",
+                                                      FText (show (length num)),  -- creative element: gives the user a bit more information on their incorrect answer
+                                                      FText " steps in the wrong order.", -- tells them how many lines they had in the wrong order and shows the correct proof
+                                                      FIndented 0 ([FText "The correct proof would read: " ] ++ showProof proof)
+                                                     ]}                          
+                        where num = isRight 0 (map ((order !!) . read) (breakUnderscore str) )
+                              proof = if level < 3 then generateProof parsedBasicLaws ex else generateProof parsedAdvancedLaws ex
+                              -- a note: sometimes the advanced expressions generated are quite long, in which case with the current JS, the feedback modal cuts off the 
+                              -- display of the correct proof. This would be fixed if the modal were made scrollable or alternatively by hardcoding the size of some the 
+                              -- replacement variables, but I'll leave that choice up to you
+                   Nothing -> error "Client response is missing 'proof' field"
+
+-- fxn for showing the proof nicely 
+showProof :: Proof -> [Field]
+showProof (Proof start lst ) 
+  = fstln ++ concatMap showProofLine lst
+    where fstln = [FIndented 0 [], FMath( myShow start), FIndented 0 []]
 
 -- translating a line in a proof into a field
 showProofLine :: (String, SetExpr) -> [Field]
@@ -237,6 +262,26 @@ showProofLine (lwnm, ex)
       FMath "=", FText lwnm
       , FIndented 1 [FMath (myShow ex)]
     ] 
+
+-- fxn for determining which, if any, steps were in the wrong order
+isRight :: Int -> [Int] -> [(Int, Int)]
+isRight _n [] = []
+isRight n (x:xs) 
+ = [(n,x) | n /= x ] ++ isRight (x+1) xs
+
+-- fxn for counting if an ordering is consecutive
+wrongOrd :: (Enum a, Num a, Eq a) => [a] -> Int
+wrongOrd [] = 0
+wrongOrd lst = length ( filter (\(x, y) -> x /= y) zipped ) 
+    where zipped = zip lst [0..]
+
+-- from ProofStub.hs
+breakUnderscore :: String -> [String]
+breakUnderscore s
+  =  case dropWhile (=='_') s of
+       "" -> []
+       s' -> w : breakUnderscore s''
+             where (w, s'') = break (=='_') s'
 
 ----------- SHOWING SETEXPR AS STRINGS ------
 prec :: SetExpr -> Int 

@@ -17,7 +17,7 @@ data Law = Law String (Equation)
             deriving Show
 type Equation = (SetExpr, SetExpr)
 
-law1, law2, law3, law4, law5, law8, law9, law10, law11, law12, law14, law15, law16 :: String 
+law1, law2, law3, law4, law5, law6, law7, law8, law9, law10, law11, law12, law13 :: String 
 -- 5 given laws from assignment sheet 
 law1 = "Intersection Definition:A \\cap B = \\left\\{e| e \\in A \\wedge e\\in B\\right\\}"
 law2 = "Union Definition:A \\cup B = \\left\\{e| e \\in A \\vee e\\in B\\right\\}"
@@ -25,19 +25,18 @@ law3 = "Set Difference Definition:A \\setminus B = \\left\\{e| e \\in A \\wedge 
 law4 = "Powerset Definition:\\P(A) = \\left\\{e| e \\subseteq A\\right\\}"
 law5 = "Identity Function:e\\in \\left\\{e|p\\right\\} = p"
 -- creative element: additional laws, used in subsequent levels 
-law8 = "Union Associativity:(A \\cup B) \\cup C = A \\cup (B \\cup C)"
-law9 = "Intersection Associativity:(A \\cap B) \\cap C = A \\cap (B \\cap C)"
-law10 = "Union Idempotent Law:A \\cup A = A"
-law11 = "Intersection Idempotent Law:A \\cap A = A"
-law12 = "Union Distributivity:A \\cup (B \\cap C) = (A \\cup B) \\cap (A \\cup C)"
--- law13 = "Intersection Distributivity:A \\cap (B \\cup C) = (A \\cap B) \\cup (A \\cap C)"
-law14 = "DeMorgans Law:A \\setminus (B \\cup C) = (A \\setminus B) \\cap (A \\setminus C)"
-law15 = "DeMorgans Law:A \\setminus (B \\cap C) = (A \\setminus B) \\cup (A \\setminus C)"
-law16 = "Name:(A \\setminus B) \\cup B = A \\cup B"
+law6 = "Union Associativity:(A \\cup B) \\cup C = A \\cup (B \\cup C)"
+law7 = "Intersection Associativity:(A \\cap B) \\cap C = A \\cap (B \\cap C)"
+law8 = "Union Idempotent Law:A \\cup A = A"
+law9 = "Intersection Idempotent Law:A \\cap A = A"
+law10 = "Union Distributivity:A \\cup (B \\cap C) = (A \\cup B) \\cap (A \\cup C)"
+law11 = "DeMorgans Law:A \\setminus (B \\cup C) = (A \\setminus B) \\cap (A \\setminus C)"
+law12 = "DeMorgans Law:A \\setminus (B \\cap C) = (A \\setminus B) \\cup (A \\setminus C)"
+law13 = "Name:(A \\setminus B) \\cup B = A \\cup B"
 
 basicLaws, advancedLaws :: [String] 
 basicLaws = [law1, law2, law3, law4, law5]
-advancedLaws = [law8, law9, law10, law11, law12, law14, law15, law16, law1, law2, law3, law4, law5]
+advancedLaws = [law6, law7, law8, law9, law10, law11, law12, law13, law1, law2, law3, law4, law5]
 
 --fxn for parsing laws 
 parseLaw :: Parser Law

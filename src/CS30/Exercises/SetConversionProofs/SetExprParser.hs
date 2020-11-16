@@ -70,15 +70,6 @@ parseConstant = do
   return (Var [n])
 
 -- operator table for use with makeExprParser 
--- operatorTable :: [[Operator Parser SetExpr]] -- order matters! 
--- operatorTable =
---   [ [prefix "e\\in" In, prefix "e\\notin" NotIn], 
---     [prefix "\\P" Power], 
---     [prefix "e\\subseteq" Subset],
---     [binary "\\cap" Cap, binary "\\cup" Cup], 
---     [binary "\\setminus" SetMinus],
---     [binary "\\wedge" Wedge, binary "\\vee" Vee] 
---   ]
 operatorTable :: [[Operator Parser SetExpr]] -- order matters! 
 operatorTable =
   [ [binary "\\in" (const In), binary "\\notin" (const NotIn)], 
@@ -126,5 +117,3 @@ parseTerm = parens parseExpr <|> exprParens parseExpr  <|> parseSetBuilder  <|> 
 parseExpr :: Parser SetExpr
 parseExpr =  makeExprParser parseTerm operatorTable
 
-
---(for all A) \P(A) = \\left\\{e| e \\in A\\right\\}
