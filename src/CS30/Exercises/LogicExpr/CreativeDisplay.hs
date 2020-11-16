@@ -7,7 +7,6 @@ import CS30.Exercises.LogicExpr.Display
 import CS30.Data
 import CS30.Exercises.Data
 import qualified Data.Map as Map
-import Debug.Trace
 
 logicWrongStepEx :: ExerciseType
 logicWrongStepEx
@@ -40,7 +39,7 @@ constructFields proof = (mapInd showStep steps, map getVal steps)
 
 -- Function for the actual text displayed to the client.
 generateExercise :: (LogicExpr, [[Field]], [Bool]) -> Exercise -> Exercise
-generateExercise (expr, steps, sol) exercise 
+generateExercise (expr, steps, _sol) exercise 
   = exercise{eQuestion = [ FText $"Identify whether each step is correct or incorrect in the proof below."
                          , FIndented 1 [FMath $ show expr] 
                          , FTable ((map . map) Cell steps)]
