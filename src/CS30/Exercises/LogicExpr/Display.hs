@@ -9,7 +9,7 @@ import qualified Data.Map as Map
 
 logicProof :: ExerciseType
 logicProof
-  = exerciseType "RewritingExpressions" "L?.?"
+  = exerciseType "TFRewritingExpressions" "Tyler and Fei"
                  "Logic: rewriting expressions" 
                  [generateRandEx 3, generateRandEx 5]
                  generateExercise 

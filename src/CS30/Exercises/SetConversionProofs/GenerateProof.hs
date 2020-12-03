@@ -4,7 +4,7 @@ COSC 69.14, 20F
 Group Assignment 2
 -}
 
-module CS30.Exercises.SetConversionProofs.GenerateProof  where
+module CS30.Exercises.SetConversionProofs.GenerateProof   where
 import CS30.Exercises.Data
 import CS30.Exercises.SetConversionProofs.SetExprParser
 import CS30.Exercises.SetConversionProofs.LawParser
@@ -36,13 +36,21 @@ example7 = (Cap (Var "X") (Cap (Var "Y") (Var "Z")))
 example8 = (In (Var "p"))
 
 generateProof :: [Law] -> SetExpr -> Proof -- We need only one proof for our problem
-generateProof laws' e = Proof e (multiSteps e)
+generateProof laws' e = Proof e (filterSteps (multiSteps e))
   where multiSteps e' = case [(law_name, res)
                               | (Law law_name law_eq) <- laws'
                               , res <- getStep law_eq e'
                               ] of
                           [] -> []
                           ((nm,e''):_) -> (nm,e'') : multiSteps e''
+        -- SJC: this is a bit involved to ensure that we don't shrink short proofs.
+        filterSteps [] = []
+        filterSteps [a] = [a]
+        filterSteps [a,b] = [a,b]
+        filterSteps [a,(x,_),("",y)] = [a,(x,y)]
+        filterSteps ((x,_):("",y):xs) = filterSteps ((x,y):xs)
+        filterSteps (x:xs) = x:filterSteps xs
+        
 
 
 cleanProof :: Proof -> Proof

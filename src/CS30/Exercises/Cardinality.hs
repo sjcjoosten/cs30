@@ -67,7 +67,7 @@ getNums (Divide e1 e2) = getNums e1++getNums e2
 
 -- cardEx definition for export to Pages.hs
 cardEx :: ExerciseType
-cardEx = exerciseType "Cardinality" "L??" "Cardinality of Expression" 
+cardEx = exerciseType "Cardinality" "Bennett and Donia" "Cardinality of Expression" 
             cardinality
             cardQuer 
             cardFeedback
@@ -120,7 +120,7 @@ cardQuer :: ([[Field]],[Integer]) -> Exercise -> Exercise
 cardQuer (quer, _solution) exer 
   = exer { eQuestion=[FText "Given "] ++ rule ++ 
                      [FText ", compute "] ++ question ++ 
-                     [FFieldMath "answer"]}
+                     [FFieldMath "answer", FNote "Give you answer as an expression (show your work without computing the final answer)."]}
                         where rule = head quer
                               question = quer!!1
 
@@ -140,13 +140,14 @@ cardFeedback (quer, sol) mStrs defaultRsp
                                  markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath(show $ head sol)] ++ 
                                                                      [FText(". You wrote "), FMath (mStrs Map.! "answer"), FMath " = ", FMath (show st) ]}
                     -- | if the evaluated answer has some error (divide by zero, or some fraction does not evaluate to an integer), then mark wrong
-                    Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText ". We couldn't understand your answer."]}
+                    Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText". We couldn't compute your answer."]}
                 else -- if they didn't have the right numbers in their answer, ask them to explain it better, where did they get those answers from?
                   tryAgain defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from? (Replace by an expression that computes the answer!)")]}
+
                 where numInAns    = getNums v 
                       allowedNums = tail sol
                       notInSol    = filter (\x -> notElem x allowedNums) numInAns              
-      Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText". We couldn't understand your answer."]}
+      Nothing -> tryAgain $ defaultRsp{prFeedback = [FText "We couldn't understand your answer. Perhaps ask for help on how to format your answer."]}
     where usr = Map.lookup "answer" mStrs
           question = quer!!1
           step = quer!!2

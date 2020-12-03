@@ -154,6 +154,9 @@ lookupInSubst nm ((nm', v) : rm)
     | otherwise = lookupInSubst nm rm 
 lookupInSubst _[] = error "Substitution was not complete, or free variables existed in the rhs of some equality"
 
+symbP :: MonadParsec e s f => Tokens s -> f ()
+symbP str = string str *> return ()
+
 -- parser single char for basic event
 basEvent_parser :: Parser FracExpr
 basEvent_parser = do {lt_spaces; 
@@ -164,30 +167,30 @@ basEvent_parser = do {lt_spaces;
                
 fractional_parser :: Parser FracExpr
 fractional_parser = do {lt_spaces;
-                    do {r <- (string "0"*> return 0) <|> (string "1"*> return 1);
+                    do {r <- (symbP "0"*> return 0) <|> (symbP "1"*> return 1);
                         lt_spaces;
                         return (FConst r)}
                     <|>
-                    do {string "Pr[";
+                    do {symbP "Pr[";
                         e1 <- fractional_parser;
-                        string "|";
+                        symbP "|";
                         e2 <- fractional_parser;
-                        string "]";
+                        symbP "]";
                         lt_spaces;
                         return (FExpr e1 e2)
                     }
                     <|>
                     do {
-                        string "(";
+                        symbP "(";
                         e1 <- fractional_parser;
-                        string ")";
+                        symbP ")";
                         lt_spaces;
                         return (e1)
                     }
                     <|>
                     do {
                         e1 <- fractional_parser;
-                        string "\\wedge";
+                        symbP "\\wedge";
                         e2 <- fractional_parser;
                     
                         lt_spaces;
@@ -196,7 +199,7 @@ fractional_parser = do {lt_spaces;
                     <|>
                     do {
                         e1 <- fractional_parser;
-                        string "\\vee";
+                        symbP "\\vee";
                         e2 <- fractional_parser;
                         
                         lt_spaces;
@@ -204,7 +207,7 @@ fractional_parser = do {lt_spaces;
                     }
                     <|>
                     do {
-                        string "\\neg";
+                        symbP "\\neg";
                         e1 <- fractional_parser;
                         lt_spaces;
                         return (NegaEvent e1)

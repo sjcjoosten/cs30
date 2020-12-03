@@ -27,22 +27,22 @@ import CS30.Exercises.GenerateExerViaProofs.ExpreParser ( probabilityProof )
 
 pages :: [ExerciseType]
 pages = [ rosterEx, powsetEx, setOpsEx -- from SetBasics
-        , probBasicEx, probExpectEx  -- Probability: Word Problems, basic probability and expected value exercises
+        , probBasicEx, probExpectEx  -- Fei and Kyle wk 5/6 probability: Word Problems, basic probability and expected value exercises
         , giveSet
         -- , tableStub -- does not pass tests, since it's not a valid exercise, but uncomment to see how tables are displayed.
         , truthEx
-        , modsEx -- Modular Arithmetic exercises
+        , modsEx -- Modular Arithmetic exercises wk 5/6. Maha and Roberto?
         , cardEx -- from Cardinality
-        , incExcCards -- from IncExcCardinalities
-        , probaEx
+        , incExcCards -- from IncExcCardinalities (Rachael and Tyler)
+        , probaEx -- 
         , modN
         , cardinalityProofExer -- has negative exponents errors
         , modProofEx
-        , logicRewritingEx
-        , logicProof
-        , logicInequalitiesEx -- Logic; inequality problems.
-        , logicWrongStepEx
-        , probabilityProof 
+        , logicRewritingEx -- Chibuzo and Bennett
+        , logicInequalitiesEx -- Kyle and Lucas: Logic; inequality problems.
+        , logicProof -- Tyler and Fei
+        , logicWrongStepEx -- Tyler and Fei
+        , probabilityProof -- Mengdie
         -- , combinEx -- too slow, see TODO
         , probExProof
         , setConv

@@ -16,7 +16,7 @@ The user is asked to reorder the proof and is given feedback on the correct orde
 -}
 
 logicInequalitiesEx :: ExerciseType
-logicInequalitiesEx = exerciseType "ineqProof" "L?.???" "Logic: Inequality"
+logicInequalitiesEx = exerciseType "ineqProofKL" "Kyle and Lucas" "Logic: Inequality"
                       [getFields] genProof simpleFeedback
   where simpleFeedback (_,sol) rsp pr
                 = case Map.lookup "proof" rsp of
@@ -107,7 +107,7 @@ filterTree n = n
 
 -- make sure the generated expression can be modified by at least one of our laws
 isInteresting :: ChoiceTree Expr -> Bool
-isInteresting (Node n) = length (getProofSteps (getProof n)) > 0
+isInteresting (Node n) = not (null (getProofSteps (getProof n)))
   where
     getProof n' = getSingleDerivation lawBois GThan n' 2
     getProofSteps (OldProof _ ps) = ps

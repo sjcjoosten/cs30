@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 
-module CS30.Exercises.ModuloGenerateEx where
+module CS30.Exercises.ModuloGenerateEx (modProofEx) where
 
 import qualified Data.Map as Map
 
@@ -15,7 +15,7 @@ import CS30.Exercises.ModularArithmetic.ModuloParser
 
 -- main Exercise Generaion function 
 modProofEx :: ExerciseType
-modProofEx = exerciseType "ModuloProof" "L??.?????"
+modProofEx = exerciseType "ModuloProof" "Sanket and Anmol"
             "Numbers: modulo n with non-monotonic operations"
             modProofs -- List of problems
             genProof -- present question as 'Exercise'

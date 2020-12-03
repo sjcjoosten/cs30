@@ -120,7 +120,7 @@ $(deriveJSON defaultOptions ''GraphAnswerType)
 -- d. Give the set of all endpoints of the edge (u,v).
 -- (Use roster notation for sets of edges or vertices, use pair notation for edges)
 giveSet :: ExerciseType
-giveSet = exerciseType "GraphsGiveSet" "(no lecture)" "Graph basics 1"
+giveSet = exerciseType "GraphsGiveSet" "(Sebastiaan)" "Graph basics 1"
               [ do (v,l,e) <- fullyLabeled 10 1 7
                    let vl = zip v l
                    rndm <- nodes vl

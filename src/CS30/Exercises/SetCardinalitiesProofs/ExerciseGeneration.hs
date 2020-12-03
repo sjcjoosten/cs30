@@ -16,7 +16,7 @@ type PossibleVals = [(Expr, Integer)]
 
 cardinalityProofExer :: ExerciseType
 cardinalityProofExer 
-    = exerciseType  "Set Cardinality" "L?.?" 
+    = exerciseType  "JPRSetCardinality" "Joseph Paul and Roberto" 
                     "Sets: Cardinalities"
                     setExercises
                     generateQuestion
@@ -24,7 +24,7 @@ cardinalityProofExer
 
 
 setExercises :: [ChoiceTree SetCardinalityProblem] -- first thing in field will be expression, rest its equivalencies
-setExercises = [fullExercise 3] -- removed larger exercises as they cause negative exponent errors
+setExercises = [fullExercise 3] -- SJC: removed larger exercises as they cause negative exponent errors
   where fullExercise i = do ex <- generateRandSetExpr i
                             let proof@(Proof lhs steps) = genProof laws (Op Cardinality [ex])
                                 rhs = last (lhs:map snd steps)

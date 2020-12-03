@@ -1,4 +1,4 @@
-module CS30.Exercises.LogicRewriting.Exercise where
+module CS30.Exercises.LogicRewriting.Exercise (logicRewritingEx) where
 
 import           CS30.Data
 import           CS30.Exercises.Data
@@ -10,7 +10,7 @@ import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, P
 
 -- final exercise type
 logicRewritingEx :: ExerciseType
-logicRewritingEx = exerciseType "Logic Rewriting" "L?.?" "Logic Rewriting"
+logicRewritingEx = exerciseType "LogicRewritingCB" "Chibuzo and Bennett" "Logic Rewriting"
                        logicExercises
                        logicQuer
                        logicFeedback

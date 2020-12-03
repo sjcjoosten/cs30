@@ -21,7 +21,7 @@ proofToString (Proof expr steps) = "Proof: " ++ exprToLatex expr ++ "\n" ++ help
         helper ((s,expression):xs) = s ++ ":  " ++ exprToLatex expression ++ "\n" ++ helper xs
         helper [] = ""
 
--- Sebastians Code
+-- Sebastiaans Code
 genProof :: [Law] -> Expr -> Proof
 genProof laws' e
  = Proof e (multiSteps e)

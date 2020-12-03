@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
-module CS30.Exercises.TruthTable where
+module CS30.Exercises.TruthTable (truthEx) where
 
 import CS30.Data
 import CS30.Exercises.Data -- 'exerciseType' function
@@ -20,7 +20,7 @@ import Control.Monad.Combinators.Expr
 -------------------------------------- Exercise Generation ------------------------------------
 
 truthEx :: ExerciseType
-truthEx = exerciseType "TruthTable" "L???.???"
+truthEx = exerciseType "TruthTable" "Anmol and Sanket"
           "Logic: Complete a TruthTable"
           trtable -- List of problems
           genQuestion -- present question as 'Exercise'
@@ -198,13 +198,6 @@ getTruthTable e = TruthTable ttHeader ttBody
                   where ttHeader = flattenExpr e ++ [e]
                         ttBody = getTruthTableBody ttHeader (getAllLiteralMappings e)
 
--- This validates a truth table. Given the allocation of values in literal columns, it checks the rest of the body
-isValidTruthTable :: TruthTable -> Bool
-isValidTruthTable (TruthTable ttHeader ttBody) 
-      = ttBody == getTruthTableBody ttHeader literalMappings
-        where literals = filter isLiteral ttHeader
-              literalMappings = map (\row-> Map.fromList(zip literals (take (length literals) row))) ttBody
-
 -- This returns the truth table body given a header and a literal to boolean mapping for every row
 getTruthTableBody :: [Expression] -> [Map.Map Literal Bool] -> [[Bool]]
 getTruthTableBody header literalMappings = 
@@ -220,16 +213,6 @@ fromTruthTable (TruthTable ttHeader ttBody)
               ftHeader = map exprToHeader ttHeader
               ftBody = map (\ttBodyRow -> map boolToCell ttBodyRow) ttBody
 
--- Converts truth table to field FTable
-toTruthTable :: Field -> TruthTable
-toTruthTable (FTable fTable) = TruthTable ttHeader ttBody
-                               where headerToExpr (Header (FText x)) = parseExpr x
-                                     headerToExpr _ = error "Expecting header with text"
-                                     cellToBool (Cell (FText x)) = x == [charTrue]
-                                     cellToBool _ = error "Expecting cell with text"
-                                     ttHeader = map headerToExpr (head fTable)
-                                     ttBody = map (\ftBodyRow -> map cellToBool ftBodyRow) (take 1 fTable)
-toTruthTable _ = error "Expecting a truth-table"
 
 --------------------------------------Truth Table Helpers-------------------------------------------
 
@@ -266,21 +249,6 @@ getLiteralsExpr = filter isLiteral . flattenExpr
 dedup :: Eq a => [a] -> [a] -- Helper
 dedup [] = []
 dedup (x:xs) = if elem x xs then dedup xs else [x] ++ dedup xs
-
--- Checks whether two expressions are semantically equal (Each corresponding node in parse has same unordered set of children)
-semanticallyEqual :: Expression -> Expression -> Bool
-semanticallyEqual (Conjunction e1 e2) (Conjunction e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
-semanticallyEqual (Disjunction e1 e2) (Disjunction e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4) || (semanticallyEqual e1 e4 && semanticallyEqual e2 e3)
-semanticallyEqual (Implication e1 e2) (Implication e3 e4) = (semanticallyEqual e1 e3 && semanticallyEqual e2 e4)
-semanticallyEqual (Negation e1) (Negation e2) = semanticallyEqual e1 e2
-semanticallyEqual e1 e2 | isLiteral e1 && isLiteral e2 = e1 == e2
-                        | otherwise = False
-
--- Checks if the truth values for two expressions are the same
-logicallyEqual :: Expression -> Expression -> Bool
-logicallyEqual e1 e2 = sameLiterals && (map (evalExpr e1) alm == map (evalExpr e2) alm)
-                       where sameLiterals = sort (getLiteralsExpr e1) == sort (getLiteralsExpr e2)
-                             alm = getAllLiteralMappings e1
 
 -- Whether an expression is a pure literal
 isLiteral :: Expression -> Bool

@@ -64,7 +64,7 @@ choiceTreeList = [
 
 incExcCards :: ExerciseType
 incExcCards
-  = exerciseType "IncExcCardinalities" "L3.0"
+  = exerciseType "IncExcCardinalities" "Rachael and Tyler"
                  "Inclusion exclusion principle" 
                  [Branch choiceTreeList]
                  genExercise 

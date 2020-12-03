@@ -1,4 +1,4 @@
-module CS30.Exercises.LogicRewriting.ProofGeneration where
+module CS30.Exercises.LogicRewriting.ProofGeneration (Proof(..),getDerivation, apply, Step) where
 
 import CS30.Exercises.LogicRewriting.Parsing (Law (..), Expr (..), Equation)
 

@@ -24,7 +24,7 @@ law1 = "Intersection Definition:A \\cap B = \\left\\{e| e \\in A \\wedge e\\in B
 law2 = "Union Definition:A \\cup B = \\left\\{e| e \\in A \\vee e\\in B\\right\\}"
 law3 = "Set Difference Definition:A \\setminus B = \\left\\{e| e \\in A \\wedge e\\notin B\\right\\}"
 law4 = "Powerset Definition:\\P(A) = \\left\\{e| e \\subseteq A\\right\\}"
-law5 = "Identity Function:e\\in \\left\\{e|p\\right\\} = p"
+law5 = ":e\\in \\left\\{e|p\\right\\} = p"
 -- creative element: additional laws, used in subsequent levels 
 law6 = "Union Associativity:(A \\cup B) \\cup C = A \\cup (B \\cup C)"
 law7 = "Intersection Associativity:(A \\cap B) \\cap C = A \\cap (B \\cap C)"
@@ -36,8 +36,8 @@ law12 = "DeMorgans Law:A \\setminus (B \\cap C) = (A \\setminus B) \\cup (A \\se
 law13 = "Name:(A \\setminus B) \\cup B = A \\cup B"
 
 basicLaws, advancedLaws :: [String] 
-basicLaws = [law1, law2, law3, law4, law5]
-advancedLaws = [law6, law7, law8, law9, law10, law13, law1, law2, law3, law4, law5]
+basicLaws = [law5, law1, law2, law3, law4]
+advancedLaws = [law5, law6, law7, law8, law9, law10, law13, law1, law2, law3, law4]
 
 --fxn for parsing laws 
 parseLaw :: Parser Law

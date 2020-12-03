@@ -70,7 +70,7 @@ genRanEx False i | i < 1
             , Branch [Node (Econst val) | val <- [2..10]]
             ]
 genRanEx _ i
-   -- creative: make sure there is always a random variable in generated expression
+   -- creative: make sure there is always a random variable in a generated expression
    = Branch [ do b' <- nodes [True,False]
                  e1 <- genRanEx b' i'
                  e2 <- genRanEx (not b') (i - i' - 1)
@@ -159,7 +159,7 @@ nonSingleQuote  = anySingleBut '\''
 -- | Joint code: combining all details
 --   TODO: generate feedback (printing a proof if the answer is wrong)
 probExProof :: ExerciseType
-probExProof = exerciseType "ProbExProof" "L?.?" "Probability : Expected Value"
+probExProof = exerciseType "ProbExProof" "Rachael" "Probability : Expected Value"
             probExercises --choiceTreeList
             genQuestion
             check -- genFeedback

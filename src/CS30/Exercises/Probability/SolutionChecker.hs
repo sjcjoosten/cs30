@@ -16,6 +16,10 @@ data NumericExpression = Const Rational
 
 data NumbericOper = Multiplication | Division | Addition | Subtraction | Exponentiation deriving (Show)
 
+showProb :: Rational -> [Char]
+showProb r | denominator r == 1 = show (numerator r)
+showProb r = "\\frac{"++show (numerator r)++"}{"++show (denominator r)++"}"
+
 digit :: Parser Integer
 digit = do a <- satisfy satiDigit
            return (toInteger ((fromEnum a - fromEnum '0')))
@@ -116,11 +120,11 @@ genFeedback (_, solution)  mStrs rsp = reTime $
                   case Map.lookup "answer" mStrs of
                       Nothing -> error "Answer field expected"
                       Just v -> case runParser numeric_value_parser "" v of
-                                  Left e -> markWrong $ rsp{prFeedback = [FText "You entered " , FMath $ show v, FText (", parse error" ++ errorBundlePretty e)]}
+                                  Left _e -> tryAgain $ rsp{prFeedback = [FText "We couldn't understand your response, please check your syntax and try again."]}
                                   Right userAnswer -> case evalRational userAnswer of
-                                                        Nothing -> markWrong $ rsp{prFeedback = [FText "Sorry! You entered ", FMath $ show userAnswer, FText ", which we couldn't evaluate (division by zero?)"]}
+                                                        Nothing -> markWrong $ rsp{prFeedback = [FText "Sorry, something went wrong! You entered ", FMath $ show userAnswer, FText ", which we couldn't evaluate (division by zero?)"]}
                                                         Just userSolution -> if userSolution == solution then
                                                                                 markCorrect $
-                                                                                    rsp{prFeedback = [FText "Congratulations! You entered ", FMath $ show userAnswer, FText ", the right answer is ", FMath$ show solution]}
+                                                                                    rsp{prFeedback = [FText "Congratulations! The right answer is ", FMath$ showProb solution]}
                                                                             else markWrong $
                                                                                     rsp{prFeedback = [FText "Sorry! You entered ", FMath $ show userAnswer, FText ", the answer is wrong"]}

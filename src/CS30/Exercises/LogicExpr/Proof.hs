@@ -50,15 +50,15 @@ input_laws = [
 
 fake_laws :: [String]
 fake_laws = [
-    "FAKELAW: ¬(p ⇒ q) ≡ ¬p ⇒ ¬q"
-    , "FAKELAW: p∨(q∧r)≡(p∨q)∧r"
-    , "FAKELAW: (p∧q)∨r≡p∧(q∨r)"
-    , "FAKELAW: ¬(p∧q)≡(p∨q)"
-    , "FAKELAW: ¬(p∧q)≡(¬p∧¬q)"
-    , "FAKELAW: ¬(p⇒q)≡(¬p⇒¬q)"
-    , "FAKELAW: ¬(p⇒q)≡(q⇒p)"
-    , "FAKELAW: ¬(p⇒q)≡(¬q⇒¬p)"
-    , "FAKELAW: false⇒q≡¬q"
+      "Erroneous distribution: p∨(q∧r)≡(p∨q)∧r"
+    , "Erroneous distribution: (p∧q)∨r≡p∧(q∨r)"
+    , "Not De Morgan: ¬(p∧q)≡(p∨q)"
+    , "Not De Morgan: ¬(p∧q)≡(¬p∧¬q)"
+    , "Wrong implication: ¬(p ⇒ q) ≡ ¬p ⇒ ¬q"
+    , "Wrong implication: ¬(p⇒q)≡(¬p⇒¬q)"
+    , "Wrong implication: ¬(p⇒q)≡(q⇒p)"
+    , "Wrong implication: ¬(p⇒q)≡(¬q⇒¬p)"
+    , "Wrong use of False: false⇒q≡¬q"
   ]
 
 renameLaw :: (a -> b) -> Law a -> Law b

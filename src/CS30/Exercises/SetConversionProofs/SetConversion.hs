@@ -23,7 +23,7 @@ $(deriveJSON defaultOptions ''STEx)
 
 -- setConv definition for export to Pages.hs
 setConv :: ExerciseType
-setConv = exerciseType "SetConversion" "L??" "Conversion to set-builder notation" 
+setConv = exerciseType "SetConversion" "Donia and Mikio" "Conversion to set-builder notation" 
               setConversion 
               genProof 
               feedback    
@@ -84,15 +84,15 @@ genAdvEx i
       result
 
 -- creative element: generates a ChoiceTree of SetExprs that are based on the format of the advanced laws
-genSuperAdvEx :: [Law] -> ChoiceTree SetExpr
-genSuperAdvEx laws 
+genSuperAdvEx :: ChoiceTree SetExpr
+genSuperAdvEx 
     = do {  i <- nodes [0..1]
         ; let j = (1 `subtract` i)
         ; a <- genAdvEx i -- could make i or j or both 0, and replace (2 `subtract` i `subtract` j) with 0 too if we wanted a simpler expr
         ; b <- genAdvEx j
         ; c <- genAdvEx (2 `subtract` i `subtract` j)
-        ; n <- nodes [0..4] -- because there are 5 advanced laws
-        ; let (Law _nm (left, _rt)) = laws!!n
+        ; n <- nodes [1..5] -- because there are 5 advanced laws
+        ; let (Law _nm (left, _rt)) = parsedAdvancedLaws!!n
         ; let expr' = fst(assignVarAdv left [a, b, c])
         ; return expr'
         } 
@@ -195,7 +195,7 @@ setConversion
                    ; order <- removeRep ( permutations (length steps))
                    ; return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 2, expr = expr'}
                  } | i <- [2..3]]
-     , Branch [do { ex <- genSuperAdvEx parsedAdvancedLaws -- level 3 --> add in advanced laws, forces an expr that uses at least one of the advanced laws
+     , Branch [do { ex <- genSuperAdvEx -- level 3 --> add in advanced laws, forces an expr that uses at least one of the advanced laws
                    ; let expr' = fst (assignVar ex ["A", "B", "C", "D", "E", "F", "G"]) 
                    ; let (Proof _expr steps) = generateProof parsedAdvancedLaws expr'
                    ; order <- permutations (length steps) -- SJC: this generates empty branches sometimes (because of zero/one-step proofs), so removing the removeRep here
@@ -227,17 +227,17 @@ genProof (STEx {exprAsField = ex, ord = _o, lev = _l, expr = _ex}) def
 -- structure mostly taken from Proof.hs
 feedback :: STEx -> Map.Map String String -> ProblemResponse -> ProblemResponse
 feedback (STEx {exprAsField = _e, ord = order, lev = level, expr = ex}) rsp pr
-               = reTime $ case Map.lookup "proof" rsp of
+               = case Map.lookup "proof" rsp of
                    Just str
                      -> if length num == 0 
-                        then markCorrect pr{prFeedback=[FText"Nice Job!"]}
+                        then markCorrect pr{prFeedback=[FText"Nice Job!"], prTimeToRead=3}
                         else markWrong pr{prFeedback=[FText "You answered with the steps in the order: ",
                                                       FText (show (map ((order !!) . read) (breakUnderscore str))), 
                                                       FText". You had ",
                                                       FText (show (length num)),  -- creative element: gives the user a bit more information on their incorrect answer
                                                       FText " steps in the wrong order.", -- tells them how many lines they had in the wrong order and shows the correct proof
                                                       FIndented 0 ([FText "The correct proof would read: " ] ++ showProof proof)
-                                                     ]}                          
+                                                     ], prTimeToRead = 10}
                         where num = isRight 0 (map ((order !!) . read) (breakUnderscore str) )
                               proof = if level < 3 then generateProof parsedBasicLaws ex else generateProof parsedAdvancedLaws ex
                               -- a note: sometimes the advanced expressions generated are quite long, in which case with the current JS, the feedback modal cuts off the 

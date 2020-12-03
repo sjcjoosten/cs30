@@ -9,8 +9,8 @@ import           Test.Tasty
 import           Test.Tasty.QuickCheck as QC
 import           Text.TeXMath.Readers.TeX (readTeX)
 import Debug.Trace
-import           CS30.Exercises.LogicExpr.Proof (checkLaw, input_laws, fake_laws)
-
+import           CS30.Exercises.LogicExpr.Proof as JPRLogic (checkLaw, input_laws, fake_laws)
+import           CS30.Exercises.LogicRewriting.Parsing as CBLogic (checkLaw, laws, lawName)
 _unused :: a
 _unused = undefined where _ = trace
 
@@ -18,15 +18,21 @@ main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [pagesStandardTests, lawTests]
+tests = testGroup "Tests" [pagesStandardTests, lawTestsJPR, lawTestsCB]
 
-lawTests :: TestTree
-lawTests
- = testGroup "LogicExpr laws" ([testLaw True l | l <- input_laws] ++
-                               [testLaw False l | l <- fake_laws])
+lawTestsJPR :: TestTree
+lawTestsJPR
+ = testGroup "LogicExpr laws (JPR)" ([testLaw True l | l <- input_laws] ++
+                                     [testLaw False l | l <- fake_laws])
  where testLaw b l
           = testCase l $ assertBool ("This law should have been "++show b ++" but was not evaluated as such.")
-                                    (b == checkLaw l)
+                                    (b == JPRLogic.checkLaw l)
+lawTestsCB :: TestTree
+lawTestsCB
+ = testGroup "Logic Rewriting laws (CB)" ([testLaw l | l <- laws])
+ where testLaw l
+          = testCase (CBLogic.lawName l) $ assertBool ("This law was evaluated as False.")
+                                                      (CBLogic.checkLaw l)
 
 pagesStandardTests :: TestTree
 pagesStandardTests
