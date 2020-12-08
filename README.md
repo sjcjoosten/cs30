@@ -2,9 +2,10 @@
 
 ## What is this?
 
-This is a practice environment for people who want to learn about
-topics in Discrete Mathematics (students). This tool works as a
-web-application, so students interact with it in a browser.
+This is a practice environment for people who want to learn about topics in Discrete Mathematics (students).
+This tool works as a web-application, so students interact with it in a browser.
+The exercises can be used as graded 'drills', requiring students to answer a certain number of questions correctly in a row.
+If used this way (that is: through Canvas or some other LMS), students are given infinite attempts and will be awarded 100% of the points upon completion.
 
 ### What do the exercises look like?
 
@@ -39,6 +40,12 @@ However, they will also continually see that this assignment is completed and no
 
 This has not been tested yet, but we only used the standards that should be compatable with other LMS's.
 This means that the most likely answer is no, but it shouldn't be hard to fix either.
+
+### Why yet another exercise environment?
+
+As far as I'm aware, there aren't many exercise environments that work well with the variety preseent in Discrete Mathematics exercises.
+Environments I'm aware of either do well with formulas that work on basic calculators, or multiple-choice questions.
+I'm also a big fan of CalcCheck ( http://calccheck.mcmaster.ca/ ), but that environment is focussed on a single very particular kind of exercise: writing proofs.
 
 ## Installation
 
@@ -120,3 +127,8 @@ stack test --ta "--quickcheck-replay=569579"
 Please for the repository, make your changes there,
 add your name to the CONTRIBUTORS.md file, and send me a pull-request.
 
+### Why Haskell? Why not Haste?
+
+Haskell's type system gives me some degree of certainty that all exercises are well-behaved.
+Specifically: it is hard to write code that changes the settings to the exercise outside of the intended mechanisms.
+I decided not using Haste (or ghc-js, or ...) as it risks becomming obsolete due to a lack of maintenance.
