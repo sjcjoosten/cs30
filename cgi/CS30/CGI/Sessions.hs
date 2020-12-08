@@ -40,13 +40,13 @@ runWithLink uid auth cl f
                     Nothing | isTemp cl -> return startData -- not logged in, so just create a new session to overwrite the old
                       | otherwise -> liftIO . err500 $ "Your data on the server became corrupted, please ask Sebastiaan to fix this manually. Tell him: "<>fName
                     Just v -> return v
-      (res, newState) <- runStateT (f runEnv{reSetScore = (postGrade uid <$> (aGradeReport =<< auth))}) initState{sdEmail = aEmail <$> auth}
+      (res, newState) <- runStateT (f runEnv{reSetScore = (postGrade <$> (aServer <$> auth) <*> return uid <*> (aGradeReport =<< auth))}) initState{sdEmail = aEmail <$> auth}
       encodeFile fName newState
       return res
  where fName = globalDataDir <> dataFile cl
 
-postGrade :: L8.ByteString -> GradeReporting -> SaveResult
-postGrade uid repDetails score -- Used https://lti.tools/saltire/tc to format 'payload'
+postGrade :: String -> L8.ByteString -> GradeReporting -> SaveResult
+postGrade serverURL uid repDetails score -- Used https://lti.tools/saltire/tc to format 'payload'
  = do let key = aOAuthKey repDetails
       dataDir <- getDataDir
       secret <- C8.readFile (dataDir++"/data/"++key)
@@ -65,7 +65,9 @@ postGrade uid repDetails score -- Used https://lti.tools/saltire/tc to format 'p
                     L8.pack "        <result><resultScore>\n"<>
                     L8.pack "            <language>en-US</language>\n"<>
                     L8.pack ("            <textString>"<>show score<>"</textString>\n")<>
-                    L8.pack "        </resultScore></result>\n"<>
+                    L8.pack "        </resultScore><resultData>\n"<>
+                    L8.pack ("                <text>Completed the required number of exercises correctly at: "<>serverURL<>"</text>\n")<>
+                    L8.pack "              </resultData></result>\n"<>
                     L8.pack "  </resultRecord></replaceResultRequest></imsx_POXBody>\n"<>
                     L8.pack "</imsx_POXEnvelopeRequest>"
       request <- signOAuth newOAuth{oauthConsumerKey=C8.pack key, oauthConsumerSecret=secret}
@@ -89,16 +91,7 @@ handleRequest :: L8.ByteString
               -> Map.Map String [String] -- POST data
               -> IO (String, ClientLink)
 handleRequest uid mp
- = do cookies' <- lookupEnv "HTTP_COOKIE"
-      let extract :: Maybe String -> Map.Map String String
-          extract = Map.fromListWith const . readCookies . CGI.urlDecode . concat . maybeToList
-           -- semigroup for Map prefers left operand values,
-           -- we consistently prefer JavaScript's reported cookies over the browser's cookies
-          cookies = extract (listToMaybe =<< Map.lookup "c" mp) <> extract cookies'
-          sesName = case safeFilename =<< listToMaybe =<< (Map.lookup "ses" mp <> ((:[]) <$> Map.lookup "ses" cookies))
-                      of Nothing -> C8.unpack . B64URL.encode . L8.toStrict . SHA.bytestringDigest . SHA.sha512
-                                        $ encodeUtf8 globalSalt <> uid
-                         Just v -> v
+ = do let sesName = C8.unpack . B64URL.encode . L8.toStrict . SHA.bytestringDigest . SHA.sha512 $ encodeUtf8 globalSalt <> uid
           fname = (globalDataDir <> "ses/" <> sesName)
       -- 7777777 seconds is 90 days, and chosen because it is the duration of a term
       putStrLn $ "Set-Cookie: ses="++sesName++"; Max-age:7777777"
@@ -108,7 +101,9 @@ handleRequest uid mp
       setFileMode (globalDataDir++"ses/") accessModes -- requires 'import System.Posix.Files' from 'unix'
       setFileMode (globalDataDir++"tmp/") accessModes 
       setFileMode (globalDataDir++"perm/") accessModes 
-      aut <- authenticate (listToMaybe =<< Map.lookup "a" mp) (listToMaybe =<< Map.lookup "h" mp)
+      serverURI <- lookupEnv "REQUEST_URI"
+      serverHost <- lookupEnv "HTTP_HOST"
+      aut <- authenticate ((<>) <$> serverHost <*> serverURI ) (listToMaybe =<< Map.lookup "a" mp) (listToMaybe =<< Map.lookup "h" mp)
       isf <- doesPathExist fname
       curLink <- if isf then decodeFileStrict fname else return (Nothing :: Maybe ClientLink)
       newLink <- case (curLink, aut) of
@@ -125,7 +120,7 @@ handleRequest uid mp
                                              else renameFile (globalDataDir <> tmpDir) (globalDataDir <> "perm/" <> aUID auth)
                              _ -> return ()
                            return (PermSession ("perm/" <> aUID auth) ("auth/" <> aUID auth))
-      -- We save the new link with our cookie:
+      -- We save the link:
       encodeFile fname newLink
       -- Also save storage data?
       return (sesName, newLink)
@@ -139,8 +134,8 @@ obtainAuth (PermSession _ usr)
         Just auth -> return (Just auth)
 
 -- get the session token we are supposed to use
-authenticate :: Maybe String -> Maybe String -> IO (Maybe Authentication)
-authenticate str hash
+authenticate :: Maybe String -> Maybe String -> Maybe String -> IO (Maybe Authentication)
+authenticate serverURL str hash
  = case (oauth_key,oauth_timestamp) of
      (Just oauth_key',Just time_oa) ->
        do dataDir <- getDataDir
@@ -161,7 +156,7 @@ authenticate str hash
           if abs (time - time_oa) > 3100 then err500$ "Clocks seem out of sync (OAuth time: "++show time_oa++", Server time: "++show time++"). Fix is most likely to revisit this page from Canvas."
             else if c == (C8.pack <$> hash)
             then case userFn of
-                   Nothing -> err500 "Could not get a user_id. This is probably an OAuth error; if you have linked this with a learning environment other than Canvas, there may be an easy fix."
+                   Nothing -> err500 "Could not get a user_id. This is perhaps an OAuth error; if you have linked this with a learning environment other than Canvas, there may be an easy fix."
                    Just fn ->
                     let fname = globalDataDir ++"auth/"++fn
                     in do createDirectoryIfMissing True (globalDataDir++"auth/")
@@ -170,7 +165,7 @@ authenticate str hash
                             Nothing -> err500 "Error processing authentication information"
                             Just v -> do encodeFile fname v -- Store the most recent authentication data
                                          return (Just v)
-            else err500$ "OAuth error: the secret used to sign the request does not seem to match our secret. \nThis is a setting. Information received: "
+            else err500$ "OAuth error: the secret used to sign the request does not seem to match our secret. \nThis is a setting."
      _ -> return Nothing
  where
   mp = decodeQueryString . CGI.urlDecode <$> str
@@ -178,10 +173,12 @@ authenticate str hash
   oauth_timestamp = (readMaybe =<< listToMaybe =<< Map.lookup "oauth_timestamp" =<< mp)::Maybe Integer
   emailMaybe = listToMaybe =<< Map.lookup "lis_person_contact_email_primary" =<< mp
   roles = concatMap (uncalate ',' . CGI.urlDecode) <$> (Map.lookup "roles" =<< mp)
-  userFn = safeFilename =<< listToMaybe =<< Map.lookup "user_id" =<< mp
+  userFn = safeFilename =<< (case lis_result_sourcedid of
+                               Nothing -> listToMaybe =<< Map.lookup "user_id" =<< mp
+                               Just v -> Just (C8.unpack (B64.encode (C8.pack v))))
   lis_outcome_service_url = CGI.urlDecode <$> (listToMaybe =<< Map.lookup "lis_outcome_service_url" =<< mp)
   lis_result_sourcedid    = CGI.urlDecode <$> (listToMaybe =<< Map.lookup "lis_result_sourcedid"    =<< mp)
    -- credentials the user is trying to get
-  res = Auth <$> emailMaybe <*> userFn <*> roles <*> return gradeReporting
+  res = Auth <$> emailMaybe <*> userFn <*> roles <*> return gradeReporting <*> serverURL
   gradeReporting = GradeR <$> lis_outcome_service_url <*> lis_result_sourcedid <*> oauth_key
 

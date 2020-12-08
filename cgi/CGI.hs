@@ -17,7 +17,6 @@ main = flip catch mkServerError $
             Nothing -> err500 "This script should be called via apache and an appropriate API, the environment variable QUERY_STRING needs to be set and apache would typically set it for us if this script is called with some GET-method data."
             Just _ -> handleResponse uid qs =<< handleRequest uid qs
             
-
 mkServerError :: SomeException -> IO ()
 mkServerError e = do putStrLn$ "Status: 500\nContent-type: text/plain\n\nCaught runtime error:"
                      putStrLn (show e)
