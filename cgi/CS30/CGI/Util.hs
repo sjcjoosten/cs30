@@ -1,16 +1,7 @@
 {-# OPTIONS_GHC -O2 #-}
-module CS30.CGI.Util (safeFilename, readCookies, readWithDefault) where
+module CS30.CGI.Util (safeFilename, readWithDefault) where
 import Control.Exception (try)
-import Data.Char (isSpace)
 import System.Directory (createDirectory)
-
--- | Gets all the cookies from a Cookie: header value
-readCookies :: String             -- ^ String to parse
-            -> [(String,String)]  -- ^ Cookie name - cookie value pairs
-readCookies s =
-    let (xs,ys) = break (=='=') (dropWhile isSpace s)
-        (zs,ws) = break (==';') (dropWhile isSpace (drop 1 ys))
-     in if null xs then [] else (xs,zs):readCookies (drop 1 ws)
 
 -- | checking if the filename (which the user sent us) is a proper filename
 safeFilename :: String -> Maybe String

@@ -9,7 +9,6 @@ Group Assignment 2
 module CS30.Exercises.SetConversionProofs.SetConversion (setConv) where
 import           CS30.Data
 import           CS30.Exercises.Data
-import CS30.Exercises.Util ( reTime )
 import qualified Data.Map as Map
 import           Data.Aeson as JSON
 import CS30.Exercises.SetConversionProofs.SetExprParser

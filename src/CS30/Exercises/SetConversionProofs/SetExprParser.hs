@@ -18,9 +18,6 @@ import           Text.Megaparsec.Char -- readFile
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Control.Monad.Combinators.Expr
 
-import Debug.Trace
-
-
 -- datatype that we parse all expressions into 
 data SetExpr = Var String -- single variable
               | SetBuilder SetExpr -- set builder expression

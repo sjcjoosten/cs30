@@ -1,34 +1,65 @@
 # cs30 [![Build Status](https://travis-ci.com/sjcjoosten/cs30.svg?branch=main)](https://travis-ci.com/sjcjoosten/cs30)
 
-This is a practice environment for people who want to learn about
-topics in Discrete Mathematics (students). This tool works as a
-web-application, so students interact with it in a browser.
+## What is this?
 
-### Help wanted! Edit this file...
-If you know what this tool is about, perhaps you can add a bit
-to the description here.
+This is a practice environment for people who want to learn about topics in Discrete Mathematics (students).
+This tool works as a web-application, so students interact with it in a browser.
+The exercises can be used as graded 'drills', requiring students to answer a certain number of questions correctly in a row.
+If used this way (that is: through Canvas or some other LMS), students are given infinite attempts and will be awarded 100% of the points upon completion.
 
-If you would like to get started with this environment locally
-(on your own computer) you can run cs30 in single user mode.
-That will set up a simple (non-configurable) web-server and
-direct you to use the application from there.
+### What do the exercises look like?
 
-There is also a Canvas mode available through 'LTI'.
+There is an environment running here: https://cs.dartmouth.edu/~sjc/cs30/
+It is fine to check out the existing exercises, but we do not recommend using this for your students:
 
-## Installation in Single user mode
+- It is quite likely that some of the exercises are unpolished and not intended for students (intended for testing only).
+  With Canvas integration, you can select which exercises students can see and complete.
+- To set up Canvas integration, you'd need to add a key and secret to this environment, for which you need access to the server (which you don't have).
+- There are many ways to loose progress:
+  As you complete exercises correctly, questions get harder. This means there is a form of progress.
+  If you refresh your browser, however, that progress may be lost.
+  Even if you don't refresh your browser, the server might decide to clean up the directory where it stored your progress (Canvas integration prevents this). The chance of this happening is small if only a handful of people are using it, but becomes large if an entire class of students is using it.
+
+### What is Canvas integration like?
+
+There are two ways the environment can be embedded: as an external tool or as an assignment.
+
+When the environment is embedded as a link to an external tool, students will see a single exercise which behaves largely the same as:
+https://cs.dartmouth.edu/~sjc/cs30/?Roster
+except that the possibility of choosing a different exercise is missing.
+
+When the environment is embedded as an assignment, the following behavior occurs:
+Students are required to complete a certain number of exercises correctly (usually 10, but this may differ per exercise).
+As students complete exercises, they see their progress, e.g. '3/10'.
+Upon making a mistake, the progress is reset.
+Once the number is reached, students see the message that they completed the assignment, and a score of 100% of the available points will be awarded on Canvas.
+If students navigate to the assignment after that, they will be able to continue practicing.
+However, they will also continually see that this assignment is completed and no 'regrades' will be submitted to Canvas.
+
+### Does this work with other LMS's, like Moodle?
+
+This has not been tested yet, but we only used the standards that should be compatable with other LMS's.
+This means that the most likely answer is no, but it shouldn't be hard to fix either.
+
+### Why yet another exercise environment?
+
+As far as I'm aware, there aren't many exercise environments that work well with the variety preseent in Discrete Mathematics exercises.
+Environments I'm aware of either do well with formulas that work on basic calculators, or multiple-choice questions.
+I'm also a big fan of CalcCheck ( http://calccheck.mcmaster.ca/ ), but that environment is focussed on a single very particular kind of exercise: writing proofs.
+
+## Installation
+
+### In Single user mode
+
+If you wish to develop exercises, or test this project offline, this is how.
 
 Prerequisites: stack, and a browser. Please install stack using the
 instructions on the Haskell Stack / GHC Downloads / Haskell Platform
 websites, and don't try using the .sh script included here.
 
-The install_stack_foreign.sh script is a workaround to try to install
-stack in case no sudo rights are available. Even if it work (and this
-is not a given) it will lead to some problems with your stack
-installation if you use it for other projects.
-
 Installation instructions:
 
-* Run 'stack exec serve --package cs30:serve'
+* Run 'stack run serve'
 
   After a while (first time is slower) you should see the message:
 
@@ -40,42 +71,43 @@ Installation instructions:
   
   A note of warning: this single user mode uses no storage. You can
   abort the script at any time by pressing ctrl-c, at which point
-  all session-data will be lost. At the time of writing, this only
-  includes a history of what questions you answered and how well
-  you did on them, which is used to ask you harder questions if you
-  did well, or restart on the easier questions if you did poorly.
+  all session-data will be lost.
+  (If you are developing exercises, this is probably the behavior you want.)
 
-## Installation with Canvas integration
+### Installation with Canvas (or some other LMS) integration
 
-This isn't really supported, so you may need to reach out to
-Sebastiaan to get help here.
+This hasn't really happened on any LMS other than my own,
+so you may need to reach out to me (Sebastiaan) to get help here.
 
-Currently, 'make' will test whether it is running on Sebastiaan's
-computter. If it is, it will synchronise the repository with an
-online server and then build and install the executables there.
-The server is running Apache with php and cgi-scripts enabled.
-There is a folder that acts as storage. This folder is mentioned in
-the file data/dir and may be relative to the cgi-script's path.
-(Using an absolute path is probabaly easier to set up, though)
+The steps are as follows:
 
-Finally, the data folder contains some cryptographic random data:
-'salt', which should be kept secret, and a file with a random
-name and random content, which is to be comunicated with Canvas.
+- setup a webserver with PHP and stack installed. This has been tested with Apache but other webservers might work too.
+- fill the data directory with the following files:
+  * data/salt (contains a random string)
+  * data/dir (contains a path to a writable directory on your server)
+  * data/chooseYourOwnFileName (filename is a key, contains a secret)
+- build a cgi script called cs30.cgi using stack. The salt and dir files are statically built into the cgi script, so these two steps must be done in this order. The file chooseYourOwnFileName will be copied to a directory of stack's choosing and accessible to the application there.
+- add the files in static to a webserver, and add the cgi script in the same folder as well
+- add the server to Canvas as an external tool. Use chooseYourOwnFileName as key, and its content as value.
+  The path to use is where you installed the static files (like https://cs.dartmouth.edu/~sjc/cs30/ )
+- add assignments to Canvas and select 'external tool' as mode of submission.
+  Use something like https://cs.dartmouth.edu/~sjc/cs30/?Roster as a path.
 
-In Canvas, a manual custom tool is to be added with the key set
-to the filename and the secret set to the content of the file.
-To select a specific exercise, like 'Roster', add ?Roster to the url.
+There is a Makefile that only works for Sebastiaan, so running it won't help you.
+If you are interested in hosting this on your own server,
+please let me (Sebastiaan) know about your situation (like what kind of server you have).
+There are currently 0 (zero) potential users who would like me to make the above process easier.
 
-## For developers, running and testing
+## For developers / contributors:
 
-Avoid using the above instructions, use this instead:
-  
-  ```console
-  stack run serve
-  ```
+If you wish to contribute ideas, please use the issue-tracker.
+If you wish to edit this documentation, code, or anything else, please:
 
-This builds everything, which should give you a larger overhead once,
-but it will also alert you if you make breaking changes to the cgi part.
+- Fork this repository (use the Fork button on Github)
+- Make your changes there
+- Create a pull-request (there's a button for that on Github too)
+
+### Testing
 
 To run the test-suite:
   
@@ -93,5 +125,10 @@ stack test --ta "--quickcheck-replay=569579"
 ### Contributing code
 
 Please for the repository, make your changes there,
-add your name to the CONTRIBUTORS.md file, and send me a pull.
+add your name to the CONTRIBUTORS.md file, and send me a pull-request.
 
+### Why Haskell? Why not Haste?
+
+Haskell's type system gives me some degree of certainty that all exercises are well-behaved.
+Specifically: it is hard to write code that changes the settings to the exercise outside of the intended mechanisms.
+I decided not using Haste (or ghc-js, or ...) as it risks becomming obsolete due to a lack of maintenance.

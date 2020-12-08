@@ -8,7 +8,7 @@ import           CS30.Exercises.SetBasics.SolutionChecker
 import           Data.Aeson.TH
 import           Data.List
 import qualified Data.Map as Map
-import           Debug.Trace
+-- import           Debug.Trace
 import           GHC.Stack
 
 type Graph = ([Vertex],[Edge])

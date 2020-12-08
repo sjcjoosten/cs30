@@ -143,7 +143,6 @@ cardFeedback (quer, sol) mStrs defaultRsp
                     Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText". We couldn't compute your answer."]}
                 else -- if they didn't have the right numbers in their answer, ask them to explain it better, where did they get those answers from?
                   tryAgain defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from? (Replace by an expression that computes the answer!)")]}
-
                 where numInAns    = getNums v 
                       allowedNums = tail sol
                       notInSol    = filter (\x -> notElem x allowedNums) numInAns              

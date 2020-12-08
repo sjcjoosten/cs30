@@ -31,9 +31,6 @@ function pre(txt){
 }
 function card(appendToElm,title,content,level=3,txt=null){
   var div = document.createElement('div');
-  if (level < 5){ /* move to half cards */
-    div.className = "card columns six";
-  }
   div.className = "card";
   var h = document.createElement('h'+level);
   h.appendChild(document.createTextNode(title));
@@ -296,14 +293,11 @@ window.onload = function (){
           (function(page){
             var a = document.createElement('a');
             a.className = "button u-full-width";
-            // $(a).addClass("button u-full-width");
             a.appendChild(document.createTextNode(page.pName));
-            (function () { 
-              var pid = page.pId;
-              // note: without using jQuery's "on", jQuery's "clone" won't copy the event.
-              $(a).on('click', function()
+            var pid = page.pId;
+            // note: without using jQuery's "on", jQuery's "clone" won't copy the event.
+            $(a).on('click', function()
                 { communicate({ s:pid, echo:pid }); });
-            })();
             el.append(a);
           })(pages[i]);
         }
@@ -313,12 +307,22 @@ window.onload = function (){
         }
       }
 
+      if(data.rProgress && data.rProgress.length==2){
+        $('#progress').text(data.rProgress[0]+'/'+data.rProgress[1]);
+        $('#progress').show();
+      }else{
+        $('#progress').hide();
+      }
+      if(data.rDone)
+        $('#done').show();
+      else
+        $('#done').hide();
+
       for(var i=0;i<exrs.length;i++){
         // Print each exercise as a card
         (function(exr){
             var submitAction;
             var buttonRow = document.createElement('div');
-            // buttonRow.className="columns row"; // don't!
             var acs = exr.eActions;
             for(var j=0;j<acs.length;j++){
                 (function(ac){
@@ -382,7 +386,10 @@ window.onload = function (){
       $('.progressBar').remove();
       $('#splash').hide();
       $('#splash').empty();
-      fill();
+      if (splash.clear) {
+        // cards.empty();
+        fill();
+      }
       $('#cards').animate({opacity:1},200);
       $('#cards').fadeIn(200);
       next = function(){};
@@ -395,6 +402,7 @@ window.onload = function (){
         d.className="popup";
         var hNr = 1;
         var txt;
+        splash.clear = true;
         switch(splash.prOutcome){
             case "POIncorrect":
                 hNr = 'h2'; // not as exciting...
@@ -407,6 +415,7 @@ window.onload = function (){
             case "POTryAgain":
                 hNr = 'h1';
                 txt = "Try again ..";
+                splash.clear = false;
             break;
         }
         var h = document.createElement('div');
@@ -422,9 +431,9 @@ window.onload = function (){
         d.appendChild(buttonRow);
         $('#splash').append(d);
         $('#splash').show();
-        cards.fadeOut(200, function() {
+        cards.fadeOut(200, splash.clear ? function() {
           cards.empty();
-        });
+        } : () => _);
         if (splash.prTimeToRead>0){
           var animation = progress($('.progressBar'), {duration:1000*splash.prTimeToRead,easing:"linear",complete:function(){ next(); }});
           $('#splash .popup div').on('mouseenter',function(){animation.stop();$('.progressBar').animate({opacity:0},200);});

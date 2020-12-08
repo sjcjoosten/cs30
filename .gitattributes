@@ -1,3 +1,5 @@
 static/mathquill/* linguist-vendored
 install_stack_foreign.sh linguist-vendored
 static/ims-blti/OAuth.php linguist-vendored
+static/sortable.js linguist-vendored
+static/visnetwork.js linguist-vendored

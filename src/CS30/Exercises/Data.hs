@@ -13,6 +13,7 @@ data ExerciseType
                 , etChoices :: [ChoiceTree Value]
                 , etGenEx :: Value -> Exercise -> Exercise
                 , etGenAns :: Value -> Map.Map String String -> ProblemResponse -> ProblemResponse
+                , etTotal::Int -- ^ Number of exercises to get correct in total before this is 'done'
                 }
 
 -- | Helperfunction to create an ExerciseType
@@ -26,7 +27,7 @@ exerciseType
       -> (a -> Map.Map String String -> ProblemResponse -> ProblemResponse) -- ^ Generate the Response popup from the exercise (a) and the client's response (a map with POST data)
       -> ExerciseType
 exerciseType tg mn rn ct exGen fbGen
- = ExerciseType tg mn rn (map (fmap enc) ct) exGen' fbGen'
+ = ExerciseType tg mn rn (map (fmap enc) ct) exGen' fbGen' 10
  where enc x = toJSON x
        exGen' :: Value -> Exercise -> Exercise
        exGen' t = case fromJSON t of
