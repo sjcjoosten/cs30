@@ -10,7 +10,6 @@ import           Data.Aeson.TH
 import           Data.Char (toLower)
 import qualified Data.Map as Map
 import           Data.Semigroup as S
-import           Data.Void
 import           Instances.TH.Lift()
 import           Language.Haskell.TH.Syntax
 
@@ -112,7 +111,7 @@ defaultExercise :: Exercise
 defaultExercise = Exercise "" [] [] [] []
 
 data Splash = SplashPR ProblemResponse
-            | XXX !Void -- there will be more fields later (sum-types generate different JSON structures, hence this field)
+            | SplashDone Int -- done making exercise, display number of correct answers in a row if so desired.
   deriving (Show)
 
 -- Rsp is used to create a json response
@@ -123,10 +122,12 @@ data Rsp = Rsp{rPages::[Page] -- list of pages one can go to
               ,rCurrentPage::Maybe Page
               ,rLogin::Maybe String -- logged in as
               ,rEcho::Maybe String
+              ,rProgress::Maybe (Int,Int)
+              ,rDone::Bool
               }
   deriving (Show)
 instance Monoid Rsp where
-  mempty = Rsp mempty mempty Nothing mempty Nothing Nothing mempty
+  mempty = Rsp mempty mempty Nothing mempty Nothing Nothing mempty Nothing False
 instance S.Semigroup Rsp where
   (<>) x y
    = mempty{rPages = rPages x <> rPages y
@@ -136,7 +137,8 @@ instance S.Semigroup Rsp where
            ,rLogin = rLogin x <|> rLogin y
            ,rEcho = rEcho x <|> rEcho y
            ,rSplash = rSplash x <|> rSplash y
-           -- ,rDebug = rDebug y
+           ,rProgress = rProgress x <|> rProgress y
+           ,rDone = rDone x || rDone y
            }
 
 -- * Data types only for communicating from the client
@@ -155,9 +157,10 @@ data LevelProblem
       = LevelProblem {lpPuzzelID :: Int
                      ,lpLevel :: Int -- how hard is the puzzel?
                      ,lpPuzzelGen :: [Int] -- how it was randomly generated
-                     ,lpPuzzelStored :: Value -- json encoded question (handler specific)
+                     ,lpPuzzelStored :: Value -- json encoded question (exact JSON structure is handler specific)
                      }
   deriving (Show, Lift)
+
 -- | After a problem instance has been handled, we store how it was handled (potentially for overviews)
 data ProblemResolve
       = ProblemResolve {lrProblem :: LevelProblem
@@ -171,14 +174,15 @@ data ProblemResolve
 -- | The function 'exerciseResponse' holds the logic for computing the current/next difficulty level,
 -- | which is based on the bookkeeping of ldStreakPerLevel, ldWrongPerLevel and ldRightPerLevel.
 data LevelData
-      = LevelData{ldOpenProblem :: Maybe LevelProblem -- current problem we are working on. Don't provide a new problem until this one has been treated
-                 ,ldPastProblems:: [ProblemResolve] -- ^ for bookkeeping or general interest, past problems in reverse order
+      = LevelData{ldOpenProblem    :: Maybe LevelProblem -- current problem we are working on. Don't provide a new problem until this one has been treated
+                 ,ldPastProblems   :: [ProblemResolve] -- ^ for bookkeeping or general interest, past problems in reverse order
+                 ,ldCurrentStreak  :: Int -- ^ Number of correct answers in a row since last wrong answer
                  ,ldCurrentLevel   :: Int -- ^ Increments and decrements depending on performance
-                 ,ldMaxLevel       :: Int -- ^ Highest level attainable (for star calculations)
+                 ,ldMaxLevel       :: Int -- ^ Highest level attainable
                  ,ldStreakPerLevel :: [Int] -- ^ once this gets to 10, the level is done permanently.
                  ,ldWrongPerLevel  :: [Integer] -- 
                  ,ldRightPerLevel  :: [Integer] -- proceed to next level once  right > 3 * wrong  (or if  streak>= 10)
-                 ,ldStars          :: Int -- 0 to 3 stars, these should only increase
+                 ,ldDone           :: Bool -- ^ Did the student finish this exercise?
                  }
   deriving (Show, Lift)
 
@@ -191,27 +195,9 @@ defaultLevelData maxAt
                  ,ldStreakPerLevel= []
                  ,ldWrongPerLevel = []
                  ,ldRightPerLevel = []
-                 ,ldStars         = -1
+                 ,ldCurrentStreak = 0
+                 ,ldDone = False
                  }
-
--- TODO: move to where used
--- At client's request, stars to be calculated (JavaScript side handling)
--- The current level and the performance based on the last 10 exercises determine the number of stars
-calcStars :: LevelData -> Int -- 0, 1, 2 or 3 stars
-calcStars ld
- = if nth (ldMaxLevel ld) (ldStreakPerLevel ld) >= 10 && pastStreakNr == 10 then 3
-   else min 2 $ (if pastStreakNr == 10 then 1 else 0)
-              + (if ldCurrentLevel ld == ldMaxLevel ld then 1 else 0)
-              + (sum (map (\pr -> if lrScore pr == POCorrect then 1 else 0) (take 10 $ ldPastProblems ld)) `div` 7)
- where pastStreak (pr:lst) | lrScore pr == POCorrect = 1 + pastStreak lst
-       pastStreak _ = 0
-       pastStreakNr :: Int
-       pastStreakNr = pastStreak (take 10 $ ldPastProblems ld)
-       -- nth which defaults to zero
-       nth :: (Num p) => Int -> [p] -> p
-       nth i (_:as) | i > 0 = nth (i-1) as
-       nth _ (h:_) = h
-       nth _ [] = 0
 
 -- | This data is passed around in the SesIO monad, contains the server-side data that is not meta-data
 data SesData = SesData{ sdLevelData::Map.Map String LevelData
@@ -220,7 +206,7 @@ data SesData = SesData{ sdLevelData::Map.Map String LevelData
   deriving (Show, Lift)
 
 startData :: SesData
-startData = SesData{sdLevelData=Map.empty,sdEmail=Nothing}
+startData = SesData{sdLevelData=Map.empty, sdEmail=Nothing}
 
 type SesIO = StateT SesData IO
 
@@ -274,3 +260,10 @@ $(deriveJSON defaultOptions ''LevelProblem)
 $(deriveJSON defaultOptions ''ProblemResolve)
 $(deriveJSON defaultOptions ''LevelData)
 $(deriveJSON defaultOptions ''SesData)
+
+type SaveResult = Double -> IO ()
+-- * Data that is not stored, only exists on runtime
+data RunEnv
+      = RunEnv {reSetScore :: Maybe SaveResult}
+runEnv :: RunEnv
+runEnv = RunEnv Nothing

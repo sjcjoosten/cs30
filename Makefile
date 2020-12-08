@@ -46,7 +46,7 @@ checkserver :
 
 sync : checkdev
 	@echo "Synchronising code with server (ensure you are connected via VPN!):"
-	rsync -varz --exclude=".?*" --exclude="data" --delete-after . $(server):cs30
+	rsync -varz --exclude=".?*" --exclude="data" --exclude="cs30.cabal" --delete-after . $(server):cs30
 	@echo "\nBuilding code server-side:"
 	ssh -t $(server) "cd cs30/&&make all"
 

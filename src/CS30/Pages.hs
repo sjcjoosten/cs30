@@ -1,16 +1,19 @@
+{-# LANGUAGE TupleSections #-}
 module CS30.Pages where
 import           CS30.Data
-import           CS30.Util (err500)
-import           CS30.Exercises
+import           CS30.Exercises ( pages )
 import           CS30.Exercises.Data
-import           Control.Monad.Trans.State.Lazy
-import           Data.Aeson as JSON
+import           CS30.Util (err500)
+import           Control.Monad.Trans.State.Lazy ( put, get )
+import           Data.Aeson as JSON ( decode, Value )
+import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.Map as Map
 import           Data.Maybe
+import Control.Monad.IO.Class
 
 pageLookup :: String -> Maybe ExerciseType
-pageLookup = flip Map.lookup $ Map.fromList (map (\et -> (etTag et,et)) pages)
+pageLookup = flip Map.lookup $ Map.fromListWithKey (\k -> error ("Double keys: "++k)) (map (\et -> (etTag et,et)) pages)
 
 -- | Handle a response from an exercise
 handleExResponse :: String -> SesIO Rsp
@@ -34,7 +37,7 @@ getHandler _ et usr lp
       return (ProblemResolve lp usr (prOutcome pr),mempty{rSplash = Just (SplashPR pr)})
 
 exerciseResponse :: ExerciseType
-                 -> Int
+                 -> Int -- ^ The unique integer assigned to this exercise
                  -> Map.Map String String
                  -> (Map.Map String String -> LevelProblem -> SesIO (ProblemResolve, b))
                  -> (ProblemResolve -> SesIO b)
@@ -52,16 +55,19 @@ exerciseResponse et eid usrData handleCur handleStale'
                                                     increaseLevel
                                                     ld{ ldStreakPerLevel = udNth ((+) 1) (lpLevel lp) (ldStreakPerLevel ld)
                                                       , ldRightPerLevel = udNth ((+) 1) (lpLevel lp) (ldRightPerLevel ld)
+                                                      , ldCurrentStreak = ldCurrentStreak ld + 1
                                                       }
                                                   POIncorrect -> 
                                                     resetLevel
                                                     ld{ ldStreakPerLevel = udNth (const 0) (lpLevel lp) (ldStreakPerLevel ld)
                                                       , ldWrongPerLevel = udNth ((+) 1) (lpLevel lp) (ldWrongPerLevel ld)
+                                                      , ldCurrentStreak = 0
                                                       }
                                                   POTryAgain -> ld
                                                 ){ldPastProblems = reslv{lrUserAnswer = usrData}:ldPastProblems ld}
                                      put ses{sdLevelData=Map.insert nm newD lDat}
                                      return rsp
+                  -- we still try to handle the (probably already completed) problem properly, but it won't be scored
                                 else handleStale (ldPastProblems ld)
                      Nothing -> handleStale (ldPastProblems ld)
         Nothing -> handleStale []
@@ -85,20 +91,33 @@ exerciseResponse et eid usrData handleCur handleStale'
         | otherwise = f (head0 lst):drop 1 lst
        head0 lst = head (lst ++ [0])
 
--- | Populate the response with exercises based on the requested page. If there is no page, a listing is returned
-populateEx :: Maybe String -> SesIO Rsp
-populateEx (Just ('?':str)) = populateEx (Just str)
-populateEx (Just str@(_:_)) | Just etp <- pageLookup str
- = do exc <- paintExercise etp
-      return mempty{rExercises = [exc]}
-populateEx _ = return mempty
+-- | Populate the response with exercises based on the requested page. If there is no page, an empty list is returned (painted as a listing by JavaScript)
+populateEx :: RunEnv -> Maybe String -> SesIO Rsp
+populateEx re (Just ('?':str)) = populateEx re (Just str)
+populateEx re (Just str@(_:_))
+ | Just etp <- pageLookup str
+ = do st <- get
+      case (Map.lookup str (sdLevelData st), reSetScore re) of
+        (Just v,Just rst) | ldCurrentStreak v >= etTotal etp && ldDone v == False
+          -> -- handle the case that the user is done:
+             do let sesD = Map.insert str (v{ldDone = True}) (sdLevelData st)
+                put (st{sdLevelData = sesD})
+                liftIO$ rst 1
+                return mempty{rDone = True, rSplash = Just (SplashDone (etTotal etp))}
+        (_,rst) -> do exc <- paintExercise etp
+                      let levData = Map.lookup str (sdLevelData st)
+                      return mempty{ rExercises = [exc]
+                                   , rProgress = (Just . (,etTotal etp) $ maybe 0 ldCurrentStreak levData) <* rst
+                                   , rDone = maybe False ldDone levData}
+populateEx _ _ = return mempty
+
+checkDone :: Rsp -> SesIO Rsp
+checkDone = error "not implemented"
 
 mkPage :: ExerciseType -> Page
 mkPage etp = Page (etTag etp) (etMenu etp ++ " - " ++ etTitle etp)
 
-
 -- | Select a puzzle (either the most recent or a randomly selected one),
--- | store the answer in the Ses for later processing (if necessary),
 -- | return the selected puzzle and its ID.
 -- | This function is also where the automated level selection comes in
 smartSelect :: String
@@ -113,26 +132,26 @@ smartSelect nm lst
                        (genInfo,puzzle)
                          <- if lvl > maxL
                             then randomSelect (Branch lst)
-                            else randomSelect (lst !! lvl)
+                            else first (lvl:) <$> randomSelect (lst !! lvl)
                        let nextNr = case ldPastProblems ld of
                                       (a:_) -> 1+lpPuzzelID (lrProblem a)
                                       _ -> 0
-                       let newProblem = LevelProblem {lpPuzzelID=nextNr
-                                                     ,lpLevel=if lvl > maxL then head genInfo else lvl
-                                                     ,lpPuzzelGen=genInfo
-                                                     ,lpPuzzelStored=puzzle
+                       let newProblem = LevelProblem { lpPuzzelID=nextNr
+                                                     , lpLevel=head genInfo
+                                                     , lpPuzzelGen=tail genInfo
+                                                     , lpPuzzelStored=puzzle
                                                      }
                        -- store the problem:
                        let ld' = Map.insert nm ld{ldOpenProblem = Just newProblem} (sdLevelData ses)
                        put (ses{sdLevelData = ld'})
                        return (nextNr, puzzle)
-         Just v -> return (lpPuzzelID v, (lpPuzzelStored v))
+         Just v -> return (lpPuzzelID v, lpPuzzelStored v)
 
 paintExercise :: ExerciseType -> SesIO Exercise
 paintExercise et
- = do (eid,ex) <- smartSelect (etTag et) (etChoices et)
+ = do (eid, ex) <- smartSelect (etTag et) (etChoices et)
       let dex = defaultExercise{ eTopic = etTitle et, eActions = [Check]
                                , eHidden = [ FValueS "tag" "ExerciseType"
-                                           , FValue "exId" eid
+                                           , FValue  "exId" eid
                                            , FValueS "exTag" (etTag et) ]}
       return (etGenEx et ex dex)

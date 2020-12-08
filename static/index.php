@@ -21,7 +21,6 @@ var signature = '<?php echo addslashes($oauth_signature) ?>';
   <script src="js/cs30.js" defer></script>
   <!-- FONT -->
   <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
-
   <!-- CSS -->
   <link rel="stylesheet" href="mathquill/mathquill.css"/>
   <link rel="stylesheet" href="css/normalize.css">
@@ -34,7 +33,7 @@ var signature = '<?php echo addslashes($oauth_signature) ?>';
     <body class="top noPHP"><div class="container">This is a PHP page of which you're viewing the source code.
         A possible cause is that PHP is not enabled on the server from which you're seeing this.
         Without PHP, OAuth login cannot work (it uses 'POST' to send data, which JavaScript cannot read).
-        Any other functionality has not been tested in this environment, so you're probably best off asking a system administrator for help.</div>
+        You're probably best off asking a system administrator for help.</div>
     <!-- <?php
   } else {
     echo '--'.'!'.'><';
@@ -47,7 +46,7 @@ var signature = '<?php echo addslashes($oauth_signature) ?>';
 <noscript>
   You need to enable JavaScript to use this page.
   This page is meant to help you practice with interactive exercises.
-  Those exercises need to be retrieved through json, so there really is no soft fallback (short of writing your own client to the api).
+  Those exercises need to be retrieved through json, so there really is no way to offer you a soft fallback.
 </noscript>
 <div class="container" id="header" style="display:none;margin-bottom:15px">
 <div id="nav">
@@ -58,6 +57,8 @@ var signature = '<?php echo addslashes($oauth_signature) ?>';
 </div>
 <div id="login" style="margin: auto 0;"></div>
 </div>
+<div id="progress" style="display:none"></div>
+<div id="done" style="display:none">Completed<br />Well done !</div>
 <div class="overlay" id="splash" style="display:none">
 </div>
 <div class="container"><div class="u-pull-right" id="login2"></div></div>

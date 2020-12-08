@@ -23,8 +23,11 @@ dataFile :: ClientLink -> String
 dataFile (TempSession x) = x
 dataFile (PermSession x _) = x
 
-data Authentication = Auth{aEmail::String,aUID::String,aRoles::[String]}
+data Authentication = Auth{aEmail::String,aUID::String,aRoles::[String],aGradeReport::Maybe GradeReporting}
+  deriving Show
+data GradeReporting = GradeR{aReportURL :: String, aSourceUID :: String, aOAuthKey::String}
   deriving Show
 
+$(deriveJSON defaultOptions ''GradeReporting)
 $(deriveJSON defaultOptions ''Authentication)
 $(deriveJSON defaultOptions ''ClientLink)

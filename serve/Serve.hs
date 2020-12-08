@@ -27,7 +27,7 @@ application ses request respond
                 sesVal <- takeMVar ses
                 (rsp,sesVal') <- runStateT (foldl (<>) mempty <$> sequenceA
                         (  [ handleExResponse rsp | rsp <- exResponse]
-                        ++ [ populateEx search]
+                        ++ [ populateEx runEnv search]
                         ++ [ return mempty{rPages = map mkPage pages, rLogin = Just "Single user mode"}
                            | "page" <- concat . maybeToList $ Map.lookup "cAct" mp]
                         )) sesVal

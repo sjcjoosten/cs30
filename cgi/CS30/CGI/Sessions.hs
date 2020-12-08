@@ -1,9 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 module CS30.CGI.Sessions where
+import           CS30.CGI.Data
 import           CS30.CGI.Globals
 import           CS30.CGI.Util
-import           CS30.CGI.Data
 import           CS30.Data
 import           CS30.Util
 import           Control.Monad.IO.Class (MonadIO(liftIO))
@@ -12,7 +12,6 @@ import           Data.Aeson as JSON
 import           Data.ByteString.Base64 as B64
 import           Data.ByteString.Base64.URL as B64URL
 import qualified Data.ByteString.Char8 as C8
-import qualified Data.ByteString.Lazy as BS
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.Digest.Pure.SHA as SHA
 import qualified Data.Map as Map
@@ -20,31 +19,73 @@ import           Data.Maybe
 import           Data.Text.Lazy.Encoding
 import           Data.Time.Clock.POSIX
 import           Network.HTTP.Base as CGI
-import           Paths_cs30
+import           Network.HTTP.Client
+import           Network.HTTP.Client.TLS (tlsManagerSettings)
+import           Network.HTTP.Types.Header (hContentType)
+import           Network.HTTP.Types.Status (statusCode)
+import           Paths_cs30 (getDataDir)
 import           System.Directory
 import           System.Environment
+import           System.Posix.Files
 import           Text.Read (readMaybe)
-import System.Posix.Files
+import           Web.Authenticate.OAuth
 
-runWithLink :: Maybe String -- ^ Email if any 
-            -> ClientLink -> SesIO a -> IO a
-runWithLink hasEmail cl f
+runWithLink :: L8.ByteString
+            -> Maybe Authentication -- ^ Authentication information if any 
+            -> ClientLink -> (RunEnv -> SesIO a) -> IO a
+runWithLink uid auth cl f
  = do fe <- doesPathExist fName
       maybeInitState <- if fe then decodeFileStrict fName else return (Just startData)
       initState <- case maybeInitState of
-                    Nothing | isTemp cl -> return startData -- not logged in, so just create a new session
-                     | otherwise -> liftIO$ err500 "Your data on the server became corrupted, please ask Sebastiaan to fix this manually"
+                    Nothing | isTemp cl -> return startData -- not logged in, so just create a new session to overwrite the old
+                      | otherwise -> liftIO . err500 $ "Your data on the server became corrupted, please ask Sebastiaan to fix this manually. Tell him: "<>fName
                     Just v -> return v
-      (res, newState) <- runStateT f initState{sdEmail = hasEmail}
+      (res, newState) <- runStateT (f runEnv{reSetScore = (postGrade uid <$> (aGradeReport =<< auth))}) initState{sdEmail = aEmail <$> auth}
       encodeFile fName newState
       return res
  where fName = globalDataDir <> dataFile cl
+
+postGrade :: L8.ByteString -> GradeReporting -> SaveResult
+postGrade uid repDetails score -- Used https://lti.tools/saltire/tc to format 'payload'
+ = do let key = aOAuthKey repDetails
+      dataDir <- getDataDir
+      secret <- C8.readFile (dataDir++"/data/"++key)
+      p_request <- parseRequest (aReportURL repDetails)
+      let payload = L8.pack "<?xml version = \"1.0\" encoding = \"UTF-8\"?>\n" <>
+                    L8.pack "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">\n"<>
+                    L8.pack "  <imsx_POXHeader>\n"<>
+                    L8.pack "    <imsx_POXRequestHeaderInfo>\n"<>
+                    L8.pack "      <imsx_version>V1.0</imsx_version>\n"<>
+                    L8.pack "      <imsx_messageIdentifier>"<>uid<>L8.pack "</imsx_messageIdentifier>"<>
+                    L8.pack "    </imsx_POXRequestHeaderInfo>\n"<>
+                    L8.pack "  </imsx_POXHeader>\n"<>
+                    L8.pack "  <imsx_POXBody><replaceResultRequest><resultRecord><sourcedGUID>\n"<>
+                    L8.pack ("          <sourcedId>"<>aSourceUID repDetails<>"</sourcedId>\n")<>
+                    L8.pack "        </sourcedGUID>\n"<>
+                    L8.pack "        <result><resultScore>\n"<>
+                    L8.pack "            <language>en-US</language>\n"<>
+                    L8.pack ("            <textString>"<>show score<>"</textString>\n")<>
+                    L8.pack "        </resultScore></result>\n"<>
+                    L8.pack "  </resultRecord></replaceResultRequest></imsx_POXBody>\n"<>
+                    L8.pack "</imsx_POXEnvelopeRequest>"
+      request <- signOAuth newOAuth{oauthConsumerKey=C8.pack key, oauthConsumerSecret=secret}
+                           (Credential []) -- 'credential'. I think this is supposed to be a key/value pair. It's a list of pairs of bytestrings.
+                           p_request{method=C8.pack "POST",secure=True,requestBody=RequestBodyLBS $ payload
+                                    ,requestHeaders=[(hContentType, C8.pack "application/xml; charset=utf-8")]}
+      mgr <- newManager tlsManagerSettings
+      withResponse request mgr checkResult 
+ where checkResult r | statusCode (responseStatus r) == 200 = return ()
+         | otherwise
+         = do body <- brConsume (responseBody r)
+              err500 (show (responseStatus r) ++"\n\n"++show (responseHeaders r) ++ "\n\n" ++ concatMap C8.unpack body)
+
+
 
 -- | Handles session cookies, calls authentication via oauth, and returns one or two file paths:
 -- | either one for guests pointing to a temporary storage file in the tmp directory
 -- | or two for logged in users, the first points to the credential-file and the second to the storage file in the perm directory.
 -- | Also sets the cookie header.
-handleRequest :: BS.ByteString
+handleRequest :: L8.ByteString
               -> Map.Map String [String] -- POST data
               -> IO (String, ClientLink)
 handleRequest uid mp
@@ -55,7 +96,7 @@ handleRequest uid mp
            -- we consistently prefer JavaScript's reported cookies over the browser's cookies
           cookies = extract (listToMaybe =<< Map.lookup "c" mp) <> extract cookies'
           sesName = case safeFilename =<< listToMaybe =<< (Map.lookup "ses" mp <> ((:[]) <$> Map.lookup "ses" cookies))
-                      of Nothing -> C8.unpack . B64URL.encode . BS.toStrict . SHA.bytestringDigest . SHA.sha512
+                      of Nothing -> C8.unpack . B64URL.encode . L8.toStrict . SHA.bytestringDigest . SHA.sha512
                                         $ encodeUtf8 globalSalt <> uid
                          Just v -> v
           fname = (globalDataDir <> "ses/" <> sesName)
@@ -89,24 +130,14 @@ handleRequest uid mp
       -- Also save storage data?
       return (sesName, newLink)
 
-obtainEmail :: ClientLink -> IO (Maybe String)
-obtainEmail (TempSession _) = return Nothing
-obtainEmail (PermSession _ usr)
+obtainAuth :: ClientLink -> IO (Maybe Authentication)
+obtainAuth (TempSession _) = return Nothing
+obtainAuth (PermSession _ usr)
  = do res <- decodeFileStrict (globalDataDir<>usr)
       case res of
         Nothing -> err500 "Authenticated user directory outdated. Please ask Sebastiaan what to do."
-        Just auth -> return (Just (aEmail auth))
+        Just auth -> return (Just auth)
 
-{-
-data ClientLink
- = TempSession
-     String -- ^ temporary session storage file
- | PermSession
-     String -- ^ permanent session storage file
-     String -- ^ user credentials
-  deriving (Show)
-  -}
-  
 -- get the session token we are supposed to use
 authenticate :: Maybe String -> Maybe String -> IO (Maybe Authentication)
 authenticate str hash
@@ -121,14 +152,20 @@ authenticate str hash
                 . SHA.hmacSha1 key
                 . L8.pack <$> str
           time <- round <$> getPOSIXTime
-          -- TODO: perhaps log this?
-          if abs (time - time_oa) > 3100 then err500$ "Clocks seem out of sync (OAuth time: "++show time_oa++", Server time: "++show time++")"
+          
+          -- Legit scenario for the timeout error:
+          --   I got this error after installing the environment on Canvas without installing the shared secret.
+          --   The error for the missing key was a 'file not found' for readFile, and after fixing it I clicked the 'try again' button, and got the error below.
+          -- Security risks for the timeout:
+          --   ??
+          if abs (time - time_oa) > 3100 then err500$ "Clocks seem out of sync (OAuth time: "++show time_oa++", Server time: "++show time++"). Fix is most likely to revisit this page from Canvas."
             else if c == (C8.pack <$> hash)
             then case userFn of
                    Nothing -> err500 "Could not get a user_id. This is probably an OAuth error; if you have linked this with a learning environment other than Canvas, there may be an easy fix."
                    Just fn ->
                     let fname = globalDataDir ++"auth/"++fn
                     in do createDirectoryIfMissing True (globalDataDir++"auth/")
+                          setFileMode (globalDataDir++"auth/") accessModes
                           case res of
                             Nothing -> err500 "Error processing authentication information"
                             Just v -> do encodeFile fname v -- Store the most recent authentication data
@@ -142,6 +179,9 @@ authenticate str hash
   emailMaybe = listToMaybe =<< Map.lookup "lis_person_contact_email_primary" =<< mp
   roles = concatMap (uncalate ',' . CGI.urlDecode) <$> (Map.lookup "roles" =<< mp)
   userFn = safeFilename =<< listToMaybe =<< Map.lookup "user_id" =<< mp
-  res = Auth <$> emailMaybe <*> userFn <*> roles -- credentials the user is trying to get
+  lis_outcome_service_url = CGI.urlDecode <$> (listToMaybe =<< Map.lookup "lis_outcome_service_url" =<< mp)
+  lis_result_sourcedid    = CGI.urlDecode <$> (listToMaybe =<< Map.lookup "lis_result_sourcedid"    =<< mp)
+   -- credentials the user is trying to get
+  res = Auth <$> emailMaybe <*> userFn <*> roles <*> return gradeReporting
+  gradeReporting = GradeR <$> lis_outcome_service_url <*> lis_result_sourcedid <*> oauth_key
 
-  

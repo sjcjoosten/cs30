@@ -3,8 +3,6 @@ version:             0.1.1.0
 license:             AllRightsReserved
 author:              sjcjoosten
 maintainer:          sjcjoosten+github@gmail.com
-extra-source-files:
-    - data/*
 dependencies:
     - base
     - containers
@@ -28,6 +26,8 @@ ghc-options:
     - -fwarn-incomplete-uni-patterns
     - -fwarn-incomplete-record-updates
 
+data-files:
+    - data/*
 library:
     source-dirs: src
 
@@ -41,6 +41,10 @@ executables:
             - time
             - cs30
             - unix
+            - authenticate-oauth
+            - http-client
+            - http-client-tls
+            - http-types
     serve:
         source-dirs:  serve
         main:         Serve.hs
