@@ -15,8 +15,10 @@
   <script src="js/sortable.js" defer></script>
   <script src="js/visnetwork.js" defer></script>
   <script>
-var postData = '<?php echo addslashes($OAuth_base_string) ?>';
-var signature = '<?php echo addslashes($oauth_signature) ?>';
+  var postData = '<?php echo addslashes($OAuth_base_string) ?>';
+  var signature = '<?php echo addslashes($oauth_signature) ?>';
+  var userId = '<?php if (! (strlen($oauth_signature)>1)) {echo (bin2hex($_SERVER["UNIQUE_ID"]));};
+   ?>';
   </script>
   <script src="js/cs30.js" defer></script>
   <!-- FONT -->

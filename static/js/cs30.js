@@ -194,7 +194,6 @@ function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_, submitAction
 }
 
 var MQ;
-var ses;
 var serverCGI = "/~sjc/cs30/cs30.cgi";
 var disconnects = 0;
 var serverResponseMsg;
@@ -214,7 +213,7 @@ window.onload = function (){
   serverResponseMsg = $('#serverCGI');
   function communicate(data,handler=processPageUpdate){
     data.r = 0;
-    data.ses = ses;
+    data.ses = userId;
     processError = function (obj,statusStr){
       var errMsg = document.createElement('div');
       errMsg.className="error";
@@ -273,7 +272,6 @@ window.onload = function (){
                   });
         };
     }
-    if (data.rSes != null) ses = data.rSes;
     if (data.rLogin != null) {
       $('#login').html(data.rLogin);
     }else{
@@ -461,7 +459,7 @@ window.onload = function (){
       }
     }
   }
-
+  
   if(typeof signature == 'undefined' || signature=='')
       communicate({cAct:'page' // 'cAct:page' to request top header with all pages (since we're not accessing this page from canvas, we use our own navigation)
                   ,s:window.location.search // request the current exercise

@@ -10,13 +10,13 @@ import           Control.Monad.IO.Class (MonadIO(liftIO))
 import           Control.Monad.Trans.State.Lazy
 import           Data.Aeson as JSON
 import           Data.ByteString.Base64 as B64
-import           Data.ByteString.Base64.URL as B64URL
+-- import           Data.ByteString.Base64.URL as B64URL
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.Digest.Pure.SHA as SHA
 import qualified Data.Map as Map
 import           Data.Maybe
-import           Data.Text.Lazy.Encoding
+-- import           Data.Text.Lazy.Encoding
 import           Data.Time.Clock.POSIX
 import           Network.HTTP.Base as CGI
 import           Network.HTTP.Client
@@ -87,43 +87,26 @@ postGrade serverURL uid repDetails score -- Used https://lti.tools/saltire/tc to
 -- | either one for guests pointing to a temporary storage file in the tmp directory
 -- | or two for logged in users, the first points to the credential-file and the second to the storage file in the perm directory.
 -- | Also sets the cookie header.
-handleRequest :: L8.ByteString
-              -> Map.Map String [String] -- POST data
-              -> IO (String, ClientLink)
-handleRequest uid mp
- = do let sesName = C8.unpack . B64URL.encode . L8.toStrict . SHA.bytestringDigest . SHA.sha512 $ encodeUtf8 globalSalt <> uid
-          fname = (globalDataDir <> "ses/" <> sesName)
-      -- 7777777 seconds is 90 days, and chosen because it is the duration of a term
-      putStrLn $ "Set-Cookie: ses="++sesName++"; Max-age:7777777"
-      createDirectoryIfMissing True (globalDataDir++"ses/") -- session storage directory (may be deleted occasionally, but better to let Haskell do this so links to tmp are followed and also deleted)
-      createDirectoryIfMissing True (globalDataDir++"tmp/") -- temporary storage directory (may be deleted at will, will be re-created as needed)
+handleRequest :: Map.Map String [String] -- POST data
+              -> IO ClientLink
+handleRequest mp
+ = do createDirectoryIfMissing True (globalDataDir++"tmp/") -- temporary storage directory (may be deleted at will, will be re-created as needed)
       createDirectoryIfMissing True (globalDataDir++"perm/") -- permanent storage directory (like tmp, but has user ids associated, so should not be deleted)
-      setFileMode (globalDataDir++"ses/") accessModes -- requires 'import System.Posix.Files' from 'unix'
       setFileMode (globalDataDir++"tmp/") accessModes 
       setFileMode (globalDataDir++"perm/") accessModes 
       serverURI <- lookupEnv "REQUEST_URI"
       serverHost <- lookupEnv "HTTP_HOST"
-      aut <- authenticate ((<>) <$> serverHost <*> serverURI ) (listToMaybe =<< Map.lookup "a" mp) (listToMaybe =<< Map.lookup "h" mp)
-      isf <- doesPathExist fname
-      curLink <- if isf then decodeFileStrict fname else return (Nothing :: Maybe ClientLink)
-      newLink <- case (curLink, aut) of
-                   (Just (TempSession tmpDir), Nothing) ->
-                     do return (TempSession tmpDir)
-                   (Just (PermSession pmDir usr), Nothing) ->
-                     do return (PermSession pmDir usr)
-                   (Nothing, Nothing) -> return (TempSession ("tmp/" <> sesName))
+      let ses = safeFilename =<< listToMaybe =<< Map.lookup "ses" mp
+      aut <- authenticate ((<>) <$> serverHost <*> serverURI) -- own url (for refering to self in canvas)
+                          (listToMaybe =<< Map.lookup "a" mp) -- all data sent through POST (missing if we are not in Canvas)
+                          (listToMaybe =<< Map.lookup "h" mp) -- a hash of all data that is signed
+      newLink <- case (ses, aut) of
+                   (Just tmpDir, Nothing) -> return (TempSession ("tmp/"<>tmpDir))
+                   (Nothing, Nothing) -> error "CGI script was called in a way that does not allow it to store any progress"
                    (_, Just auth)
-                     -> do case curLink of
-                             Just (TempSession tmpDir)
-                               -> do isfP <- doesPathExist (globalDataDir <> "perm/" <> aUID auth)
-                                     if isfP then removeFile (globalDataDir <> tmpDir)
-                                             else renameFile (globalDataDir <> tmpDir) (globalDataDir <> "perm/" <> aUID auth)
-                             _ -> return ()
-                           return (PermSession ("perm/" <> aUID auth) ("auth/" <> aUID auth))
-      -- We save the link:
-      encodeFile fname newLink
+                     -> return (PermSession ("perm/" <> aUID auth) ("auth/" <> aUID auth))
       -- Also save storage data?
-      return (sesName, newLink)
+      return newLink
 
 obtainAuth :: ClientLink -> IO (Maybe Authentication)
 obtainAuth (TempSession _) = return Nothing

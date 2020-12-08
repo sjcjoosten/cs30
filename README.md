@@ -10,15 +10,19 @@ If used this way (that is: through Canvas or some other LMS), students are given
 ### What do the exercises look like?
 
 There is an environment running here: https://cs.dartmouth.edu/~sjc/cs30/
-It is fine to check out the existing exercises, but we do not recommend using this for your students:
+It is fine to check out the existing exercises, but I do not recommend using this for your students:
 
 - It is quite likely that some of the exercises are unpolished and not intended for students (intended for testing only).
   With Canvas integration, you can select which exercises students can see and complete.
 - To set up Canvas integration, you'd need to add a key and secret to this environment, for which you need access to the server (which you don't have).
-- There are many ways to loose progress:
-  As you complete exercises correctly, questions get harder. This means there is a form of progress.
-  If you refresh your browser, however, that progress may be lost.
+- As you complete exercises correctly, questions get harder. This means there is a form of progress.
+  There are many ways to loose progress:
+  At the time of writing, as soon as you refresh your browser, your progress is lost.
+  (This allows you to refresh to generate a different exercise as you try the environment.
+  Students cannot do this)
   Even if you don't refresh your browser, the server might decide to clean up the directory where it stored your progress (Canvas integration prevents this). The chance of this happening is small if only a handful of people are using it, but becomes large if an entire class of students is using it.
+- I occasionally break the 'demo mode'. It is not well tested since I don't deem it critical, but I do tend to fix it if I become aware of this.
+  Last time this broke was December 8th 2020.
 
 ### What is Canvas integration like?
 
