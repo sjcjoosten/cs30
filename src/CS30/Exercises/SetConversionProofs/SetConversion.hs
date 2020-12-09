@@ -6,7 +6,7 @@ COSC 69.14, 20F
 Group Assignment 2
 -}
 
-module CS30.Exercises.SetConversionProofs.SetConversion (setConv) where
+module CS30.Exercises.SetConversionProofs.SetConversion (setConversionEx) where
 import           CS30.Data
 import           CS30.Exercises.Data
 import qualified Data.Map as Map
@@ -21,11 +21,11 @@ data STEx = STEx {exprAsField::[Field],ord::[Int], lev::Int, expr::SetExpr} deri
 $(deriveJSON defaultOptions ''STEx)
 
 -- setConv definition for export to Pages.hs
-setConv :: ExerciseType
-setConv = exerciseType "SetConversion" "Donia and Mikio" "Conversion to set-builder notation" 
-              setConversion 
-              genProof 
-              feedback    
+setConversionEx :: ExerciseType
+setConversionEx = exerciseType "SetConversion" "L2.1" "Conversion to set-builder notation" 
+                    setConversion 
+                    genProof 
+                    feedback    
 
 -- from ProofStub.hs
 permutations :: Int -> ChoiceTree [Int]

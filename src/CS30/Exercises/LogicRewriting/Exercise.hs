@@ -10,7 +10,7 @@ import           CS30.Exercises.LogicRewriting.ProofGeneration (getDerivation, P
 
 -- final exercise type
 logicRewritingEx :: ExerciseType
-logicRewritingEx = exerciseType "LogicRewritingCB" "Chibuzo and Bennett" "Logic Rewriting"
+logicRewritingEx = exerciseType "LogicRewriting" "L3.1" "Logic Rewriting"
                        logicExercises
                        logicQuer
                        logicFeedback

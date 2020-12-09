@@ -8,8 +8,8 @@ import qualified Data.Set as Set
 allDigits :: [Int]
 allDigits = [1..9]
 
-setop :: [ChoiceTree ([Field], [String])]
-setop = setop_f (threeSets allDigits) ++ setop_f threeSets_oneEmpty
+setops :: [ChoiceTree ([Field], [String])]
+setops = setop_f (threeSets allDigits) ++ setop_f threeSets_oneEmpty
   where
    setop_f ts
       = [ fmap (\(digits1,digits2,digits3) -> let set1 = sort$ map show $ nub (digits1 ++ digits2)

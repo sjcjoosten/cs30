@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module CS30.Exercises.IncExcCardinalities (incExcCards) where
+module CS30.Exercises.IncExcCardinalities (incExcCardinalitiesEx) where
 import           CS30.Data
 import           CS30.Exercises.Data
 import           CS30.Exercises.Util
@@ -17,54 +17,41 @@ $(deriveJSON defaultOptions ''IncExcProblem)
 type Parser = Parsec Void String
 
 choiceTreeList :: [ChoiceTree IncExcProblem]
-choiceTreeList = [
-      -- ChoiceTree of Branches for each variable in the equation |A U B U C| = |A| + |B| + |C| - |A ∩ B| - |A ∩ C| - |B ∩ C| + |A ∩ B ∩ C|, representing three sets.
-      -- |A U B U C| = a + b + c - d - e - f + g
-      -- It then becomes trivial to create and solve systems of equations for different question types.
-      Branch [ Branch [Branch [Branch [Branch [Branch [Branch [
-            nodes [
-                 -- Basic part of assignment --
-                 -- Question type 1: Given |A|, |B|, and |A U B|, find |A ∩ B| (or vice versa).
-                   IEP [
-                         [FText"|A| ", FMath$ "= "++show(a)], 
-                         [FText"|B| ", FMath$"= "++show(b)], 
-                         [FMath$ "|A \\cup B|", FMath$"= "++show(d)]]
-                       (FMath$ "|A \\cap B|")
-                       (a+b-d)
-                  ],
-                  
-            -- Creative part of assignment: extra problem types --
-            -- Question type 2: Given |A U C|, |A U B U C|, and |A U (C ∩ B)|, find |A U B|.
-            nodes [IEP [[FMath "|A \\cup C|", FMath$ "= "++show(a+c-e)], 
-                        [FMath "|A \\cup B \\cup C|", FMath$"= "++show(a+b+c-d-e-f+g)], 
-                        [FMath "|A \\cup (C \\cap B)|", FMath$"= "++show(a+f-g)]]
-                       (FMath "|A \\cup B|")
-                       (a + b - d)],
-            -- Question type 3: Given |A U C|, |B U C|, and |C U (A ∩ B)|, find |A U B U C|.
-            nodes [IEP [[FMath "|A \\cup C|", FMath$ "= "++show(a+c-e)], 
-                        [FMath "|B \\cup C|", FMath$"= "++show(b+c-f)], 
-                        [FMath "|C \\cup (A \\cap B)|", FMath$"= "++show(c+d-g)]
-                        ]
-                       (FMath "|A \\cup B \\cup C|")
-                       (a + b + c - d - e - f + g)],
-            -- Question type 4: Given |A U C|, |B U C|, and |B U (A ∩ C)|, find |A U (B ∩ C)|.
-            nodes [IEP [[FMath "|A \\cup C|", FMath$ "= "++show(a+c-e)], 
-                        [FMath "|B \\cup C|", FMath$ "= "++show(b+c-f)],
-                        [FMath "|B \\cup (A \\cap C)|", FMath$ "= "++show(b+e-g)]]
-                       (FMath "|A \\cup (B \\cap C)|")
-                       (a + f - g)]
-      ] | f <- [g+1..min (c-50) (b-50)]]
-      | e <- [g+1..min (c-50) (a-50)]]
-      | d <- [g+1..min (b-50) (a-50)]]
-      | c <- [120..180], c > g]
-      | b <- [120..180], b > g]
-      | a <- [120..180], a > g]
-      | g <- [10..60]]
-      -- These ranges were selected to ensure that none of the branches are empty given the constraints provided. 
+choiceTreeList = [ do inters <- nodes [10..40]
+                      a <- nodes [inters+10..inters+110]
+                      b <- nodes [inters+10..inters+110]
+                      (given,ansExpr,ansNum)
+                        <- nodes [ ([FMath$ "|A \\cup B|", FMath$"= "++show(a+b-inters)]
+                                   ,(FMath$ "|A \\cap B|")
+                                   ,inters)
+                                 , ([FMath$ "|A \\cap B|", FMath$"= "++show(inters)]
+                                   ,(FMath$ "|A \\cup B|")
+                                   ,a+b-inters)]
+                      return $
+                        IEP [[FText"|A| ", FMath$ "= "++show(a)], 
+                             [FText"|B| ", FMath$"= "++show(b)], 
+                             given]
+                            ansExpr
+                            ansNum
+                 , do aUbc <- nodes [60..90]
+                      aUb <- nodes [aUbc+10..aUbc+110]
+                      aUc <- nodes [aUbc+10..aUbc+110]
+                      let aUbUc = aUb + aUc - aUbc
+                      let computerade = [("|A \\cup C|",aUc)
+                                        ,("|A \\cup B \\cup C|",aUbUc)
+                                        ,("|A \\cup (B \\cap C)|",aUbc)
+                                        ,("|A \\cup B|",aUb)]
+                      remv <- nodes [0..3]
+                      return $
+                        IEP [ [FMath f, FMath$ "= "++show s]
+                            | (f,s) <- take remv computerade ++ drop (remv+1) computerade]
+                            (FMath (fst$ computerade!!remv))
+                            (snd$ computerade!!remv)
+                 ]
 
-incExcCards :: ExerciseType
-incExcCards
-  = exerciseType "IncExcCardinalities" "Rachael and Tyler"
+incExcCardinalitiesEx :: ExerciseType
+incExcCardinalitiesEx
+  = exerciseType "IncExcCardinalities" "L2.2"
                  "Inclusion exclusion principle" 
                  [Branch choiceTreeList]
                  genExercise 

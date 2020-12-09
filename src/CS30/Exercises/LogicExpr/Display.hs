@@ -1,15 +1,15 @@
 {-# OPTIONS_GHC -Wall #-}
 
-module CS30.Exercises.LogicExpr.Display (logicProof, genRandEx) where
+module CS30.Exercises.LogicExpr.Display (logicProofOrderEx, genRandEx) where
 import CS30.Exercises.LogicExpr.Parser
 import CS30.Exercises.LogicExpr.Proof
 import CS30.Data
 import CS30.Exercises.Data
 import qualified Data.Map as Map
 
-logicProof :: ExerciseType
-logicProof
-  = exerciseType "TFRewritingExpressions" "Tyler and Fei"
+logicProofOrderEx :: ExerciseType
+logicProofOrderEx
+  = exerciseType "LogicProofOrder" "L3.2"
                  "Logic: rewriting expressions" 
                  [generateRandEx 3, generateRandEx 5]
                  generateExercise 

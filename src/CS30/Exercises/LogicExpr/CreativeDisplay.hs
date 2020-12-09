@@ -10,8 +10,8 @@ import qualified Data.Map as Map
 
 logicWrongStepEx :: ExerciseType
 logicWrongStepEx
-  = exerciseType "RewritingExpressionsHarder" "Tyler and Fei"
-                 "Logic: rewriting expressions (harder version)" 
+  = exerciseType "LogicWrongStep" "L3.3"
+                 "Logic: rewriting expressions (identify wrong steps)" 
                  [generateRandFaultyEx 3, generateRandFaultyEx 5]
                  generateExercise 
                  generateFeedback

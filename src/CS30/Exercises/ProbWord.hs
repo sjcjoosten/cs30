@@ -7,8 +7,8 @@ import CS30.Exercises.ProbWord.ExpectedValue
 import CS30.Exercises.ProbWord.SolutionChecker
 
 probBasicEx, probExpectEx :: ExerciseType
-probBasicEx   = exerciseType "BasicProb" "Fei and Kyle" "Basic Probability" basicprob probQuer probFeedback
-probExpectEx  = exerciseType "ExpectedValue" "Fei and Kyle" "Expected Value" expectprob probQuer probExpectFeedback 
+probBasicEx   = exerciseType "ProbBasic" "L11?" "Basic Probability" basicprob probQuer probFeedback
+probExpectEx  = exerciseType "ProbExpect" "L13?" "Expected Value" expectprob probQuer probExpectFeedback 
 
 probQuer :: Real a => ([Field], a) -> Exercise -> Exercise
 probQuer (quer, _solution) def
