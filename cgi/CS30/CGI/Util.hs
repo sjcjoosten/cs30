@@ -6,9 +6,12 @@ import System.Directory (createDirectory)
 -- | checking if the filename (which the user sent us) is a proper filename
 safeFilename :: String -> Maybe String
 safeFilename str
- = if all isSafe str then Just str
-   else Nothing
-   where isSafe c
+ = case nonDots of
+     [] -> Nothing
+     x -> if all isSafe x then Just str else Nothing
+   where
+    nonDots = filter (/= '.') str
+    isSafe c
           = if (c <= 'Z') then
               if (c <= '9')
               then c >= '0' || c == '-'

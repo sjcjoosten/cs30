@@ -51,9 +51,9 @@ choiceTreeList = [ do inters <- nodes [10..40]
 
 incExcCardinalitiesEx :: ExerciseType
 incExcCardinalitiesEx
-  = exerciseType "IncExcCardinalities" "L2.2"
+  = exerciseType "IncExcCardinalities" "L1.3"
                  "Inclusion exclusion principle" 
-                 [Branch choiceTreeList]
+                 choiceTreeList
                  genExercise 
                  genFeedback
 

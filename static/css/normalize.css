@@ -464,15 +464,16 @@ th {
   background-color: white;
   -webkit-transition: .4s;
   transition: .4s;
-  border-radius: 50%;
+  border-radius: 13px;
 }
 
-input:indeterminate + .slider {
-  background-color: none;
-}
-
-input:focus + .slider {
-  box-shadow: 0 0 1px #33C3F0;
+input:indeterminate + .slider:before {
+  text-align: center;
+  vertical-align: middle;
+  width: -moz-calc(100% - 8px);
+  width: -webkit-calc(100% - 8px);
+  width: -o-calc(100% - 8px);
+  width: calc(100% - 8px);
 }
 
 input:checked + .slider:before {

@@ -7,9 +7,9 @@ import CS30.Exercises.SetBasics.SetOps
 import CS30.Exercises.SetBasics.SolutionChecker
 
 rosterEx,powsetEx,setOpsEx :: ExerciseType
-rosterEx = exerciseType "Roster" "L1.1" "Roster notation" roster rosterQuer    rosterFeedback
-powsetEx = exerciseType "Powset" "L1.2" "Powerset operations" powset rosterQuer rosterFeedback2
-setOpsEx = exerciseType "SetOps" "L1.3" "More set operations" setops rosterQuer rosterFeedback
+rosterEx = exerciseType "Roster" "Optional" "Roster notation" roster rosterQuer    rosterFeedback
+powsetEx = exerciseType "Powset" "L1.1" "Powerset operations" powset rosterQuer rosterFeedback2
+setOpsEx = exerciseType "SetOps" "L1.2" "More set operations" setops rosterQuer rosterFeedback
 
 rosterQuer :: ([Field],a) -> Exercise -> Exercise
 rosterQuer (quer, _solution) def 

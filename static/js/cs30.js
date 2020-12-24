@@ -279,6 +279,7 @@ window.onload = function (){
     }
     var exrs = data.rExercises;
     var pages = data.rPages;
+    if (data.rSes) userId = data.rSes;
     var cards = $('#cards');
 
     fill = function (){

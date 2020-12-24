@@ -1,0 +1,40 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:cs30"
+
+    - path: "cgi/CGI.hs"
+      component: "cs30:exe:cs30.cgi"
+
+    - path: "cgi/CS30/CGI/Data.hs"
+      component: "cs30:exe:cs30.cgi"
+
+    - path: "cgi/CS30/CGI/Globals.hs"
+      component: "cs30:exe:cs30.cgi"
+
+    - path: "cgi/CS30/CGI/Pages.hs"
+      component: "cs30:exe:cs30.cgi"
+
+    - path: "cgi/CS30/CGI/Sessions.hs"
+      component: "cs30:exe:cs30.cgi"
+
+    - path: "cgi/CS30/CGI/Util.hs"
+      component: "cs30:exe:cs30.cgi"
+
+    - path: "cgi/Paths_cs30.hs"
+      component: "cs30:exe:cs30.cgi"
+
+    - path: "serve/Serve.hs"
+      component: "cs30:exe:serve"
+
+    - path: "serve/CS30/Static.hs"
+      component: "cs30:exe:serve"
+
+    - path: "serve/CS30/StaticPaths.hs"
+      component: "cs30:exe:serve"
+
+    - path: "serve/Paths_cs30.hs"
+      component: "cs30:exe:serve"
+
+    - path: "test"
+      component: "cs30:test:spec"

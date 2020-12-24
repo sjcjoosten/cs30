@@ -100,13 +100,17 @@ handleRequest mp
       aut <- authenticate ((<>) <$> serverHost <*> serverURI) -- own url (for refering to self in canvas)
                           (listToMaybe =<< Map.lookup "a" mp) -- all data sent through POST (missing if we are not in Canvas)
                           (listToMaybe =<< Map.lookup "h" mp) -- a hash of all data that is signed
-      newLink <- case (ses, aut) of
-                   (Just tmpDir, Nothing) -> return (TempSession ("tmp/"<>tmpDir))
+      exists <- case ses of 
+                 Just ('p':'e':'r':'m':'/':fn) | Just ses' <- safeFilename fn
+                   -> (&&) <$> doesFileExist (globalDataDir++"perm/"++ses') <*> doesFileExist (globalDataDir++"auth/"++ses')
+                 _ -> return False
+      if exists then return (PermSession ("perm/"<>fromJust ses) ("auth/"<>fromJust ses))
+           else case (ses, aut) of
+                   (Just tmpDir, Nothing)
+                     -> do return (TempSession ("tmp/"<>tmpDir))
                    (Nothing, Nothing) -> error "CGI script was called in a way that does not allow it to store any progress"
                    (_, Just auth)
                      -> return (PermSession ("perm/" <> aUID auth) ("auth/" <> aUID auth))
-      -- Also save storage data?
-      return newLink
 
 obtainAuth :: ClientLink -> IO (Maybe Authentication)
 obtainAuth (TempSession _) = return Nothing
@@ -129,6 +133,8 @@ authenticate serverURL str hash
                 . SHA.bytestringDigest
                 . SHA.hmacSha1 key
                 . L8.pack <$> str
+          if str == Nothing then err500 "Couldn't find data" else return ()
+          if hash == Nothing then err500 "Couldn't find hash" else return ()
           time <- round <$> getPOSIXTime
           
           -- Legit scenario for the timeout error:
@@ -148,8 +154,10 @@ authenticate serverURL str hash
                             Nothing -> err500 "Error processing authentication information"
                             Just v -> do encodeFile fname v -- Store the most recent authentication data
                                          return (Just v)
-            else err500$ "OAuth error: the secret used to sign the request does not seem to match our secret. \nThis is a setting."
-     _ -> return Nothing
+            else err500$ "OAuth error: the secret used to sign the request does not seem to match our secret. \nThis is a setting."++show hash++show c++show key
+     _ -> case mp of
+            Nothing -> return Nothing
+            Just _ -> err500 ("Missing or invalid OAuth fields "<> show (Map.lookup "oauth_consumer_key" =<< mp))
  where
   mp = decodeQueryString . CGI.urlDecode <$> str
   oauth_key = safeFilename =<< listToMaybe =<< Map.lookup "oauth_consumer_key" =<< mp

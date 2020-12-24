@@ -12,7 +12,7 @@ import           Data.Maybe
 handleResponse :: L8.ByteString
                -> Map.Map String [String] -- POST data
                -> ClientLink -> IO ()
-handleResponse uid mp (clientLink)
+handleResponse uid mp clientLink
  = do auth <- obtainAuth clientLink
       rsp <- runWithLink uid auth clientLink$
              (\re ->
@@ -25,7 +25,7 @@ handleResponse uid mp (clientLink)
                      ++ [ return mempty{rPages = map mkPage pages}
                         | "page" <- concat . maybeToList $ Map.lookup "cAct" mp]
                      ))
-      respond rsp{rEcho = listToMaybe =<< Map.lookup "echo" mp}
+      respond rsp{rEcho = listToMaybe =<< Map.lookup "echo" mp, rSes = dataFile clientLink}
  where
     respond :: Rsp -> IO ()
     respond rsp = do putStrLn "Content-type: application/json\n"

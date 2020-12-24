@@ -19,28 +19,35 @@ import CS30.Exercises.SetCardinalitiesProofs.ExerciseGeneration (cardinalityProo
 import CS30.Exercises.SetConversionProofs.SetConversion (setConversionEx)
 import CS30.Exercises.Table (tableStub)
 import CS30.Exercises.TruthTable (truthEx)
+import CS30.Exercises.Relations.RelationBasics ( multiplicitiesRelations )
+import CS30.Exercises.Relations.FunctionBasics ( multiplicitiesFunctions )
 
 -- a note on MathQuill (what LaTeX is valid and what LaTeX is not):
 -- http://math.chapman.edu/~jipsen/mathquill/test/MathQuillsymbolsMathJax.html
 -- http://math.chapman.edu/~jipsen/mathquill/test/test.html
 
 pages :: [ExerciseType]
-pages = [ rosterEx
-        , powsetEx{etTotal = 6}
-        , setOpsEx -- from SetBasics
+pages = -- lecture 1:
+        [ powsetEx{etTotal = 6}
+        , setOpsEx{etTotal = 6} -- from SetBasics
+        , incExcCardinalitiesEx{etTotal = 6} -- from IncExcCardinalities (Rachael and Tyler)
 
-        , setConversionEx -- set-builder notation rewrite proofs
-        , incExcCardinalitiesEx -- from IncExcCardinalities (Rachael and Tyler)
-        , cardEx -- Bennett and Donia, from set cardinalities
+        -- lecture 2:
+        , multiplicitiesRelations{etTotal = 10}
+        -- , multiplicitiesFunctions -- doesn't do anything right now
 
-        , logicRewritingEx -- Chibuzo and Bennett: select the name of the law that is named
-        , logicProofOrderEx{etTotal = 6} -- Tyler and Fei: put proof in right order
-        , logicWrongStepEx{etTotal = 4} -- Tyler and Fei: which steps are correct and which are not?
+        -- lecture 3:
+        , logicRewritingEx{etTotal = 6} -- Chibuzo and Bennett: select the name of the law that is named
+        , logicWrongStepEx{etTotal = 5} -- Tyler and Fei: which steps are correct and which are not?
+        , setConversionEx{etTotal = 5} -- set-builder notation rewrite proofs
         -- , logicInequalitiesEx -- Kyle and Lucas: Logic; inequality problems. Wrong method to generate proofs
 
         , probBasicEx -- Fei and Kyle wk 5/6 probability: basic probability (solvable through counting)
         , probaEx -- Probability, compute expression. Contains conditional probabilities and independent stuff
         , probExpectEx  -- Fei and Kyle wk 5/6 probability: Expected value exercises
+
+        , cardEx -- Bennett and Donia, from set cardinalities -> goes into combinatorics week
+        
         -- , giveSet -- graph basics (needs to be disentangled and edges need to be shown/typed properly)
         -- , tableStub -- does not pass tests, since it's not a valid exercise, but uncomment to see how tables are displayed.
         -- , truthEx -- Anmol and Sanket compute a truth table, sometimes generates impossible questions
@@ -50,8 +57,10 @@ pages = [ rosterEx
         -- , modProofEx -- confusing step-names
         -- , combinEx -- doesn't work
         -- , probExProof -- works, but questions look ugly
+        , rosterEx{etTotal = 6}
+        , logicProofOrderEx{etTotal = 6} -- Tyler and Fei: put proof in right order
         ]
 
 -- the definition below is to prevent warnings about unused imports
 _ignorable :: [ExerciseType]
-_ignorable = [graphStub, tableStub, combinEx, probExProof, truthEx, giveSet, modsEx, modN, cardinalityProofExer, modProofEx, logicInequalitiesEx]
+_ignorable = [graphStub, tableStub, combinEx, probExProof, truthEx, giveSet, modsEx, modN, cardinalityProofExer, modProofEx, logicInequalitiesEx, multiplicitiesFunctions]

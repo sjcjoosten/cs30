@@ -67,7 +67,7 @@ getNums (Divide e1 e2) = getNums e1++getNums e2
 
 -- cardEx definition for export to Pages.hs
 cardEx :: ExerciseType
-cardEx = exerciseType "Cardinality" "L2.3" "Cardinality of Expression" 
+cardEx = exerciseType "Cardinality" "?" "Cardinality of Expression" 
             cardinality
             cardQuer 
             cardFeedback

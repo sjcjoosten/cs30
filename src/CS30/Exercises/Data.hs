@@ -16,6 +16,10 @@ data ExerciseType
                 , etTotal::Int -- ^ Number of exercises to get correct in total before this is 'done'
                 }
 
+genericQuer :: ([Field], b) -> Exercise -> Exercise
+genericQuer (q,_) ex
+ = ex{eQuestion = q}
+
 -- | Helperfunction to create an ExerciseType
 exerciseType
       :: (ToJSON a, FromJSON a) -- We must be able to encode and decode in order to store the exercise properly

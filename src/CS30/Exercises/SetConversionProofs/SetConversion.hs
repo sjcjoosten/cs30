@@ -9,6 +9,7 @@ Group Assignment 2
 module CS30.Exercises.SetConversionProofs.SetConversion (setConversionEx) where
 import           CS30.Data
 import           CS30.Exercises.Data
+import CS30.Exercises.Util
 import qualified Data.Map as Map
 import           Data.Aeson as JSON
 import CS30.Exercises.SetConversionProofs.SetExprParser
@@ -22,19 +23,10 @@ $(deriveJSON defaultOptions ''STEx)
 
 -- setConv definition for export to Pages.hs
 setConversionEx :: ExerciseType
-setConversionEx = exerciseType "SetConversion" "L2.1" "Conversion to set-builder notation" 
+setConversionEx = exerciseType "SetConversion" "?" "Conversion to set-builder notation" 
                     setConversion 
                     genProof 
                     feedback    
-
--- from ProofStub.hs
-permutations :: Int -> ChoiceTree [Int]
-permutations 0 = Node []
-permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you can more easily check this out in GHCI.
- = do i <- nodes [0..n-1]
-      rm <- permutations (n-1)
-      return (i : map (\v -> if v >= i then v+1 else v) rm)
-
 
 -- creative element: removes the permutation of orderings that's in the correct order
 -- ensures the user always has to rearrange something

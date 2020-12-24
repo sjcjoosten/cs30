@@ -1,7 +1,7 @@
 module CS30.Exercises.Util where
 import CS30.Exercises.Data
 import CS30.Data
-import Data.List
+import Data.List ( (\\), intercalate, nub, sortOn )
 
 -- | Calculate the ProblemResponse time in a simple way
 reTime :: ProblemResponse -> ProblemResponse
@@ -46,9 +46,31 @@ threeSets allDigits = Branch [ replace (\digits1 -> Branch
 
 -- | Generates a ChoiceTree in which each element is an ordered subset, with elements taken from the provided list
 --   For instance, 'getOrderedSubset [1,2,3,4] 2' will contain '[2,1]' but not '[1,1]'.
+--   Warning: this ignores duplicates and creates empty branches if there arent' enough distinct items to draw from
 getOrderedSubset :: Eq a 
                  => [a] -- ^ elements to draw from
                  -> Int -- ^ n: the number of elements to choose
                  -> ChoiceTree [a] -- ^ resulting tree with all elements being n large
-getOrderedSubset opts n | n > 0 = Branch [fmap (o:) (getOrderedSubset (delete o opts) (n-1)) | o<-opts]
-getOrderedSubset _ _ = Node []
+getOrderedSubset opts n | n > 0 = Branch [fmap (o:) (getOrderedSubset lst (n-1)) | (o,lst)<-select opts]
+                        | otherwise = Node []
+
+-- | Generates a ChoiceTree in which each element is an unordered subset, with elements taken from the provided list
+--   This function preserves the order in the initial list
+--   For instance, 'getOrderedSubset [1,2,3,4] 2' will contain '[1,2]' but not '[1,1]' or '[2,1]'.
+getUnorderedSubset :: Eq a => [a] -> Int -> ChoiceTree [a]
+getUnorderedSubset opts n = map snd . sortOn fst <$> getOrderedSubset (zip [(0::Int)..] opts) n
+
+select :: [a] -> [(a,[a])]
+select [] = []
+select (x:xs) = (x,xs) : [(y,x:ys) | (y,ys) <- select xs]
+
+selectSplit :: [a] -> [([a],a,[a])]
+selectSplit [] = []
+selectSplit (x:xs) = ([],x,xs) : [(x:lys,y,rys) | (lys,y,rys) <- selectSplit xs]
+
+permutations :: Int -> ChoiceTree [Int]
+permutations 0 = Node []
+permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you can more easily check this out in GHCI.
+ = do i <- nodes [0..n-1]
+      rm <- permutations (n-1)
+      return (i : map (\v -> if v >= i then v+1 else v) rm)
