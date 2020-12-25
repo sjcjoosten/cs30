@@ -96,21 +96,21 @@ handleRequest mp
       setFileMode (globalDataDir++"perm/") accessModes 
       serverURI <- lookupEnv "REQUEST_URI"
       serverHost <- lookupEnv "HTTP_HOST"
-      let ses = safeFilename =<< listToMaybe =<< Map.lookup "ses" mp
+      let ses = listToMaybe =<< Map.lookup "ses" mp
       aut <- authenticate ((<>) <$> serverHost <*> serverURI) -- own url (for refering to self in canvas)
                           (listToMaybe =<< Map.lookup "a" mp) -- all data sent through POST (missing if we are not in Canvas)
                           (listToMaybe =<< Map.lookup "h" mp) -- a hash of all data that is signed
       exists <- case ses of 
                  Just ('p':'e':'r':'m':'/':fn) | Just ses' <- safeFilename fn
-                   -> (&&) <$> doesFileExist (globalDataDir++"perm/"++ses') <*> doesFileExist (globalDataDir++"auth/"++ses')
-                 _ -> return False
-      if exists then return (PermSession ("perm/"<>fromJust ses) ("auth/"<>fromJust ses))
-           else case (ses, aut) of
-                   (Just tmpDir, Nothing)
-                     -> do return (TempSession ("tmp/"<>tmpDir))
-                   (Nothing, Nothing) -> error "CGI script was called in a way that does not allow it to store any progress"
-                   (_, Just auth)
-                     -> return (PermSession ("perm/" <> aUID auth) ("auth/" <> aUID auth))
+                   -> (\x y -> if x && y then Just fn else Nothing) <$> doesFileExist (globalDataDir++"perm/"++ses') <*> doesFileExist (globalDataDir++"auth/"++ses')
+                 _ -> return Nothing
+      case (exists,ses, aut) of
+           (Just ses',_,_) -> (return (PermSession ("perm/"<>ses') ("auth/"<>ses')))
+           (_,_, Just auth)
+             -> return (PermSession ("perm/" <> aUID auth) ("auth/" <> aUID auth))
+           (_,Just ses', _) | Just tmpDir <- safeFilename ses'
+             -> do return (TempSession ("tmp/"<>tmpDir))
+           (_,_,_) -> error ("CGI script was called in a way that does not allow it to store any progress: "++show ses)
 
 obtainAuth :: ClientLink -> IO (Maybe Authentication)
 obtainAuth (TempSession _) = return Nothing
