@@ -108,7 +108,7 @@ handleRequest mp
            (Just ses',_,_) -> (return (PermSession ("perm/"<>ses') ("auth/"<>ses')))
            (_,_, Just auth)
              -> return (PermSession ("perm/" <> aUID auth) ("auth/" <> aUID auth))
-           (_,Just ses', _) | Just tmpDir <- safeFilename ses'
+           (_,Just ('t':'m':'p':'/':ses'), _) | Just tmpDir <- safeFilename ses'
              -> do return (TempSession ("tmp/"<>tmpDir))
            (_,_,_) -> error ("CGI script was called in a way that does not allow it to store any progress: "++show ses)
 

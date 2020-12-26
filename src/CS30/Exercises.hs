@@ -33,7 +33,7 @@ pages = -- lecture 1:
         , incExcCardinalitiesEx{etTotal = 6} -- from IncExcCardinalities (Rachael and Tyler)
 
         -- lecture 2:
-        , multiplicitiesRelations{etTotal = 10}
+        , multiplicitiesRelations{etTotal = 7}
         -- , multiplicitiesFunctions -- doesn't do anything right now
 
         -- lecture 3:

@@ -19,7 +19,8 @@ multiplicitiesRelations
                       ma = maximum image
          (uni,tot,sur,inj) <- (,,,) <$> boolTree <*> boolTree <*> boolTree <*> boolTree
          vals <- shrink . makeUni uni . map swap . makeUni inj <$> getUnorderedSubset [(x,y) | x<-[0..9],y<-[0..9]] 15
-         let vals' = map (    (if tot then relabel (nubSort (map fst vals)) else id)
+         let vals' = nubSort $ -- just to sort
+                     map (    (if tot then relabel (nubSort (map fst vals)) else id)
                           *** (if sur then relabel (nubSort (map snd vals)) else id)) vals
          let image = nubSort (map fst vals')
          let range = nubSort (map snd vals')
