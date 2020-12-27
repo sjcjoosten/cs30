@@ -442,7 +442,7 @@ window.onload = function (){
         cards.empty();
       } : () => _);
       if (splash.prTimeToRead && splash.prTimeToRead>0){
-        $('.progressBar').parent.show();
+        $('.progressBar').parent().show();
         var animation = progress($('.progressBar'), {duration:1000*splash.prTimeToRead,easing:"linear",complete:function(){ next(); }});
         $('#splash .popup div').on('mouseenter',function(){animation.stop();$('.progressBar').animate({opacity:0},200);});
       }
