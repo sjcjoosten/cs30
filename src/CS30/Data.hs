@@ -23,10 +23,9 @@ import           Language.Haskell.TH.Syntax
 -- * Data types that go back and forth between client and server
 
 -- | A potential action which the user may do with an exercise
---   For instance, Submit is used in tests (stores the answer given, hides the question)
 --   Check is used in practice exercises (check if the answer is correct, get a next question)
---   TooHard can be used in practice too (skip question, get an easier one first)
-data Action = Submit | Check | TooHard Int
+--   Report can be used to store progress
+data Action = Check | Report
   deriving (Show)
 
 -- * Data types only for communicating to the client
@@ -108,10 +107,11 @@ data Exercise
   deriving (Show)
 
 defaultExercise :: Exercise
-defaultExercise = Exercise "" [] [] [] []
+defaultExercise = Exercise "" [] [Check] [] []
 
 data Splash = SplashPR ProblemResponse
             | SplashDone Int -- done making exercise, display number of correct answers in a row if so desired.
+            | SplashFeedback String -- request feedback from user. Optional argument: URL to use to report this exercise.
   deriving (Show)
 
 -- Rsp is used to create a json response
@@ -253,7 +253,7 @@ $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothi
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSOption)
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSOptions)
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSFont)
-$(deriveJSON defaultOptions ''Action)
+$(deriveJSON defaultOptions{allNullaryToStringTag=False} ''Action)
 $(deriveJSON defaultOptions ''Page)
 $(deriveJSON defaultOptions ''ProblemOutcome)
 $(deriveJSON defaultOptions ''LevelProblem)
@@ -261,9 +261,13 @@ $(deriveJSON defaultOptions ''ProblemResolve)
 $(deriveJSON defaultOptions ''LevelData)
 $(deriveJSON defaultOptions ''SesData)
 
-type SaveResult = Double -> IO ()
+type PuzzleRange = (String, Int, Int) -- name, start id (inclusive), end id (exclusive)
+type SaveResult = PuzzleRange -> Maybe Double -> SesIO ()
 -- * Data that is not stored, only exists on runtime
 data RunEnv
       = RunEnv {reSetScore :: Maybe SaveResult}
 runEnv :: RunEnv
 runEnv = RunEnv Nothing
+
+rangeUri :: ([Char], Int, Int) -> [Char]
+rangeUri (nm,start,end) = "/"++nm++"/"++show start++"/"++show end

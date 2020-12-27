@@ -1,5 +1,4 @@
 module Main (main) where
-import CS30.CGI.Pages
 import CS30.CGI.Sessions
 import CS30.Util
 import Control.Exception (SomeException, catch)

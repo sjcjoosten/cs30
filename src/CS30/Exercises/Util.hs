@@ -69,8 +69,14 @@ selectSplit [] = []
 selectSplit (x:xs) = ([],x,xs) : [(x:lys,y,rys) | (lys,y,rys) <- selectSplit xs]
 
 permutations :: Int -> ChoiceTree [Int]
-permutations 0 = Node []
-permutations n -- ChoiceTree is a Monad now! I've also derived "Show", so you can more easily check this out in GHCI.
- = do i <- nodes [0..n-1]
-      rm <- permutations (n-1)
-      return (i : map (\v -> if v >= i then v+1 else v) rm)
+permutations n = permute [0..n-1]
+permute :: [a] -> ChoiceTree [a]
+permute (a:as) = do tl <- permute as
+                    i <- nodes [0..length tl]
+                    return (take i tl++a:drop i tl)
+permute [] = return []
+
+repeatRT :: Int -> ChoiceTree a -> ChoiceTree [a]
+repeatRT n ct
+ | n <= 0 = Node []
+ | otherwise = (:) <$> ct <*> repeatRT (n-1) ct

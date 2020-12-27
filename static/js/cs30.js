@@ -395,12 +395,19 @@ window.onload = function (){
     };
     var splash = data.rSplash;
     if (splash!=null) {
+      var d = document.createElement('div');
+      d.className="popup";
+      var hNr = 1;
+      var txt;
+      if (splash.tag == "SplashFeedback")
+      {
+        var h = document.createElement('div');
+        // h.className = "row";
+        $(h).html(splash.contents);
+        d.appendChild(h);
+      }else{
         splash = splash.contents;
         var feedb = splash.prFeedback;
-        var d = document.createElement('div');
-        d.className="popup";
-        var hNr = 1;
-        var txt;
         splash.clear = true;
         switch(splash.prOutcome){
             case "POIncorrect":
@@ -424,25 +431,27 @@ window.onload = function (){
         for(var j=0;j<feedb.length;j++){
           handleField(feedb[j], _, function(a){d.appendChild(a);});
         }
-        var buttonRow = document.createElement('div');
-        buttonRow.className="container";
-        $(buttonRow).html("<div class=\"container\"><div class=\"progressBar\"><div></div></div></div><div><button id=\"OK\" class=\"center\">Ok</button></div>");
-        d.appendChild(buttonRow);
-        $('#splash').append(d);
-        $('#splash').show();
-        cards.fadeOut(200, splash.clear ? function() {
-          cards.empty();
-        } : () => _);
-        if (splash.prTimeToRead>0){
-          var animation = progress($('.progressBar'), {duration:1000*splash.prTimeToRead,easing:"linear",complete:function(){ next(); }});
-          $('#splash .popup div').on('mouseenter',function(){animation.stop();$('.progressBar').animate({opacity:0},200);});
+      }
+      var buttonRow = document.createElement('div');
+      buttonRow.className="container";
+      $(buttonRow).html("<div class=\"container\" style=\"display:none\"><div class=\"progressBar\"><div></div></div></div><div><button id=\"OK\" class=\"center\">Ok</button></div>");
+      d.appendChild(buttonRow);
+      $('#splash').append(d);
+      $('#splash').show();
+      cards.fadeOut(200, splash.clear ? function() {
+        cards.empty();
+      } : () => _);
+      if (splash.prTimeToRead && splash.prTimeToRead>0){
+        $('.progressBar').parent.show();
+        var animation = progress($('.progressBar'), {duration:1000*splash.prTimeToRead,easing:"linear",complete:function(){ next(); }});
+        $('#splash .popup div').on('mouseenter',function(){animation.stop();$('.progressBar').animate({opacity:0},200);});
+      }
+      $('#OK').on('click',next);
+      $(document).keydown( function(event) {
+        if (event.which === 13) {
+          next();
         }
-        $('#OK').on('click',next);
-        $(document).keydown( function(event) {
-          if (event.which === 13) {
-            next();
-          }
-        }); 
+      });
     } else {
       if(cards.is(':empty')){
         if($('#splash').is(':hidden')){

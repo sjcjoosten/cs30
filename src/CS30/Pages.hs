@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
-module CS30.Pages where
-import           CS30.Data
+module CS30.Pages (pages, handleExResponse, populateEx, mkPage) where
+import CS30.Data
 import           CS30.Exercises ( pages )
 import           CS30.Exercises.Data
 import           CS30.Util (err500)
@@ -10,7 +10,6 @@ import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.Map as Map
 import           Data.Maybe
-import Control.Monad.IO.Class
 
 pageLookup :: String -> Maybe ExerciseType
 pageLookup = flip Map.lookup $ Map.fromListWithKey (\k -> error ("Double keys: "++k)) (map (\et -> (etTag et,et)) pages)
@@ -32,9 +31,12 @@ getHandler
     -> Map.Map String String
     -> LevelProblem
     -> SesIO (ProblemResolve, Rsp)
-getHandler _ et usr lp
- = do let pr = etGenAns et (lpPuzzelStored lp) usr defaultProblemResponse
-      return (ProblemResolve lp usr (prOutcome pr),mempty{rSplash = Just (SplashPR pr)})
+getHandler Check et usr lp
+ = let pr = etGenAns et (lpPuzzelStored lp) usr defaultProblemResponse
+   in return (ProblemResolve lp usr (prOutcome pr), mempty{rSplash = Just (SplashPR pr)})
+-- to handle other forms: ignore the response and don't show a splash screen..
+getHandler _ _ usr lp
+ = return (ProblemResolve lp usr POTryAgain, mempty)
 
 exerciseResponse :: ExerciseType
                  -> Int -- ^ The unique integer assigned to this exercise
@@ -73,7 +75,7 @@ exerciseResponse et eid usrData handleCur handleStale'
         Nothing -> handleStale []
  where handleStale (a:as) = if lpPuzzelID (lrProblem a) == eid then handleStale' a
                             else handleStale as
-       handleStale [] = err500 ("The exercise id "++show eid++" is was not found in your profile")
+       handleStale [] = err500 ("The exercise id "++show eid++" is was not found")
        increaseLevel ld
         = let cl = ldCurrentLevel ld
               drop' = drop cl
@@ -102,17 +104,13 @@ populateEx re (Just str@(_:_))
           -> -- handle the case that the user is done:
              do let sesD = Map.insert str (v{ldDone = True}) (sdLevelData st)
                 put (st{sdLevelData = sesD})
-                liftIO$ rst 1
+                rst (str, length (ldPastProblems v) - ldCurrentStreak v, length (ldPastProblems v)) (Just 1)
                 return mempty{rDone = True, rSplash = Just (SplashDone (etTotal etp))}
-        (_,rst) -> do exc <- paintExercise etp
-                      let levData = Map.lookup str (sdLevelData st)
-                      return mempty{ rExercises = [exc]
-                                   , rProgress = (Just . (,etTotal etp) $ maybe 0 ldCurrentStreak levData) <* rst
-                                   , rDone = maybe False ldDone levData}
+        (levData,rst) -> do exc <- paintExercise (maybe defaultExercise (const defaultExercise{eActions=[Check,Report]}) rst) etp
+                            return mempty{ rExercises = [exc]
+                                         , rProgress = (Just . (,etTotal etp) $ maybe 0 ldCurrentStreak levData) <* rst
+                                         , rDone = maybe False ldDone levData}
 populateEx _ _ = return mempty
-
-checkDone :: Rsp -> SesIO Rsp
-checkDone = error "not implemented"
 
 mkPage :: ExerciseType -> Page
 mkPage etp = Page (etTag etp) (etMenu etp ++ " - " ++ etTitle etp)
@@ -147,11 +145,11 @@ smartSelect nm lst
                        return (nextNr, puzzle)
          Just v -> return (lpPuzzelID v, lpPuzzelStored v)
 
-paintExercise :: ExerciseType -> SesIO Exercise
-paintExercise et
+paintExercise :: Exercise -> ExerciseType -> SesIO Exercise
+paintExercise def et
  = do (eid, ex) <- smartSelect (etTag et) (etChoices et)
-      let dex = defaultExercise{ eTopic = etTitle et, eActions = [Check]
-                               , eHidden = [ FValueS "tag" "ExerciseType"
-                                           , FValue  "exId" eid
-                                           , FValueS "exTag" (etTag et) ]}
+      let dex = def{ eTopic = etTitle et
+                   , eHidden = [ FValueS "tag" "ExerciseType"
+                               , FValue  "exId" eid
+                               , FValueS "exTag" (etTag et) ]}
       return (etGenEx et ex dex)

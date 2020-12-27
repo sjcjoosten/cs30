@@ -6,10 +6,12 @@ import           CS30.CGI.Globals
 import           CS30.CGI.Util
 import           CS30.Data
 import           CS30.Util
+import           CS30.Exercises
+import           CS30.Pages
 import           Control.Monad.IO.Class (MonadIO(liftIO))
 import           Control.Monad.Trans.State.Lazy
 import           Data.Aeson as JSON
-import           Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Base64 as B64
 -- import           Data.ByteString.Base64.URL as B64URL
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy.Char8 as L8
@@ -30,6 +32,44 @@ import           System.Posix.Files
 import           Text.Read (readMaybe)
 import           Web.Authenticate.OAuth
 
+makeReport :: String -> RunEnv -> ClientLink -> SesIO Rsp
+makeReport s re clientLink
+ = case JSON.decode (L8.pack s) of
+     Nothing -> return mempty
+     Just (v@ExResponse{})
+       -> do let exRange = (exTag v,exId v,exId v + 1)
+             case (cAction v, reSetScore re) of
+               (Report,Just rst)
+                 -> do rst exRange Nothing
+                       return mempty{rSplash=Just (SplashFeedback "Your exercise history has been submitted for manual grading. Please inform your teacher about the issue you wish to report.")}
+               (Report,Nothing)
+                 -> return mempty{rSplash=Just (SplashFeedback ("To file a report about the current exercise, please mention: "++"/"++dataFile clientLink++rangeUri exRange))}
+               _ -> return mempty
+
+handleResponse :: L8.ByteString
+               -> Map.Map String [String] -- POST data
+               -> ClientLink -> IO ()
+handleResponse uid mp clientLink
+ = do auth <- obtainAuth clientLink
+      rsp <- runWithLink uid auth clientLink$
+             (\re ->
+             let search = listToMaybe =<< Map.lookup "s" mp -- 's' is used when looking for a page (example: 'ex1')
+                 exResponse = concat . maybeToList$ Map.lookup "ex" mp :: [String] -- 'ex' is used when responding to an exercise. json-encoded.
+             in foldl (<>) mempty{rLogin = aEmail <$> auth} <$> sequenceA
+                     (  [ handleExResponse rsp | rsp <- exResponse ]
+                     ++ [ makeReport rsp re clientLink | rsp <- exResponse]
+                     ++ [ populateEx re search
+                        ]
+                     ++ [ return mempty{rPages = map mkPage pages}
+                        | "page" <- concat . maybeToList $ Map.lookup "cAct" mp ]
+                     ))
+      respond rsp{rEcho = listToMaybe =<< Map.lookup "echo" mp, rSes = dataFile clientLink}
+ where
+    respond :: Rsp -> IO ()
+    respond rsp = do putStrLn "Content-type: application/json\n"
+                     L8.putStrLn (JSON.encode rsp)
+                     return ()
+
 runWithLink :: L8.ByteString
             -> Maybe Authentication -- ^ Authentication information if any 
             -> ClientLink -> (RunEnv -> SesIO a) -> IO a
@@ -46,11 +86,12 @@ runWithLink uid auth cl f
  where fName = globalDataDir <> dataFile cl
 
 postGrade :: String -> L8.ByteString -> GradeReporting -> SaveResult
-postGrade serverURL uid repDetails score -- Used https://lti.tools/saltire/tc to format 'payload'
+postGrade serverURL uid repDetails puzR score -- Used https://lti.tools/saltire/tc to format 'payload'
  = do let key = aOAuthKey repDetails
-      dataDir <- getDataDir
-      secret <- C8.readFile (dataDir++"/data/"++key)
-      p_request <- parseRequest (aReportURL repDetails)
+      dataDir <- liftIO$ getDataDir
+      secret <- liftIO$ C8.readFile (dataDir++"/data/"++key)
+      p_request <- liftIO$ parseRequest (aReportURL repDetails)
+      let uri = rangeUri puzR
       let payload = L8.pack "<?xml version = \"1.0\" encoding = \"UTF-8\"?>\n" <>
                     L8.pack "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">\n"<>
                     L8.pack "  <imsx_POXHeader>\n"<>
@@ -62,20 +103,26 @@ postGrade serverURL uid repDetails score -- Used https://lti.tools/saltire/tc to
                     L8.pack "  <imsx_POXBody><replaceResultRequest><resultRecord><sourcedGUID>\n"<>
                     L8.pack ("          <sourcedId>"<>aSourceUID repDetails<>"</sourcedId>\n")<>
                     L8.pack "        </sourcedGUID>\n"<>
-                    L8.pack "        <result><resultScore>\n"<>
-                    L8.pack "            <language>en-US</language>\n"<>
-                    L8.pack ("            <textString>"<>show score<>"</textString>\n")<>
-                    L8.pack "        </resultScore><resultData>\n"<>
-                    L8.pack ("                <text>Completed the required number of exercises correctly at: "<>serverURL<>"</text>\n")<>
-                    L8.pack "              </resultData></result>\n"<>
+                    L8.pack "        <result>\n"<>
+                    (case score of
+                      Nothing -> mempty
+                      Just scr -> L8.pack "          <resultScore>\n"<>
+                                  L8.pack "            <language>en-US</language>\n"<>
+                                  L8.pack ("            <textString>"<>show scr<>"</textString>\n")<>
+                                  L8.pack "          </resultScore>\n"
+                    )<>
+                    L8.pack "          <resultData>\n"<>
+                    L8.pack ("              <url>"<>serverURL<>uri<>"</url>\n")<>
+                    L8.pack "          </resultData>\n"<>
+                    L8.pack "        </result>\n"<>
                     L8.pack "  </resultRecord></replaceResultRequest></imsx_POXBody>\n"<>
                     L8.pack "</imsx_POXEnvelopeRequest>"
-      request <- signOAuth newOAuth{oauthConsumerKey=C8.pack key, oauthConsumerSecret=secret}
+      request <- liftIO$ signOAuth newOAuth{oauthConsumerKey=C8.pack key, oauthConsumerSecret=secret}
                            (Credential []) -- 'credential'. I think this is supposed to be a key/value pair. It's a list of pairs of bytestrings.
                            p_request{method=C8.pack "POST",secure=True,requestBody=RequestBodyLBS $ payload
                                     ,requestHeaders=[(hContentType, C8.pack "application/xml; charset=utf-8")]}
-      mgr <- newManager tlsManagerSettings
-      withResponse request mgr checkResult 
+      mgr <- liftIO$ newManager tlsManagerSettings
+      liftIO$ withResponse request mgr checkResult 
  where checkResult r | statusCode (responseStatus r) == 200 = return ()
          | otherwise
          = do body <- brConsume (responseBody r)
@@ -108,7 +155,9 @@ handleRequest mp
            (Just ses',_,_) -> (return (PermSession ("perm/"<>ses') ("auth/"<>ses')))
            (_,_, Just auth)
              -> return (PermSession ("perm/" <> aUID auth) ("auth/" <> aUID auth))
-           (_,Just ('t':'m':'p':'/':ses'), _) | Just tmpDir <- safeFilename ses'
+           (_,Just ('t':'m':'p':'/':ses'), _) | Just tmpDir <- safeFilename ses' -- temporary sessions
+             -> do return (TempSession ("tmp/"<>tmpDir))
+           (_,Just ses', _) | Just tmpDir <- safeFilename ses' -- unique id generated by client for the first try
              -> do return (TempSession ("tmp/"<>tmpDir))
            (_,_,_) -> error ("CGI script was called in a way that does not allow it to store any progress: "++show ses)
 
@@ -170,6 +219,6 @@ authenticate serverURL str hash
   lis_outcome_service_url = CGI.urlDecode <$> (listToMaybe =<< Map.lookup "lis_outcome_service_url" =<< mp)
   lis_result_sourcedid    = CGI.urlDecode <$> (listToMaybe =<< Map.lookup "lis_result_sourcedid"    =<< mp)
    -- credentials the user is trying to get
-  res = Auth <$> emailMaybe <*> userFn <*> roles <*> return gradeReporting <*> serverURL
+  res = Auth <$> emailMaybe <*> userFn <*> roles <*> return gradeReporting <*> ((\x y-> x++"/"++y) <$> serverURL <*> userFn)
   gradeReporting = GradeR <$> lis_outcome_service_url <*> lis_result_sourcedid <*> oauth_key
 

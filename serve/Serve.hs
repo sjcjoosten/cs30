@@ -3,7 +3,6 @@ module Main (main) where
 import           CS30.Data
 import           CS30.Static
 import           CS30.Pages
-import           CS30.Exercises (pages)
 import           Control.Concurrent.MVar
 import           Control.Monad.Trans.State.Lazy
 import           Data.Aeson as JSON

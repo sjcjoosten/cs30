@@ -9,6 +9,7 @@ import Data.List.Extra (nubSort)
 import GHC.Exts
 
 data ISB = Injective | Surjective | Bijective deriving Show
+isb_all :: [ISB]
 isb_all = [Injective,Surjective,Bijective]
 
 multiplicitiesFunctions :: ExerciseType
