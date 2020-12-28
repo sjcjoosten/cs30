@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 module CS30.Pages (pages, handleExResponse, populateEx, mkPage, reconstructExercise) where
-import CS30.Data
+import           CS30.Data
 import           CS30.Exercises ( pages )
 import           CS30.Exercises.Data
 import           CS30.Util (err500)
@@ -8,8 +8,10 @@ import           Control.Monad.Trans.State.Lazy ( put, get )
 import           Data.Aeson as JSON ( decode, Value )
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as L8
+import           Data.List.Extra (minimumOn)
 import qualified Data.Map as Map
 import           Data.Maybe
+import           Data.Ratio
 
 reconstructExercise
         :: String -- exercise tag
@@ -108,12 +110,18 @@ exerciseResponse et eid usrData handleCur handleStale'
               nl = nextUp (drop' $ ldStreakPerLevel ld)
                           (drop' $ ldWrongPerLevel ld)
                           (drop' $ ldRightPerLevel ld)
-          in updateLevel ld{ldCurrentLevel = cl + nl}
-       resetLevel ld = updateLevel ld{ldCurrentLevel = nextUpStrk (ldStreakPerLevel ld)}
-       updateLevel ld = ld{ ldOpenProblem = Nothing }
+          in updateLevel ld (cl + nl)
+       resetLevel ld = updateLevel ld (nextUpStrk (ldStreakPerLevel ld))
+       updateLevel ld sc
+        | sc >= length (etChoices et) = ld{ ldOpenProblem = Nothing, ldCurrentLevel = hardest ld }
+        | otherwise = ld{ ldOpenProblem = Nothing, ldCurrentLevel = sc }
+       hardest ld = fst . minimumOn snd $
+                    [ (i, (wrong + 1) % (right + wrong + 1))
+                    | ((i, right), wrong) <- [0..] `zip` ldWrongPerLevel ld `zip` ldRightPerLevel ld]
        nextUp strk wrongs rights
-        = if head0 rights > 3 * head0 wrongs then 1 + nextUpStrk (drop 1 strk) else nextUpStrk strk
-       nextUpStrk (c:lst) | c >= 10 = 1 + nextUpStrk lst
+        = if head0 rights > 3 * head0 wrongs then 1 + nextUpStrk (drop 1 strk)
+          else nextUpStrk strk
+       nextUpStrk (c:lst) | c >= etTotal et `div` length (etChoices et) = 1 + nextUpStrk lst
        nextUpStrk _ = 0
        udNth f n lst | n > 0 = head0 lst : udNth f (n - 1) (drop 1 lst)
         | otherwise = f (head0 lst):drop 1 lst

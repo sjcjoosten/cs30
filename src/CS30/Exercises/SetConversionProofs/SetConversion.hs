@@ -78,15 +78,15 @@ genAdvEx i
 genSuperAdvEx :: ChoiceTree SetExpr
 genSuperAdvEx 
     = do {  i <- nodes [0..1]
-        ; let j = (1 `subtract` i)
-        ; a <- genAdvEx i -- could make i or j or both 0, and replace (2 `subtract` i `subtract` j) with 0 too if we wanted a simpler expr
-        ; b <- genAdvEx j
-        ; c <- genAdvEx (2 `subtract` i `subtract` j)
-        ; n <- nodes [1..5] -- because there are 5 advanced laws
-        ; let (Law _nm (left, _rt)) = parsedAdvancedLaws!!n
-        ; let expr' = fst(assignVarAdv left [a, b, c])
-        ; return expr'
-        } 
+         ; let j = (1 `subtract` i)
+         ; a <- genAdvEx i -- could make i or j or both 0, and replace (2 `subtract` i `subtract` j) with 0 too if we wanted a simpler expr
+         ; b <- genAdvEx j
+         ; c <- genAdvEx (2 `subtract` i `subtract` j)
+         ; n <- nodes [1..5] -- because there are 5 advanced laws
+         ; let (Law _nm (left, _rt)) = parsedAdvancedLaws!!n
+         ; let expr' = fst(assignVarAdv left [a, b, c])
+         ; return expr'
+         } 
                 
 -- assignVar definition to go over the final expression by replacing all variables from left to right.
 -- creative element: ensures that there is no duplication of variables in the random expr generated as the problem
@@ -173,25 +173,24 @@ assignVarAdv (Power e) lst
 -- creative element: the variation in problem type isn't just centered around number of expressions or size of problem 
 setConversion :: [ChoiceTree STEx] 
 setConversion
- = [
-     Branch [ do { ex <- genBasicEx 2     -- level 1 --> simple cap, cup, set min 
-                   ; let expr' = fst (assignVar ex ["A", "B", "C"]) 
-                   ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
-                   ; order <- removeRep ( permutations (length steps))
-                   ;  return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 1, expr = expr'}
+ = [ Branch [ do { ex <- genBasicEx 2     -- level 1 --> simple cap, cup, set min 
+                 ; let expr' = fst (assignVar ex ["A", "B", "C"]) 
+                 ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
+                 ; order <- removeRep ( permutations (length steps))
+                 ; return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 1, expr = expr'}
                  } ]
-     , Branch [ do { ex <- genAdvEx i  -- level 2 --> add in power
-                   ; let expr' = fst (assignVar ex ["A", "B", "C", "D"]) 
-                   ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
-                   ; order <- removeRep ( permutations (length steps))
-                   ; return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 2, expr = expr'}
-                 } | i <- [2..3]]
-     , Branch [do { ex <- genSuperAdvEx -- level 3 --> add in advanced laws, forces an expr that uses at least one of the advanced laws
-                   ; let expr' = fst (assignVar ex ["A", "B", "C", "D", "E", "F", "G"]) 
-                   ; let (Proof _expr steps) = generateProof parsedAdvancedLaws expr'
-                   ; order <- permutations (length steps) -- SJC: this generates empty branches sometimes (because of zero/one-step proofs), so removing the removeRep here
-                   ; return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 3, expr = expr'}
-                 } ]
+   , Branch [ do { ex <- genAdvEx i  -- level 2 --> add in power
+                 ; let expr' = fst (assignVar ex ["A", "B", "C", "D"]) 
+                 ; let (Proof _expr steps) = generateProof parsedBasicLaws expr'
+                 ; order <- removeRep ( permutations (length steps))
+                 ; return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 2, expr = expr'}
+               } | i <- [2..3]]
+   , Branch [do { ex <- genSuperAdvEx -- level 3 --> add in advanced laws, forces an expr that uses at least one of the advanced laws
+                 ; let expr' = fst (assignVar ex ["A", "B", "C", "D", "E", "F", "G"]) 
+                 ; let (Proof _expr steps) = generateProof parsedAdvancedLaws expr'
+                 ; order <- permutations (length steps) -- SJC: this generates empty branches sometimes (because of zero/one-step proofs), so removing the removeRep here
+                 ; return STEx {exprAsField = [FIndented 1 [FMath (myShow expr')], FReorder "proof" (map ((map showProofLine steps) !!) order)], ord = order, lev = 3, expr = expr'}
+               } ]
    ]
 
 -- a simple mechanism for generating the choice tree for questions

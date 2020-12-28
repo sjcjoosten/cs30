@@ -35,12 +35,12 @@ generateRandEx n
 genRandEx :: Int -> ChoiceTree LogicExpr
 genRandEx i | i < 1
   = Branch [ Branch [Branch [Node (Var varName), Node (Neg $ Var varName)] | varName <- ['p','q','r']]
-            , Branch [Node (Con True), Node (Con False)]
-            ]
+           , Branch [Node (Con True), Node (Con False)]
+           ]
 genRandEx i
   = Branch [do { e1 <- genRandEx i'
-                ;e2 <- genRandEx (i - i' - 1)
-                ;opr <- nodes [And,Or,Imply]
+                ;(wgt,opr) <- nodes [(1,And),(1,Or),(2,Imply)]
+                ;e2 <- genRandEx (i - i' - wgt)
                 ;return (Bin opr e1 e2)
               }
             | i' <- [0..i-1]
