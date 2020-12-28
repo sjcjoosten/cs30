@@ -359,7 +359,10 @@ hr {
 	-webkit-border-radius: 10px; /* Webkit */
 	border-radius: 10px;
 }
-
+.buttonRow {
+  display:flex;
+  justify-content: space-between;
+}
 .popup h1 {
   color: black;
   -webkit-text-fill-color: white; /* Will override color (regardless of order) */

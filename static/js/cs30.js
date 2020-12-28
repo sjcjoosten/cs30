@@ -322,6 +322,7 @@ window.onload = function (){
         (function(exr){
             var submitAction;
             var buttonRow = document.createElement('div');
+            buttonRow.className="buttonRow";
             var acs = exr.eActions;
             for(var j=0;j<acs.length;j++){
                 (function(ac){
@@ -345,7 +346,7 @@ window.onload = function (){
                 elmt.className="button";
                 elmt.appendChild(document.createTextNode(ac.tag));
                 elmt.onclick = f;
-                submitAction = f;
+                if (j==0) submitAction = f;
                 buttonRow.appendChild(elmt);
                 })(acs[j]);
             }
@@ -357,7 +358,6 @@ window.onload = function (){
             }
             var values = [];
             var d = document.createElement('div');
-            // d.className="row"; // don't!
             for(var j=0;j<qs.length;j++){
               handleField(qs[j], function(p){values.push(p);}, function(a){d.appendChild(a);}, submitAction);
             }

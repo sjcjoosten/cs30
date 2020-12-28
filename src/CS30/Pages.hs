@@ -1,5 +1,5 @@
 {-# LANGUAGE TupleSections #-}
-module CS30.Pages (pages, handleExResponse, populateEx, mkPage) where
+module CS30.Pages (pages, handleExResponse, populateEx, mkPage, reconstructExercise) where
 import CS30.Data
 import           CS30.Exercises ( pages )
 import           CS30.Exercises.Data
@@ -10,6 +10,32 @@ import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.Map as Map
 import           Data.Maybe
+
+reconstructExercise
+        :: String -- exercise tag
+        -> [Int] -- way it was generated
+        -> Value -- generated value
+        -> Maybe ProblemResolve -- has user's answers if there were any
+        -> Exercise
+reconstructExercise tag gen vl pr'
+  | Just exTp <- pageLookup tag
+  = let ex = etGenEx exTp vl defaultExercise
+    in ex{eActions = []
+         ,eTopic = (eTopic ex) ++comments
+         ,eQuestion = [ FIndented 1 (eQuestion ex) ] ++ prFlds}
+  | otherwise
+  = defaultExercise{eActions = []
+      ,eQuestion = [ FIndented 0 [FText "Tag no longer an exercise: ", FText tag]
+                   , FIndented 1 [FText "Generated as: ", FText (show gen)]
+                   , FIndented 1 [FText "Value: ", FText (show vl)]
+                   ] ++ prFlds}
+  where (prFlds,comments)
+           = case pr' of
+               Nothing -> ([],"")
+               Just pr -> ( [FText "Response:", FTable$ [[Header (FText "Key"),Header (FText "Value")]] ++
+                             [[Cell (FText k),Cell (FText v)] | (k,v) <- Map.toList (lrUserAnswer pr) ]
+                            ]
+                          , " ("++show (lrScore pr)++")")
 
 pageLookup :: String -> Maybe ExerciseType
 pageLookup = flip Map.lookup $ Map.fromListWithKey (\k -> error ("Double keys: "++k)) (map (\et -> (etTag et,et)) pages)
@@ -104,7 +130,10 @@ populateEx re (Just str@(_:_))
           -> -- handle the case that the user is done:
              do let sesD = Map.insert str (v{ldDone = True}) (sdLevelData st)
                 put (st{sdLevelData = sesD})
-                rst (str, length (ldPastProblems v) - ldCurrentStreak v, length (ldPastProblems v)) (Just 1)
+                let lastId = case ldPastProblems v of
+                               [] -> 0
+                               (h:_) -> lpPuzzelID (lrProblem h) + 1
+                rst (str, lastId - ldCurrentStreak v, lastId) (Just 1)
                 return mempty{rDone = True, rSplash = Just (SplashDone (etTotal etp))}
         (levData,rst) -> do exc <- paintExercise (maybe defaultExercise (const defaultExercise{eActions=[Check,Report]}) rst) etp
                             return mempty{ rExercises = [exc]

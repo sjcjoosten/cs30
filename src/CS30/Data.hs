@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveLift      #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
@@ -10,8 +9,6 @@ import           Data.Aeson.TH
 import           Data.Char (toLower)
 import qualified Data.Map as Map
 import           Data.Semigroup as S
-import           Instances.TH.Lift()
-import           Language.Haskell.TH.Syntax
 
 -- table of content:
 -- 1. Data types that go back and forth between client and server
@@ -94,7 +91,7 @@ data ProblemOutcome
       = POCorrect -- ^ Full points, user answered correct
       | POIncorrect -- ^ No points, user answered incorrect
       | POTryAgain -- ^ Not a valid answer, user needs to fix it
-  deriving (Show, Lift, Eq)
+  deriving (Show, Eq)
 
 -- | Exercises as sent to the client (via Json). Documentation describes the client's interpretation
 data Exercise
@@ -102,7 +99,7 @@ data Exercise
                 ,eQuestion::[Field] -- ^ Content of the question
                 ,eActions::[Action] -- ^ Buttons under the question
                 ,eHidden::[Field] -- ^ Meta-info (not displayed)
-                ,eBroughtBy::[String] -- ^ Exercise was brought to you by: ... (UTF8)
+                ,eBroughtBy::[String] -- ^ Exercise was brought to you by: ... (list of creators in UTF8)
                 }
   deriving (Show)
 
@@ -157,9 +154,9 @@ data LevelProblem
       = LevelProblem {lpPuzzelID :: Int
                      ,lpLevel :: Int -- how hard is the puzzel?
                      ,lpPuzzelGen :: [Int] -- how it was randomly generated
-                     ,lpPuzzelStored :: Value -- json encoded question (exact JSON structure is handler specific)
+                     ,lpPuzzelStored :: Value -- puzzle specific data
                      }
-  deriving (Show, Lift)
+  deriving (Show)
 
 -- | After a problem instance has been handled, we store how it was handled (potentially for overviews)
 data ProblemResolve
@@ -167,7 +164,7 @@ data ProblemResolve
                        ,lrUserAnswer :: Map.Map String String -- verbatim input from user (value of "cValue")
                        ,lrScore :: ProblemOutcome -- right or wrong
                        }
-  deriving (Show, Lift)
+  deriving (Show)
 
 -- | Current level information: what is the problem we are currently working on, 
 -- | what were the past problems, how many stars did we get, etcetera..
@@ -184,7 +181,7 @@ data LevelData
                  ,ldRightPerLevel  :: [Integer] -- proceed to next level once  right > 3 * wrong  (or if  streak>= 10)
                  ,ldDone           :: Bool -- ^ Did the student finish this exercise?
                  }
-  deriving (Show, Lift)
+  deriving (Show)
 
 defaultLevelData :: Int -> LevelData
 defaultLevelData maxAt
@@ -203,7 +200,7 @@ defaultLevelData maxAt
 data SesData = SesData{ sdLevelData::Map.Map String LevelData
                       , sdEmail::Maybe String -- email address for traceability (if we have it), needed to forbid taking tests without login
                       }
-  deriving (Show, Lift)
+  deriving (Show)
 
 startData :: SesData
 startData = SesData{sdLevelData=Map.empty, sdEmail=Nothing}
