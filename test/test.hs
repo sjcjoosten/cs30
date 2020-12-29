@@ -49,9 +49,11 @@ pagesStandardTests
          where choiceT s f
                 = testGroup s [ QC.testProperty ("Problem "++show i) (f c)
                               | (c,i) <- zip (etChoices et) [(0::Int)..] ]
-               validFields f = conjoin (map checkField (let ex = etGenEx et f defaultExercise
-                                                        in eQuestion ex ++ eHidden ex))
+               validFields f = checkFields ((\ex -> eQuestion ex ++ eHidden ex) <$> etGenEx et f defaultExercise)
 
+checkFields :: Maybe [Field] -> Property
+checkFields Nothing = property QCP.failed{QCP.reason="Could not generate an exercise for a value found in the corresponding choice-tree"}
+checkFields (Just fs) = conjoin (map checkField fs)
 checkField :: Field -> Property
 checkField = property . validField
 

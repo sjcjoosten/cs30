@@ -7,9 +7,12 @@ import Data.Maybe ( fromJust )
 type Substitution = [(VarName,LogicExpr)]
 type VarName = Char
 
-data Proof a = Proof LogicExpr [Step a] deriving (Show)
-
-type Step a= (a, LogicExpr)
+-- take the tail end of a proof
+maxSizeProof :: Int -> Proof a -> Proof a
+maxSizeProof nr p@(Proof _ stps)
+  = case drop (length stps - nr - 1) stps of
+      ((_, e'):steps) | nr < length stps -> Proof e' steps
+      _ -> p
 
 input_laws :: [String]
 input_laws = [
@@ -49,17 +52,19 @@ input_laws = [
     ]
 
 fake_laws :: [String]
-fake_laws = [
-      "Erroneous distribution: p∨(q∧r)≡(p∨q)∧r"
+fake_laws
+  = [ "Wrong use of False: false⇒q≡¬q"
+    , "Erroneous distribution: p∨(q∧r)≡(p∨q)∧r"
     , "Erroneous distribution: (p∧q)∨r≡p∧(q∨r)"
     , "Not De Morgan: ¬(p∧q)≡(p∨q)"
+    , "Not De Morgan: ¬(p∧q)≡(¬p∨q)"
     , "Not De Morgan: ¬(p∧q)≡(¬p∧¬q)"
+    , "Not De Morgan: ¬(p∧q)≡(¬p∧¬q)"
+    , "Wrong implication: ¬(p⇒q)≡(q⇒p)"
     , "Wrong implication: ¬(p ⇒ q) ≡ ¬p ⇒ ¬q"
     , "Wrong implication: ¬(p⇒q)≡(¬p⇒¬q)"
-    , "Wrong implication: ¬(p⇒q)≡(q⇒p)"
     , "Wrong implication: ¬(p⇒q)≡(¬q⇒¬p)"
-    , "Wrong use of False: false⇒q≡¬q"
-  ]
+    ]
 
 renameLaw :: (a -> b) -> Law a -> Law b
 renameLaw f law = law {lawName=f (lawName law)}
@@ -91,7 +96,7 @@ getWrongDerivation true_laws false_laws e
  where multiSteps :: LogicExpr -> Int -> [Step Bool] 
        multiSteps e' stepNum
         = case [ (lawName law, res)
-               | law <- if even stepNum then true_laws++false_laws else false_laws++true_laws -- true_laws and false_laws in alternatining order of appearance
+               | law <- if stepNum `mod` 3 == 0 then true_laws++false_laws else false_laws++true_laws -- true_laws and false_laws in alternatining order of appearance
                , res <- getStep (lawEq law) e'               
                , lawName law || not (equivalenceCheck e' res)
                ] of

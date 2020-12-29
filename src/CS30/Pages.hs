@@ -4,6 +4,8 @@ import           CS30.Data
 import           CS30.Exercises ( pages )
 import           CS30.Exercises.Data
 import           CS30.Util (err500)
+import           Control.Monad ( join )
+import           Control.Monad.IO.Class ( MonadIO )
 import           Control.Monad.Trans.State.Lazy ( put, get )
 import           Data.Aeson as JSON ( decode, Value )
 import           Data.Bifunctor (first)
@@ -11,7 +13,10 @@ import qualified Data.ByteString.Lazy.Char8 as L8
 import           Data.List.Extra (minimumOn)
 import qualified Data.Map as Map
 import           Data.Maybe
-import           Data.Ratio
+-- import           Data.Ratio
+
+
+
 
 reconstructExercise
         :: String -- exercise tag
@@ -21,10 +26,14 @@ reconstructExercise
         -> Exercise
 reconstructExercise tag gen vl pr'
   | Just exTp <- pageLookup tag
-  = let ex = etGenEx exTp vl defaultExercise
-    in ex{eActions = []
-         ,eTopic = (eTopic ex) ++comments
-         ,eQuestion = [ FIndented 1 (eQuestion ex) ] ++ prFlds}
+  = case newOrRegenerate exTp gen vl defaultExercise of
+      Just ex -> dumbDown ex
+      Nothing -> defaultExercise{eQuestion =
+                   [ FIndented 0 [FText "Could not reconstruct exercise ", FText tag]
+                   , FIndented 1 [FText "Generated as: ", FText (show gen)]
+                   , FIndented 1 [FText "Value: ", FText (show vl)]
+                   , FIndented 1 [FText "Most likely cause is that the exercise has changed on the server side"]
+                   ] ++ prFlds}
   | otherwise
   = defaultExercise{eActions = []
       ,eQuestion = [ FIndented 0 [FText "Tag no longer an exercise: ", FText tag]
@@ -38,6 +47,23 @@ reconstructExercise tag gen vl pr'
                              [[Cell (FText k),Cell (FText v)] | (k,v) <- Map.toList (lrUserAnswer pr) ]
                             ]
                           , " ("++show (lrScore pr)++")")
+        dumbDown ex -- remove actions and add user's answers if any
+         = ex{ eActions = []
+             , eTopic = eTopic ex ++ comments
+             , eQuestion = [ FIndented 1 (eQuestion ex) ] ++ prFlds}
+
+newOrRegenerate :: ExerciseType -> [Int] -> Value -> Exercise -> Maybe Exercise
+newOrRegenerate et gen vl ex
+  = case etGenEx et vl ex of
+      Nothing -> join (etGenEx et <$> regenerate gen (Branch (etChoices et)) <*> return ex)
+      x -> x
+regenerate :: [Int] -> ChoiceTree a -> Maybe a
+regenerate _ (Node v) = Just v
+regenerate (i:is) (Branch cs)
+ = case drop i cs of
+    [] -> Nothing
+    (x:_) -> regenerate is x
+regenerate _ _ = Nothing
 
 pageLookup :: String -> Maybe ExerciseType
 pageLookup = flip Map.lookup $ Map.fromListWithKey (\k -> error ("Double keys: "++k)) (map (\et -> (etTag et,et)) pages)
@@ -60,8 +86,9 @@ getHandler
     -> LevelProblem
     -> SesIO (ProblemResolve, Rsp)
 getHandler Check et usr lp
- = let pr = etGenAns et (lpPuzzelStored lp) usr defaultProblemResponse
-   in return (ProblemResolve lp usr (prOutcome pr), mempty{rSplash = Just (SplashPR pr)})
+ = case etGenAns et (lpPuzzelStored lp) usr defaultProblemResponse of
+      Just pr -> return (ProblemResolve lp usr (prOutcome pr), mempty{rSplash = Just (SplashPR pr)})
+      Nothing -> return (ProblemResolve lp usr POTryAgain, mempty{rSplash = Just (SplashFeedback "Your exercise could not be checked. Perhaps it was changed recently on the server side. If this keeps happening, please report it to your teacher.")})
 -- to handle other forms: ignore the response and don't show a splash screen..
 getHandler _ _ usr lp
  = return (ProblemResolve lp usr POTryAgain, mempty)
@@ -115,9 +142,10 @@ exerciseResponse et eid usrData handleCur handleStale'
        updateLevel ld sc
         | sc >= length (etChoices et) = ld{ ldOpenProblem = Nothing, ldCurrentLevel = hardest ld }
         | otherwise = ld{ ldOpenProblem = Nothing, ldCurrentLevel = sc }
-       hardest ld = fst . minimumOn snd $
-                    [ (i, (wrong + 1) % (right + wrong + 1))
-                    | ((i, right), wrong) <- [0..] `zip` ldWrongPerLevel ld `zip` ldRightPerLevel ld]
+       hardest ld = fst . minimumOn snd $ [0..] `zip` ldStreakPerLevel ld
+       -- zipFill0 (a:as) (b:bs) = (a,b):zipFill0 as bs
+       -- zipFill0 as [] = zip as (repeat 0)
+       -- zipFill0 [] bs = zip (repeat 0) bs
        nextUp strk wrongs rights
         = if head0 rights > 3 * head0 wrongs then 1 + nextUpStrk (drop 1 strk)
           else nextUpStrk strk
@@ -155,38 +183,44 @@ mkPage etp = Page (etTag etp) (etMenu etp ++ " - " ++ etTitle etp)
 -- | Select a puzzle (either the most recent or a randomly selected one),
 -- | return the selected puzzle and its ID.
 -- | This function is also where the automated level selection comes in
-smartSelect :: String
-            -> [ChoiceTree Value]
-            -> SesIO (Int, Value)
-smartSelect nm lst
+paintExercise :: Exercise -> ExerciseType 
+            -> SesIO Exercise
+paintExercise def et -- nm lst
   = do ses <- get
        let ld = fromMaybe (defaultLevelData (length lst)) $ Map.lookup nm (sdLevelData ses)
        case ldOpenProblem ld of
-         Nothing -> do let lvl = ldCurrentLevel ld
-                       let maxL = length lst - 1
-                       (genInfo,puzzle)
-                         <- if lvl > maxL
-                            then randomSelect (Branch lst)
-                            else first (lvl:) <$> randomSelect (lst !! lvl)
-                       let nextNr = case ldPastProblems ld of
-                                      (a:_) -> 1+lpPuzzelID (lrProblem a)
-                                      _ -> 0
-                       let newProblem = LevelProblem { lpPuzzelID=nextNr
-                                                     , lpLevel=head genInfo
-                                                     , lpPuzzelGen=tail genInfo
-                                                     , lpPuzzelStored=puzzle
-                                                     }
-                       -- store the problem:
-                       let ld' = Map.insert nm ld{ldOpenProblem = Just newProblem} (sdLevelData ses)
-                       put (ses{sdLevelData = ld'})
-                       return (nextNr, puzzle)
-         Just v -> return (lpPuzzelID v, lpPuzzelStored v)
+         Just v | Just ex <- etGenEx et (lpPuzzelStored v) def{ eTopic = etTitle et }
+           -> return ex{ eHidden = eHidden ex ++ hiddenFs (lpPuzzelID v)}
+         _ -> do (nr,newProblem) <- selectNew ld lst
+                 -- store the problem:
+                 let ld' = Map.insert nm ld{ldOpenProblem = Just newProblem} (sdLevelData ses)
+                 put (ses{sdLevelData = ld'})
+                 case etGenEx et (lpPuzzelStored newProblem)
+                              def{ eTopic = etTitle et, eHidden = hiddenFs nr } of
+                   Nothing -> error "Could not generate exercise based on a freshly found value"
+                   Just ex -> return ex
+  where nm = etTag et
+        lst = etChoices et
+        hiddenFs i = [ FValueS "tag" "ExerciseType"
+                     , FValue  "exId" i
+                     , FValueS "exTag" nm ]
 
-paintExercise :: Exercise -> ExerciseType -> SesIO Exercise
-paintExercise def et
- = do (eid, ex) <- smartSelect (etTag et) (etChoices et)
-      let dex = def{ eTopic = etTitle et
-                   , eHidden = [ FValueS "tag" "ExerciseType"
-                               , FValue  "exId" eid
-                               , FValueS "exTag" (etTag et) ]}
-      return (etGenEx et ex dex)
+selectNew :: MonadIO m
+          => LevelData -> [ChoiceTree Value] -> m (Int, LevelProblem)
+selectNew ld lst
+ = do let lvl = ldCurrentLevel ld
+      let maxL = length lst - 1
+      (genInfo,puzzle) <- if lvl > maxL
+                          then randomSelect (Branch lst)
+                          else first (lvl:) <$> randomSelect (lst !! lvl)
+      let nextNr = case ldPastProblems ld of
+                     (a:_) -> 1+lpPuzzelID (lrProblem a)
+                     _ -> 0
+      let newProblem = LevelProblem { lpPuzzelID=nextNr
+                                    , lpLevel=head genInfo
+                                    , lpPuzzelGen=tail genInfo
+                                    , lpPuzzelStored=puzzle
+                                    }
+      return (nextNr, newProblem)
+
+      

@@ -1,3 +1,8 @@
+-- module takes up 5s of testing, all slowness is in generating the ChoiceTree.
+-- This is 50% of all testing time at the time of writing.
+-- By adding these options I took off >1s (SJ, Dec 29 2020)
+{-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -O2 #-}
 module CS30.Exercises.Relations.RelationBasics (multiplicitiesRelations) where
 import CS30.Data
 import CS30.Exercises.Data
@@ -34,16 +39,16 @@ multiplicitiesRelations
          (dom_start, dom_end) <- ensureTot tot image
          (cod_start, cod_end) <- ensureTot sur range
          let row str = [Cell (FText str), Cell (FFieldBool (FText "Yes") (FText "No") Nothing str)]
+         rows <- permute [ row "Univalent"
+                         , row "Total"
+                         , row "Injective"
+                         , row "Surjective"]
          if (image == [dom_start..dom_end]) == tot then return () else error ("Totality violation: "++show tot++show image++show (dom_start,dom_end))
          if (range == [cod_start..cod_end]) == sur then return () else error ("Surjectivity violation"++show sur++show image++show (dom_start,dom_end))
          if (nub (map fst vals') == map fst vals') == uni then return () else error ("Univalence violation"++show uni++show vals++show subset)
          if (nub (map snd vals') == map snd vals') == inj then return () else error ("Injectivity violation"++show inj ++ show vals++show subset)
          let orlst [] lst = lst
              orlst lst _ = lst
-         rows <- permute [ row "Univalent"
-                         , row "Total"
-                         , row "Injective"
-                         , row "Surjective"]
          return ( [ FText "Consider the relation "
                   , FMath "R = ", showset show vals'
                   , FText " on domain ", showRange dom_start dom_end

@@ -9,6 +9,10 @@ import           Data.Void
 import           Data.Aeson as JSON -- used for 'deriveJSON' line
 import           Data.Aeson.TH
 
+
+data Proof a = Proof LogicExpr [Step a] deriving (Show)
+type Step a = (a, LogicExpr)
+
 type Parser = Parsec Void String
 data LogicExpr 
     = Con Bool
@@ -24,8 +28,6 @@ data LogicOp
     | Imply
     deriving (Eq)
     -- deriving (Eq, Show)
-$(deriveJSON defaultOptions ''LogicOp)
-$(deriveJSON defaultOptions ''LogicExpr)
 
 equivalenceCheck :: LogicExpr -> LogicExpr -> Bool
 equivalenceCheck lhs rhs = and (
@@ -69,7 +71,7 @@ symb Imply = implyStr
 
 instance Show LogicExpr where
     show e = shows e ""
-    showsPrec _ (Con b) = showString (if b then "true" else "false")
+    showsPrec _ (Con b) = showString (if b then "\\text{true}" else "\\text{false}")
     showsPrec _ (Var v) = showString [v]       
     showsPrec _p (Neg e) = showString negStr . showsPrec negPrec e
     showsPrec p (Bin Imply e1 e2)
@@ -153,4 +155,6 @@ parseUntil c =
         rmd <- parseUntil c
         return (x:rmd)
 
-
+$(deriveJSON defaultOptions ''LogicOp)
+$(deriveJSON defaultOptions ''LogicExpr)
+$(deriveJSON defaultOptions ''Proof)

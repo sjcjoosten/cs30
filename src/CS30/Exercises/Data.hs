@@ -11,9 +11,9 @@ data ExerciseType
                 , etMenu :: String
                 , etTitle :: String
                 , etChoices :: [ChoiceTree Value]
-                , etGenEx :: Value -> Exercise -> Exercise
-                , etGenAns :: Value -> Map.Map String String -> ProblemResponse -> ProblemResponse
-                , etTotal::Int -- ^ Number of exercises to get correct in total before this is 'done'
+                , etGenEx :: Value -> Exercise -> Maybe Exercise -- nothing only allowed if there was a decoding error, will silently generate a new exercise
+                , etGenAns :: Value -> Map.Map String String -> ProblemResponse -> Maybe ProblemResponse -- nothing only allowed if there was a decoding error. Will give a popup saying the exercise could not be graded and generate a new exercise.
+                , etTotal :: Int -- ^ Number of exercises to get correct in total before this is 'done'
                 }
 
 genericQuer :: ([Field], b) -> Exercise -> Exercise
@@ -33,15 +33,15 @@ exerciseType
 exerciseType tg mn rn ct exGen fbGen
  = ExerciseType tg mn rn (map (fmap enc) ct) exGen' fbGen' 10
  where enc x = toJSON x
-       exGen' :: Value -> Exercise -> Exercise
+       exGen' :: Value -> Exercise -> Maybe Exercise
        exGen' t = case fromJSON t of
-                    Success t' -> exGen t'
-                    Error e -> error$ "Decoding error of the exercise ("++e++")"
-       fbGen' :: Value -> Map.Map String String -> ProblemResponse -> ProblemResponse
+                    Success t' -> Just . exGen t'
+                    Error _ -> const Nothing -- error$ "Decoding error of the exercise ("++e++")"
+       fbGen' :: Value -> Map.Map String String -> ProblemResponse -> Maybe ProblemResponse
        fbGen' a
          = case fromJSON a of
-             Success a' -> fbGen a'
-             Error e -> error$ "Decoding error of the exercise ("++e++")"
+             Success a' -> (Just .) . fbGen a'
+             Error _ -> const $ const Nothing -- error$ "Decoding error of the exercise ("++e++")"
 
 -- | Data-structure to take (perhaps randomly)
 data ChoiceTree a = Node a | Branch [ChoiceTree a] deriving (Functor, Show, Eq)
