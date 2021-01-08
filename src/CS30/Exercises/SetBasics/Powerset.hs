@@ -13,7 +13,7 @@ powset = [ nodes [ ( [FText "the powerset 𝒫",FMath$ "(\\left\\{"++d1++","++d2
          , nodes [ ( [FText "the powerset 𝒫",FMath$ "(\\left\\{"++d1++"\\right\\})"]
                    , [[],[d1]]
                    )
-                 | d1 <- map show allDigits ++ map show ['a'..'z'] ]
+                 | d1 <- map show allDigits ++ map (:[]) ['a'..'z'] ]
          , Branch [ nodes [ ( [FText "the powerset 𝒫",FMath$ "(\\left\\{"++d1++","++d2++","++d3++"\\right\\})",FText " without listing duplicates",FNote "You're never supposed to write duplicates in roster notation, not even if the question contains duplicates"]
                             , nubSort (map nubSort ([[],[d1],[d2],[d1,d2]]++(map (d3:) [[],[d1],[d2],[d1,d2]])))
                             )
