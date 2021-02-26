@@ -93,7 +93,7 @@ numeric_value_parser = lt_spaces *> makeExprParser digits oprs <* lt_spaces
                 ]
        infixL str opr = InfixL (return (BinOp opr) <* string str <* lt_spaces)
 lt_spaces :: Parser ()
-lt_spaces = ((string " " <|> string "\\t" <|> string "\\ ") *> lt_spaces)
+lt_spaces = ((string " " <|> string "\\t" <|> string "\\ " <|> string "\\+") *> lt_spaces)
         <|> return ()
 
 evalRational :: NumericExpression -> Maybe Rational
@@ -120,11 +120,11 @@ genFeedback (_, solution)  mStrs rsp = reTime $
                   case Map.lookup "answer" mStrs of
                       Nothing -> error "Answer field expected"
                       Just v -> case runParser numeric_value_parser "" v of
-                                  Left _e -> tryAgain $ rsp{prFeedback = [FText "We couldn't understand your response, please check your syntax and try again."]}
+                                  Left _e -> tryAgain $ rsp{prFeedback = [FText "We couldn't understand your response, please check your syntax and try again. If this keeps happening (or if you think this needs to be fixed), then please report this as an issue."]}
                                   Right userAnswer -> case evalRational userAnswer of
                                                         Nothing -> markWrong $ rsp{prFeedback = [FText "Sorry, something went wrong! You entered ", FMath $ show userAnswer, FText ", which we couldn't evaluate (division by zero?)"]}
                                                         Just userSolution -> if userSolution == solution then
                                                                                 markCorrect $
                                                                                     rsp{prFeedback = [FText "Congratulations! The right answer is ", FMath$ showProb solution]}
                                                                             else markWrong $
-                                                                                    rsp{prFeedback = [FText "Sorry! You entered ", FMath $ show userAnswer, FText ", the answer is wrong"]}
+                                                                                    rsp{prFeedback = [FText "Sorry! The answer should be ", FMath$ showProb solution, FText " but your answer was equal to ",FMath$ showProb userSolution]}

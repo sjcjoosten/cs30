@@ -67,7 +67,7 @@ getNums (Divide e1 e2) = getNums e1++getNums e2
 
 -- cardEx definition for export to Pages.hs
 cardEx :: ExerciseType
-cardEx = exerciseType "Cardinality" "?" "Cardinality of Expression" 
+cardEx = exerciseType "Cardinality" "L12" "Cardinality of Expression" 
             cardinality
             cardQuer 
             cardFeedback
@@ -120,7 +120,7 @@ cardQuer :: ([[Field]],[Integer]) -> Exercise -> Exercise
 cardQuer (quer, _solution) exer 
   = exer { eQuestion=[FText "Given "] ++ rule ++ 
                      [FText ", compute "] ++ question ++ 
-                     [FFieldMath "answer", FNote "Give you answer as an expression (show your work without computing the final answer)."]}
+                     [FFieldMath "answer", FNote "Give you answer as an expression (show your work without computing the final answer). For n choose m, use \\binom. Raise to a power by typing ^"]}
                         where rule = head quer
                               question = quer!!1
 
@@ -172,7 +172,7 @@ spaceConsumer = L.space spaces empty empty
 spaces :: Parser ()
 spaces = some spc >> return ()
  where spc = string " " <|> string "\t" <|> string "\n" <|> string "\r"
-             <|> string "\\ " <|> string "~"
+             <|> string "\\ " <|> string "\\+" <|> string "~"
 
 -- parse a given specific string, accounting for spaces 
 symbol :: String -> Parser String
@@ -238,8 +238,8 @@ parseFrac = do
 
 -- parses a term (some expression in brackets/parens, a constant alone, or a binom/frac)
 parseTerm :: Parser MathExpr
-parseTerm = parens parseExpr <|> brackets parseExpr <|> parseConstant <|> parseBinom <|> parseFrac
+parseTerm = (parens parseExpr <|> brackets parseExpr <|> parseConstant <|> parseBinom <|> parseFrac)
 
 -- parse a full expression (using makeExprParser)
 parseExpr :: Parser MathExpr
-parseExpr =  makeExprParser parseTerm operatorTable
+parseExpr = makeExprParser parseTerm operatorTable

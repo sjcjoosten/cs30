@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module CS30.Exercises.SetBasics.SolutionChecker (rosterFeedback, rosterFeedback2) where
+module CS30.Exercises.SetBasics.SolutionChecker where
 import           CS30.Data
 import           CS30.Exercises.Util
 import           Data.Functor.Identity
@@ -10,7 +10,7 @@ import qualified Data.Set as Set
 import qualified Data.Text.Lazy as Text
 import           Data.Void
 import           Text.Megaparsec
-import           Text.Megaparsec.Char -- readFile
+import Text.Megaparsec.Char ( string )
 -- TODO: get rid of code duplication
 
 -- | Answer whether a user-given set matches the set in the solution for sets of elements (no sets within sets)
@@ -46,7 +46,7 @@ rosterFeedback2 (quer, sol) usr' defaultRsp
                                 then correct{prFeedback=rsp }
                                 else wrong{prFeedback=rsp++[FText$ ". You answered a different set: "]++rspwa})
                            else wrong{prFeedback=rsp++[FText ". Your answer contained duplicate elements: "]++rspwa}
-  where solTeX = dispSet (map dispSet sol)
+  where solTeX = dispSet (map dispTuple sol)
         usr = Map.lookup "roster" usr'
         pr :: Maybe [[String]]
         pr = case usr of
@@ -65,6 +65,9 @@ rosterFeedback2 (quer, sol) usr' defaultRsp
                 Just v -> [FMath v]
         wrong = markWrong defaultRsp
         correct = markCorrect defaultRsp
+
+dispTuple :: [String] -> String
+dispTuple lst = "("++intercalate "," lst++")"
 
 
 -- get set in roster notation as a list of strings, duplicates are kept, whitespace, quotes and parentheses are removed when appropriate

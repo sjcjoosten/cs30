@@ -82,7 +82,7 @@ rationalExpr = lt_spaces *> makeExprParser termP oprs <* lt_spaces
         parseDec = foldl (\x y -> x*10 + y) 0
         -- Latex spaces parser, doesn't return the parsed string.
         lt_spaces :: Parser ()
-        lt_spaces = ((string " " <|> string "\\t" <|> string "\\ ") *> lt_spaces)
+        lt_spaces = ((string " " <|> string "\\t" <|> string "\\ " <|> string "\\+" <|> string "dollar" <|> string "USD" <|> string "usd") *> lt_spaces)
                     <|> return ()
         oprs =  [ [ infixL "^" Exponentiation
                   , Prefix (return Negate <* string "-" <* lt_spaces)] -- negate, exponentiation
@@ -115,10 +115,10 @@ probFeedback (quer, sol) usr' defaultRsp
   = reTime$ case usr of 
               Nothing -> error "Server communication error: expecting a 'prob' field"
               Just v -> case runParser rationalExpr "" v of
-                           Left e -> wrong{prFeedback=[FText$ "I didn't understand what you wrote. Here's a parse-error: "++errorBundlePretty e]}
+                           Left e -> tryAgain defaultRsp{prFeedback=[FText$ "I didn't understand what you wrote. Here's a parse-error: "++errorBundlePretty e]}
                            Right expr -> case evalRational expr of
                                            Just userSol -> if userSol == sol then correct{prFeedback=rsp} else wrong{prFeedback=rsp++[FText$ ". You answered incorrectly: "]++rspwa}
-                                           Nothing -> wrong{prFeedback=[FText$ "That math expression isn't supported."]}
+                                           Nothing -> tryAgain defaultRsp{prFeedback=[FText$ "I could not evaluate the mathematical expression you wrote."]}
   where 
   -- runParser ::
   -- Parsec e s a -> String -> s -> Either (ParseErrorBundle s e) a
@@ -137,10 +137,10 @@ probExpectFeedback (quer, sol) usr' defaultRsp
   = reTime$ case usr of 
               Nothing -> error "Server communication error: expecting a 'prob' field"
               Just v -> case runParser rationalExpr "" v of
-                           Left e -> wrong{prFeedback=[FText$ "I didn't understand what you wrote. Here's a parse-error: "++errorBundlePretty e]}
+                           Left _e -> tryAgain wrong{prFeedback=[FText$ "I didn't understand what you wrote."]}
                            Right expr -> case evalRational expr of
                                            Just userSol -> if realToFrac userSol ~== sol then correct{prFeedback=rsp} else wrong{prFeedback=rsp++[FText$ ". You answered incorrectly: "]++rspwa}
-                                           Nothing -> wrong{prFeedback=[FText$ "That math expression isn't supported."]}
+                                           Nothing -> tryAgain wrong{prFeedback=[FText$ "Some math expression isn't supported, or I couldn't evaluate it."]}
   where 
   -- runParser ::
   -- Parsec e s a -> String -> s -> Either (ParseErrorBundle s e) a

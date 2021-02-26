@@ -3,7 +3,7 @@ import CS30.Exercises.Cardinality (cardEx)
 import CS30.Exercises.CombinatoricsIntegers (combinEx)
 import CS30.Exercises.ComputeX (modsEx)
 import CS30.Exercises.Data (ExerciseType(etTotal))
-import CS30.Exercises.Graphs (graphStub, giveSet)
+import CS30.Exercises.Graphs ( graphStub, graphsGiveSet )
 import CS30.Exercises.IncExcCardinalities (incExcCardinalitiesEx)
 import CS30.Exercises.LogicExpr.CreativeDisplay (logicWrongStepEx)
 import CS30.Exercises.LogicExpr.Display (logicProofOrderEx)
@@ -37,22 +37,22 @@ pages = -- lecture 1:
         -- , multiplicitiesFunctions -- doesn't do anything right now
 
         -- lecture 3:
-        , logicRewritingEx{etTotal = 6} -- Chibuzo and Bennett: select the name of the law that is named
+        -- , logicRewritingEx{etTotal = 6} -- Chibuzo and Bennett: select the name of the law that is named (infinite loops .. sometimes)
         , logicWrongStepEx{etTotal = 5} -- Tyler and Fei: which steps are correct and which are not?
         , setConversionEx{etTotal = 5} -- set-builder notation rewrite proofs
         -- , logicInequalitiesEx -- Kyle and Lucas: Logic; inequality problems. Wrong method to generate proofs
 
-        , probBasicEx -- Fei and Kyle wk 5/6 probability: basic probability (solvable through counting)
-        , probaEx -- Probability, compute expression. Contains conditional probabilities and independent stuff
+        , probBasicEx{etTotal = 6} -- Fei and Kyle wk 5/6 probability: basic probability (solvable through counting)
+        , probaEx{etTotal=8} -- Probability, compute expression. Contains conditional probabilities and independent stuff
         , probExpectEx  -- Fei and Kyle wk 5/6 probability: Expected value exercises
 
         , cardEx -- Bennett and Donia, from set cardinalities -> goes into combinatorics week
         
-        -- , giveSet -- graph basics (needs to be disentangled and edges need to be shown/typed properly)
+        , graphsGiveSet{etTotal=8} -- graph basics (incident edges, neighbors, isolated vertices, endpoints)
         -- , tableStub -- does not pass tests, since it's not a valid exercise, but uncomment to see how tables are displayed.
         -- , truthEx -- Anmol and Sanket compute a truth table, sometimes generates impossible questions
         -- , modsEx -- Modular Arithmetic exercises wk 5/6. Maha and Roberto? Needs to be disentangled
-        -- , modN -- modulo N, true or false. Needs fixing
+        , modN -- modulo N, true or false. Needs fixing
         -- , cardinalityProofExer -- had negative exponents errors, needs fixing
         -- , modProofEx -- confusing step-names
         -- , combinEx -- doesn't work
@@ -63,4 +63,4 @@ pages = -- lecture 1:
 
 -- the definition below is to prevent warnings about unused imports
 _ignorable :: [ExerciseType]
-_ignorable = [graphStub, tableStub, combinEx, probExProof, truthEx, giveSet, modsEx, modN, cardinalityProofExer, modProofEx, logicInequalitiesEx, multiplicitiesFunctions]
+_ignorable = [graphStub, tableStub, combinEx, probExProof, truthEx, modsEx, modN, cardinalityProofExer, modProofEx, logicInequalitiesEx, multiplicitiesFunctions]

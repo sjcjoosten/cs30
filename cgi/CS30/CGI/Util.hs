@@ -14,7 +14,7 @@ safeFilename str
     isSafe c
           = if (c <= 'Z') then
               if (c <= '9')
-              then c >= '0' || c == '-'
+              then c >= '0' || c == '-' || c == '%'
               else c >= 'A' || c == '='
             else
               if (c < 'a') then c=='_'

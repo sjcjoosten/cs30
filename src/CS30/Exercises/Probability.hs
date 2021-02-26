@@ -7,7 +7,7 @@ import CS30.Exercises.Probability.Problems
 import CS30.Exercises.Probability.SolutionChecker
 
 probaEx :: ExerciseType
-probaEx = exerciseType "ProbaCompute" "L12?" "Probability : compute expression"
+probaEx = exerciseType "ProbaCompute" "L14" "Probability : compute expression"
             choiceTreeList
             genQuestion
             genFeedback

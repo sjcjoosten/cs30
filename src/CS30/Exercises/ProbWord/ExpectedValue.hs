@@ -4,7 +4,7 @@ import           CS30.Exercises.Data
 import           Numeric
 
 expectprob :: [ChoiceTree ([Field], Double)]
-expectprob = [ Branch [ Branch [nodes [ ( [FText $ "you invest $100 in a stock that will return $" ++ show winVal ++ " with probability " ++ (showFFloat (Just 1) winProb "") ++ " or $" ++ show loseVal ++ " with probability " ++ (showFFloat (Just 1) (1 - winProb) "") ++ ", what is your expected return?"]
+expectprob = [ Branch [ Branch [nodes [ ( [FText $ "you invest in a stock that will return $" ++ show winVal ++ " with probability " ++ (showFFloat (Just 1) winProb "") ++ " or $" ++ show loseVal ++ " with probability " ++ (showFFloat (Just 1) (1 - winProb) "") ++ ", what is your expected return?"]
                                         , fromInteger winVal * winProb + fromInteger loseVal * (1 - winProb)
                                         )
                                       | winVal <- [120,130..180]]
@@ -20,7 +20,7 @@ expectprob = [ Branch [ Branch [nodes [ ( [FText $ "you invest $100 in a stock t
                        | firstPlaceProb <- [0.001,0.002..0.005]
                        , secondPlaceProb <- [0.006,0.007..0.010]
                        ]
-              , Branch [ Branch [nodes [ ( [FText $ show numBets ++ " people place $100 bets that will pay out $" ++ show winVal ++ " with probability " ++ (showFFloat (Just 1) winProb "") ++ ", how much should the casino expect to make?"]
+              , Branch [ Branch [nodes [ ( [FText $ show numBets ++ " people place $100 bets that will pay out $" ++ show winVal ++ " each with probability " ++ (showFFloat (Just 1) winProb "") ++ ", how much should the casino expect to make?"]
                                          , fromInteger numBets * (100 - fromInteger winVal * winProb)
                                          )
                                        | winProb <- filter (\x -> fromInteger winVal * x < 100) [0.1,0.2,0.3,0.4]

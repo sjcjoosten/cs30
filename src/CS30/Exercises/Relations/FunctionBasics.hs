@@ -1,12 +1,6 @@
 module CS30.Exercises.Relations.FunctionBasics (multiplicitiesFunctions) where
 import CS30.Data
 import CS30.Exercises.Data
-import CS30.Exercises.Util
-import qualified Data.Map as Map
-import Control.Arrow ((***))
-import Data.List ( (\\), intercalate, nub, partition )
-import Data.List.Extra (nubSort)
-import GHC.Exts
 
 data ISB = Injective | Surjective | Bijective deriving Show
 isb_all :: [ISB]

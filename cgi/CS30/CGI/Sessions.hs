@@ -233,7 +233,9 @@ authenticate serverURL str hash
   emailMaybe = listToMaybe =<< Map.lookup "lis_person_contact_email_primary" =<< mp
   roles = concatMap (uncalate ',' . CGI.urlDecode) <$> (Map.lookup "roles" =<< mp)
   userFn = safeFilename =<< (case lis_result_sourcedid of
-                               Nothing -> listToMaybe =<< Map.lookup "user_id" =<< mp
+                               Nothing -> do mp' <- mp
+                                             uid <- Map.lookup "user_id" mp'
+                                             CGI.urlEncode <$> listToMaybe uid
                                Just v -> Just (C8.unpack (B64.encode (C8.pack v))))
   lis_outcome_service_url = CGI.urlDecode <$> (listToMaybe =<< Map.lookup "lis_outcome_service_url" =<< mp)
   lis_result_sourcedid    = CGI.urlDecode <$> (listToMaybe =<< Map.lookup "lis_result_sourcedid"    =<< mp)

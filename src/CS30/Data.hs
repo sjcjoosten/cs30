@@ -59,7 +59,14 @@ data JSNode = JSNode {jsnId :: Int
 data JSFont = JSFont {jsfMulti :: Maybe String}
   deriving (Show)
 data JSOptions = JSOptions {jsoNodes :: JSOption
-                           ,jsoEdges :: JSOption}
+                           ,jsoEdges :: JSOption
+                           ,jsoLayout :: JSLayout}
+  deriving (Show)
+data JSLayout = JSLayout {jslHierarchical :: Maybe JSHierarchical}
+  deriving (Show)
+data JSHierarchical = JSHierarchical {jshSortMethod :: JSSortMethod}
+  deriving (Show)
+data JSSortMethod = Directed | Hubsize
   deriving (Show)
 data JSOption = JSOption
                      {jsoShape :: Maybe String
@@ -213,9 +220,14 @@ instance Monoid JSOption where
   mempty = JSOption Nothing Nothing Nothing Nothing
 
 instance Semigroup JSOptions where
-  JSOptions a1 b1 <> JSOptions a2 b2 = JSOptions (a1 <> a2) (b1 <> b2)
+  JSOptions a1 b1 c1 <> JSOptions a2 b2 c2 = JSOptions (a1 <> a2) (b1 <> b2) (c1 <> c2)
 instance Monoid JSOptions where
-  mempty = JSOptions mempty mempty
+  mempty = JSOptions mempty mempty mempty
+
+instance Semigroup JSLayout where
+  JSLayout h1 <> JSLayout h2 = JSLayout (h1 <|> h2)
+instance Monoid JSLayout where
+  mempty = JSLayout Nothing
 
 -- code below is template haskell code
 $(deriveJSON defaultOptions ''Exercise)
@@ -248,6 +260,9 @@ instance FromJSON JSEdge where
                               <*> parseJSON obj
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSGraph)
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSOption)
+$(deriveJSON defaultOptions ''JSSortMethod)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSHierarchical)
+$(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSLayout)
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSOptions)
 $(deriveJSON defaultOptions{fieldLabelModifier = drop 3 . map toLower, omitNothingFields = True} ''JSFont)
 $(deriveJSON defaultOptions{allNullaryToStringTag=False} ''Action)

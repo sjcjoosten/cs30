@@ -91,13 +91,13 @@ putElemIn y n (x:xs) = x:(putElemIn y (n-1) xs)
 -- (note: we don't test Definition of False/True at all, 
 --  although we do use it in proofs)
 testLaws :: [String]
-testLaws = ["Double Negation Law",
+testLaws = ["Negation of Negation",
             "De Morgan's Law",
-            "Identity Law",
-            "Domination Law",
-            "Idempotent Law",
-            "Negation Law",
-            "Implication Law"
+            -- "Irrelevance", -- empty trees?
+            "Operation with true, false",
+            "Idempotence",
+            "Operation with Negation",
+            "Implication as an OR"
             ]
 
 -- contains all the exercises: 

@@ -2,7 +2,6 @@ module CS30.Exercises.ModN (modN) where
 import CS30.Data
 import CS30.Exercises.Data
 import CS30.Exercises.Util
-import Data.List
 import qualified Data.Map as Map
 
 type ModNEntry = (Field, Bool)
@@ -10,34 +9,30 @@ type ModNEntry = (Field, Bool)
 
 -- | Constant function, returns the generated exercise
 modN :: ExerciseType
-modN = exerciseType "ModNTF" "Modulo N" "True or False" 
+modN = exerciseType "ModN" "L25" "Modulo: True or False" 
               [exercise] genTable modNFeedback
 
 -- | Generates the table of problems
 genTable :: [(Field,bool)] -> Exercise -> Exercise
 genTable myProblem def 
- = def{ eQuestion = [ FText $"Please answer those questions"
+ = def{ eQuestion = [ FText $"Indicate for each answer whether it is true or false"
                     , FTable ([headerRow] ++                                                                                     -- add header row to the table
                                 [ [Cell field, Cell (FFieldBool (FText "True") (FText "False") (Just False) ("TF_" ++ show i))]  -- add the body rows of the table
-                                    | ((field, _),i) <- myProblemIndexed ] )
+                                | ((field, _),i) <- myProblemIndexed ] )
                     ]
       , eBroughtBy = ["Paul Gralla","Joseph Hajjar"] }
  where 
        myProblemIndexed = zip myProblem ([1..]::[Int])
        headerRow = [Header (FText "Equation"),Header (FText "True/False") ]
 
-
-cartProduct :: [ChoiceTree a] -> ChoiceTree [a]
-cartProduct [] = Node []
-cartProduct (x:xs) = replace f (cartProduct xs)
-    where
-        f xs' = fmap (:xs') x
-
 -- | Constant which creates the ChoiceTree with all of the exercises
 -- | Input: nothing
 -- | Output: ChoiceTree with all of the exercises
 exercise :: ChoiceTree [ModNEntry]
-exercise = replace cartProduct (Branch [Node [integerPowerSame modBase, addition modBase, multiplication modBase, integerPowerDiff modBase, fractionPower modBase]| modBase <- [4,6..20]])
+exercise
+ = do base <- (2*)<$> nodes [2..10]
+      perms <- permute [integerPowerSame base, addition base, multiplication base, integerPowerDiff base]
+      sequenceA (take 3 perms)
 
 
 -- | Generates a problem with two numbers (congruent under modulo) raised to the same power (always True)
@@ -45,88 +40,62 @@ exercise = replace cartProduct (Branch [Node [integerPowerSame modBase, addition
 -- | Output: a ChoiceTree containing problems of this type with the given modBase
 integerPowerSame :: Integer -> ChoiceTree ModNEntry
 integerPowerSame modBase = Branch [ Branch [g leftNum expo modBase
-                                            | expo <- [modBase..modBase*2] ] 
-                                                          | leftNum <- getLeftNums modBase]
+                                           | expo <- [modBase..modBase*2] ] 
+                                  | leftNum <- getLeftNums modBase]
     where
         g leftNum expo' mb = Node (FMath (show leftNum ++ "^{" ++ show expo' ++ "}" ++  "\\  \\equiv_{" ++ show mb ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show expo' ++ "}"), True)
-            where
-                rightNum = leftNum `mod` modBase
+            where rightNum = leftNum `mod` modBase
 
 -- | Generates a problem with two numbers (congruent under modulo) raised to different powers (rarely True)
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a ChoiceTree containing problems of this type with the given modBase
 integerPowerDiff :: Integer -> ChoiceTree ModNEntry
-integerPowerDiff modBase = Branch [ Branch [g leftNum exponent1 exponent2 modBase
-                                           | (exponent1, exponent2) <- (zip [modBase, modBase + 2..modBase*2] (reverse [modBase - 1, modBase + 1..modBase*2])) ]  -- pick to different powers, by picking the same index from a list of even and a reversed list of odd numbers
-                                  | leftNum <- getLeftNums modBase]
-    where
-        g leftNum exponent1 exponent2 modBase' = Node (FMath (show leftNum ++ "^{" ++ show exponent1 ++ "}" ++  "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\ " ++ show rightNum ++ "^{" ++ show exponent2 ++ "}"), isCorrect)
-            where
-                rightNum = leftNum `mod` modBase
-                isCorrect = modExp leftNum exponent1 modBase == modExp rightNum exponent2 modBase
-
--- | Generates a problem with two numbers (congruent under modulo) square rooted (rarely True)
--- | Input: modBase - the modular base of the equivalence
--- | Output: a ChoiceTree containing problems of this type with the given modBase
-fractionPower :: Integer -> ChoiceTree ModNEntry
-fractionPower modBase = Branch [ g leftNum rightNum modBase
-                               | rightNum <- squares
-                               , leftNum <- (filter (\x -> (x `mod` modBase == rightNum `mod` modBase) && x /=rightNum ) squares)
-                               -- Pick left and right number out of list of squares such that they have that they are congruent before the sqrt operation
-                               ]
-    where
-        g leftNum rightNum modBase' = Node (FMath ("\\sqrt{" ++ show leftNum ++ "}" ++  "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\ \\sqrt{" ++ show rightNum ++ "}"), isCorrect)
-            where
-                isCorrect = (rootOfPerfectSquare leftNum) `mod` modBase == (rootOfPerfectSquare rightNum) `mod` modBase  
+integerPowerDiff modBase = nodes [ (FMath (show leftNum ++ "^{" ++ show exponent1 ++ "}" ++  "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show leftNum ++ "^{" ++ show exponent2 ++ "}"), False)
+                                   -- pick to different powers, by picking the same index from a list of even and a reversed list of odd numbers
+                                 | leftNum <- [1..modBase-1]
+                                 , exponent1 <- [modBase .. modBase*3]
+                                 , let exponent2 = leftNum
+                                 , modExp leftNum exponent1 modBase /= modExp leftNum exponent2 modBase
+                                 ]
 
 -- | Generates a problem where the same number is added to two numbers which are congruent under modulo (always True)
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a ChoiceTree containing problems of this type with the given modBase
 addition :: Integer -> ChoiceTree ModNEntry 
-addition modBase = Branch [ Branch [g leftNum summand modBase 
-                                    | summand <- [1..modBase*2] ] 
-                                    | leftNum <- getLeftNums modBase]
-    where
-        g leftNum summand modBase' = Node (FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\ " ++ show rightNum ++ " + " ++ show summand), True)
-            where
-                rightNum = leftNum `mod` modBase
+addition modBase
+  = Branch [ Branch [nodes [ (FMath (show leftNum ++ " + " ++ show summand ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show rightNum ++ " + " ++ show summand), True)
+                           , (FMath (show summand ++ " + " ++ show leftNum ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\ " ++ show summand ++ " + " ++ show rightNum), True)
+                           ]
+                    | summand <- [1..modBase*2] ]
+           | leftNum <- getLeftNums modBase
+           , let rightNum = leftNum `mod` modBase]
 
 -- | Generates a problem where the same number is multiplied to two numbers which are congruent under modulo (always True)
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a ChoiceTree containing problems of this type with the given modBase
 multiplication :: Integer -> ChoiceTree ModNEntry
-multiplication modBase = Branch [ Branch [g leftNum factor modBase
-                                         | factor <- [1..modBase*2] ] 
-                                | leftNum <- getLeftNums modBase]
-    where
-        g leftNum factor modBase' = Node (FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase' ++ "} \\ \\  " ++ show rightNum ++ " \\cdot " ++ show factor), True)
-            where
-                rightNum = leftNum `mod` modBase
+multiplication modBase
+  = Branch [ Branch [ nodes [ (FMath (show leftNum ++ " \\cdot " ++ show factor ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\  " ++ show rightNum ++ " \\cdot " ++ show factor), True)
+                            , (FMath (show factor ++ " \\cdot " ++ show leftNum ++ "\\  \\equiv_{" ++ show modBase ++ "} \\ \\  " ++ show factor ++ " \\cdot " ++ show rightNum), True)
+                            ]
+                    | factor <- [1..modBase*2] ] 
+           | leftNum <- getLeftNums modBase
+           , let rightNum = leftNum `mod` modBase]
 
-
--- | List of squares in [1,400] from which to choose perfect squares for fractionPower
-squares :: [Integer]
-squares = [x*x | x <- [1..20]]
-
--- | General square root function (given the input is a perfect square)
--- | Input: sq - a perfect square in [1,400]
--- | Output: index (the square root) if square root is found else -1
-rootOfPerfectSquare :: Integer -> Integer
-rootOfPerfectSquare sq = 
-    case index of
-        Just i -> toInteger i
-        Nothing -> -1
-        where index = elemIndex sq [x*x | x <- [1..20]]
-
--- taken from https://gist.github.com/trevordixon/6788535
+-- taken from https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/
 modExp :: Integer -> Integer -> Integer -> Integer
-modExp x y n = mod (x^(mod y (n-1))) n
+modExp _ 0 _ = 1
+modExp b e m
+  | even e    = (r*r) `mod` m
+  | otherwise = (b*r*r) `mod` m
+  where
+    r = modExp b (e `div` 2) m
 
 -- | Generates a list of numbers which are not multiples of the modBase (used in most exercise generating functions)
 -- | Input: modBase - the modular base of the equivalence
 -- | Output: a list of numbers which are not multiples of the modBase
 getLeftNums :: Integer -> [Integer]
-getLeftNums modBase = (filter (\x -> x `mod` modBase /= 0)[(modBase+1)..modBase*5])
+getLeftNums modBase = (filter (\x -> x `mod` modBase /= 0) [(modBase+1)..modBase*5-1])
 
 -- | Feedback function
 -- | Generates a table with (given solutions) | (correct solutions) if anything is found incorrect
@@ -153,6 +122,5 @@ modNFeedback qAndSol usr defaultRsp
         
         isCorrect = all (==True) [ givenAns == (charToBoolStr solu) | (givenAns,solu) <- allAnsWithSol]  -- do all given answers match the correct solution
         charToBoolStr c = if(c == "F") then "False" else (if(c == "T") then "True" else "")
-    
         wrong = markWrong defaultRsp
         correct = markCorrect defaultRsp

@@ -74,18 +74,20 @@ showParenLATEX b p = if b
 -- contains all the laws that we use (after parsing)
 lawStrings :: [String]
 lawStrings = [
-        "Negation Law: p || !p = true",
-        "Negation Law: p && !p = false",
-        "Idempotent Law: p || p = p",
-        "Idempotent Law: p && p = p",
-        "Double Negation Law: !(!p) = p",
+        "Operation with Negation: p || !p = true",
+        "Operation with Negation: p && !p = false",
+        "Idempotence: p || p = p",
+        "Idempotence: p && p = p",
+        "Irrelevance: p || (p && q) = p",
+        "Irrelevance: p && (p || q) = p",
+        "Negation of Negation: !(!p) = p",
         "Definition of True: !false = true",
         "Definition of False: !true = false",
-        "Identity Law: p || false = p",
-        "Identity Law: p && true = p",
-        "Domination Law: p && false = false",
-        "Domination Law: p || true = true",
-        "Implication Law: p => q = !p || q",
+        "Operation with true, false: p || false = p",
+        "Operation with true, false: p && true = p",
+        "Operation with true, false: p && false = false",
+        "Operation with true, false: p || true = true",
+        "Implication as an OR: p => q = !p || q",
         "De Morgan's Law: !(p && q) = !p || !q",
         "De Morgan's Law: !(p || q) = !p && !q"
     ]
