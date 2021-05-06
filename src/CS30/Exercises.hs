@@ -59,6 +59,7 @@ pages = -- lecture 1:
         -- , probExProof -- works, but questions look ugly
         , rosterEx{etTotal = 6}
         , logicProofOrderEx{etTotal = 6} -- Tyler and Fei: put proof in right order
+        , logicRewritingEx -- wip
         ]
 
 -- the definition below is to prevent warnings about unused imports

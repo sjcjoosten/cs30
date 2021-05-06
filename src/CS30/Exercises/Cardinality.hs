@@ -52,7 +52,7 @@ evalExpr (Choose e1 e2) = do {x1 <- evalExpr e1; x2 <- evalExpr e2; return (x1 `
 evalExpr (Divide e1 e2) = do x1 <- evalExpr e1
                              x2 <- evalExpr e2 
                              if (x2 == 0 || (x1 `rem` x2) /= 0) then Nothing
-                             -- ^ all answers should be valid integers, so there's something wrong if 
+                             -- all answers should be valid integers, so there's something wrong if 
                              -- either the denominator is 0 or the numerator doesn't divide the denominator
                              else return (x1 `div` x2)
 
@@ -139,7 +139,7 @@ cardFeedback (quer, sol) mStrs defaultRsp
                                else -- otherwise, show them how their math is wrong
                                  markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath(show $ head sol)] ++ 
                                                                      [FText(". You wrote "), FMath (mStrs Map.! "answer"), FMath " = ", FMath (show st) ]}
-                    -- | if the evaluated answer has some error (divide by zero, or some fraction does not evaluate to an integer), then mark wrong
+                    -- if the evaluated answer has some error (divide by zero, or some fraction does not evaluate to an integer), then mark wrong
                     Nothing -> markWrong $ defaultRsp{prFeedback = [FText("The correct answer is ")] ++ question ++ [FMath " = "] ++ step ++ [FMath " = "] ++ [FMath (show $ head sol)] ++ [FText". We couldn't compute your answer."]}
                 else -- if they didn't have the right numbers in their answer, ask them to explain it better, where did they get those answers from?
                   tryAgain defaultRsp{prFeedback = [FText("Please explain your answer better. Where did you get " ++ list_to_string notInSol  ++" from? (Replace by an expression that computes the answer!)")]}
@@ -202,9 +202,9 @@ operatorTable =
   [ [postfix "!" Fact],
     [binary "^" Expon] ,
     [binary "\\cdot" Mult, binary "" Mult] , 
-    -- ^ second term here lets us parse things like (3)(3) = 3*3
+    -- second term here lets us parse things like (3)(3) = 3*3
     [binary "choose" Choose]
-    -- ^ we allow the literal word "choose" in between two expressions
+    -- we allow the literal word "choose" in between two expressions
   ]
 
 -- helper function for generating an binary infix operator
@@ -224,7 +224,7 @@ parseBinom = do
   _  <- symbol "\\binom" 
   e1 <- brackets parseExpr 
   e2 <- brackets parseExpr
-  -- ^ we assume both expressions here are within brackets
+  -- we assume both expressions here are within brackets
   -- (which seems to be how it is always generated)
   return (Choose e1 e2)
 

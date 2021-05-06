@@ -10,7 +10,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 {- defining datas and types -}
 type Parser        = Parsec Void String
 
-data Expr          = Var String | Const Integer | Op Opr [Expr] deriving (Eq)  -- | ConstVar String
+data Expr          = Var String | Const Integer | Op Opr [Expr] deriving (Eq)  --  | ConstVar String
 data Opr           = Multiplication | Division | Addition | Subtraction
                    | Exponentiation | Factorial | Negate deriving (Eq,Show)
 
