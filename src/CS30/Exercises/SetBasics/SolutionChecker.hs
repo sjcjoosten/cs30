@@ -37,8 +37,8 @@ rosterFeedback (quer, sol) usr' defaultRsp
         wrong = markWrong defaultRsp
         correct = markCorrect defaultRsp
 -- | Answer whether a user-given set matches the set in the solution for sets of sets (no sets within those, just elements)
-rosterFeedback2 :: ([Field], [[String]]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
-rosterFeedback2 (quer, sol) usr' defaultRsp
+rosterFeedback2 :: Bool -> ([Field], [[String]]) -> Map.Map String String -> ProblemResponse -> ProblemResponse
+rosterFeedback2 graphs (quer, sol) usr' defaultRsp
   = reTime$ case pr of
                  Nothing -> wrong{prFeedback= rsp++(FText "Your answer was "):rspwa}
                  Just v -> if nub (map (nubSort) v) == (map sort v) then
@@ -46,7 +46,7 @@ rosterFeedback2 (quer, sol) usr' defaultRsp
                                 then correct{prFeedback=rsp }
                                 else wrong{prFeedback=rsp++[FText$ ". You answered a different set: "]++rspwa})
                            else wrong{prFeedback=rsp++[FText ". Your answer contained duplicate elements: "]++rspwa}
-  where solTeX = dispSet (map dispTuple sol)
+  where solTeX = dispSet (map (if graphs then dispTuple else dispSet) sol)
         usr = Map.lookup "roster" usr'
         pr :: Maybe [[String]]
         pr = case usr of
