@@ -109,12 +109,13 @@ removeQuotes lst
 
 type Parser = ParsecT Void Text.Text Identity
 
+-- outer parser, require end of file.
 parseSet :: Parser [Text.Text]
 parseSet = parseWS *> (    (string "\\{" *> parseInnerSet <* string "\\}")
                        <|> (string "{" *> parseInnerSet <* string "}") -- shouldn't be writable in math mode but we're allowing it for accessibility
                        <|> (string "\\emptyset" *> return []) -- shouldn't be returned by MathQuill, but perhaps useful to allow for accessibility
                        <|> (string "\\varnothing " *> return [])
-                      ) <* parseWS
+                      ) <* parseWS <* eof
 parseWS :: Parser Text.Text
 parseWS = ((<>) <$> (string " " <|> string "\n" <|> string "\r" <|> string "\t" <|> string "\\ " <|> string "\\left" <|> string "\\right" <|> string "\\Left" <|> string "\\Right"
                      <|> ((<>) <$> string "%" <*> untilEOL)) 
