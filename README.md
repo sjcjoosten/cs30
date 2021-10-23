@@ -128,7 +128,7 @@ stack test --ta "--quickcheck-replay=569579"
 
 ### Contributing code
 
-Please for the repository, make your changes there,
+Please fork the repository, make your changes there,
 add your name to the CONTRIBUTORS.md file, and send me a pull-request.
 
 ### Why Haskell? Why not Haste?
