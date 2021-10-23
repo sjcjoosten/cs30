@@ -1,4 +1,4 @@
-# cs30 [![Build Status](https://travis-ci.com/sjcjoosten/cs30.svg?branch=main)](https://travis-ci.com/sjcjoosten/cs30)
+# cs30
 
 ## What is this?
 
