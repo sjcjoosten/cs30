@@ -1,7 +1,6 @@
 .stack*
 .exists*
 .vscode
-cs30.cabal
 data/*
 
 .DS_Store
