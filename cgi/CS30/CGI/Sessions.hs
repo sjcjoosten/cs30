@@ -29,7 +29,6 @@ import           Network.HTTP.Types.Status (statusCode)
 import           Paths_cs30 (getDataDir)
 import           System.Directory
 import           System.Environment
-import           System.Posix.Files
 import           Text.Read (readMaybe)
 import           Web.Authenticate.OAuth
 
@@ -152,8 +151,8 @@ handleRequest :: Map.Map String [String] -- POST data
 handleRequest mp
  = do createDirectoryIfMissing True (globalDataDir++"tmp/") -- temporary storage directory (may be deleted at will, will be re-created as needed)
       createDirectoryIfMissing True (globalDataDir++"perm/") -- permanent storage directory (like tmp, but has user ids associated, so should not be deleted)
-      setFileMode (globalDataDir++"tmp/") accessModes 
-      setFileMode (globalDataDir++"perm/") accessModes 
+      -- setFileMode (globalDataDir++"tmp/") accessModes -- needs unix, I don't want it to need unix
+      -- setFileMode (globalDataDir++"perm/") accessModes 
       serverURI <- lookupEnv "REQUEST_URI"
       serverHost <- lookupEnv "HTTP_HOST"
       let ses = listToMaybe =<< Map.lookup "ses" mp
