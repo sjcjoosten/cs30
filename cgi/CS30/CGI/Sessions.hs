@@ -216,7 +216,7 @@ authenticate serverURL str hash
                    Just fn ->
                     let fname = globalDataDir ++"auth/"++fn
                     in do createDirectoryIfMissing True (globalDataDir++"auth/")
-                          setFileMode (globalDataDir++"auth/") accessModes
+                          -- setFileMode (globalDataDir++"auth/") accessModes
                           case res of
                             Nothing -> err500 "Error processing authentication information"
                             Just v -> do encodeFile fname v -- Store the most recent authentication data
