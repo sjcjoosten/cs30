@@ -2,7 +2,7 @@
 .exists*
 .vscode
 data/*
-
+cs30.cabal
 .DS_Store
 **/.DS_Store
 

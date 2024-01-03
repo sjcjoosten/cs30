@@ -40,7 +40,6 @@ executables:
             - base64-bytestring
             - time
             - cs30
-            - unix
             - authenticate-oauth
             - http-client
             - http-client-tls
