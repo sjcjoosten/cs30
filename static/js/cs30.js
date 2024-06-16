@@ -194,7 +194,7 @@ function handleField(q, pushHandler = ()=>_, appendHandler = ()=>_, submitAction
 }
 
 var MQ;
-var serverCGI = "/~sjc/cs30/cs30.cgi";
+var serverCGI = "/cs30/cs30.cgi";
 var disconnects = 0;
 var serverResponseMsg;
 var graphLoaded = false; // we don't load the graph by default, but when we do, we ensure it is only loaded once

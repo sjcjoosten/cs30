@@ -8,11 +8,11 @@
 # if local, sync with server and call 'make' on server
 
 # directory that must exist server-side only (for establishing that we are on the server)
-homedir = /home/sjc/
+homedir = /home/sjoosten/
 # directory that must exist developer-side only (for establishing that we are on the developer code)
 devdir = /Users/sjc/
 # server address from the client side
-server = f004d0r@www.cs.dartmouth.edu
+server = sjoosten@cse-u-sjoosten-01.cse.umn.edu
 # remaining directories are server side:
 # installation directory for cgi scripts
 installdir = $(homedir)public_html/cs30/
@@ -20,7 +20,7 @@ maincgi = $(installdir)cs30.cgi
 srcdir = cgi/
 staticdir = static/
 mainhs = $(srcdir)CGI.hs
-datadir = $(homedir)cs30data/
+datadir = $(homedir)cs30data/ # a writable directory
 hidir = .tmp
 
 choose : $(homedir) $(devdir)
@@ -45,7 +45,7 @@ checkserver :
 	@test -e $(homedir)
 
 sync : checkdev
-	@echo "Synchronising code with server (ensure you are connected via VPN!):"
+	@echo "Synchronising code with server:"
 	rsync -varz --exclude=".?*" --exclude="data" --exclude="dist*" --exclude="cs30.cabal" --delete-after . $(server):cs30
 	@echo "\nBuilding code server-side:"
 	ssh -t $(server) "cd cs30/&&make all"
@@ -71,7 +71,7 @@ $(installdir) : $(shell find $(staticdir) -type f -name '*')
 
 $(maincgi) : dir $(mainhs) $(datadir)
 	printf "$(datadir)" > data/dir
-	@~/.local/bin/stack build cs30:cs30.cgi --copy-bins --local-bin-path=$(installdir)
+	@/usr/local/bin/stack build cs30:cs30.cgi --copy-bins --local-bin-path=$(installdir)
 	@chmod 755 $(maincgi)
 
 # Q: Why is there no make clean?

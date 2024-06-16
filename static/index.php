@@ -1,12 +1,19 @@
 <html><head>
   <!-- PHP
     <?php
+    echo "set error reportin on\n";
     error_reporting(E_ALL & E_NOTICE);
-    ini_set("display_errors", 1);
+    echo "set display errors on\n";
+    ini_set("display_errors", '1');
+    echo "require OAuth.php\n";
     require_once 'ims-blti/OAuth.php';
+    echo "build request\n";
     $request = OAuthRequest::from_request();
+    echo "get signature base string\n";
     $OAuth_base_string = $request->get_signature_base_string();
+    echo "get signature\n";
     $oauth_signature = $request->get_parameter('oauth_signature');
+    echo "done";
     ?> -->
   <title>CS30 Exercise and Test environment</title>
   <link href="https://fonts.googleapis.com/css?family=Nunito:300,400,700" rel="stylesheet">

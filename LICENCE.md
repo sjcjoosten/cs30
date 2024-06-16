@@ -1,27 +1,20 @@
 Copyright (c) 2020 Sebastiaan J.C. Joosten
 
-SJC Tinker Licence
+An exclusive Licence to this software and associated documentation files (the "Software") is given to Stef Joosten.
 
-With regard to the CS30 Software:
+As of Fathersday, June 16th 2024, Sebastiaan J.C. Joosten (SJC) grants the following rights exclusively to Stef M. M. Joosten (SMM):
 
-This software and associated documentation files (the "Software") may only be
-used in production, if you (and any entity that you represent) have agreed to,
-and are in compliance with, an agreement governing the use of the Software,
-as agreed by you and Sebastiaan J. C. Joosten ("SJC").
-Subject to the foregoing sentence, you are free to modify this Software and
-publish patches to the Software. You agree that SJC and/or its licensors (as
-applicable) retain all right, title and interest in and to all such
-modifications and/or patches, and all such modifications and/or patches may
-only be used, copied, modified, displayed, distributed, or otherwise exploited
-with a valid agreement with SJC.
+Right to use (including but not limited to: compile, run on a server, run on a local machine, run on a virtual environment, both either as is or in modified form)
 
-Notwithstanding the foregoing, you may copy and modify the Software for
-development and testing purposes, without requiring a separate agreement with
-SJC. You agree that SJC and/or its licensors (as applicable) retain all right,
-title and interest in and to all such modifications. You are not granted any
-other rights beyond what is expressly stated herein. Subject to the foregoing,
-it is forbidden to copy, merge, publish, distribute, sublicense, and/or sell
-the Software.
+Right to modify (make changes to the software in its original form or compiled form)
+
+Right to distribute, both in source or compiled form, in modified or original form.
+This includes the right to give out a license to those it is distributed to for use and/or modification.
+
+For those who are not SMM and do not have SMMs explicit permission to do so, it is forbidden to download, copy, merge, publish, distribute, sublicense, and/or sell the Software.
+
+The publication of the software on the internet (on github.com or otherwise) by SJC is done to establish prior use and create a record of the permissions granted to SMM in this license.
+This publications will be removed immediately upon SMMs request.
 
 The full text of this License shall be included in all copies or substantial
 portions of the Software.
